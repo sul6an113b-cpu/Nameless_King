@@ -1,0 +1,538 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Date Sorting Machine — Flow Simulation</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    background: #0f1419;
+    color: #e6e6e6;
+    padding: 20px;
+    min-height: 100vh;
+  }
+  .container { max-width: 1200px; margin: 0 auto; }
+  h1 { font-size: 20px; font-weight: 500; margin-bottom: 4px; }
+  .subtitle { color: #8899a6; font-size: 13px; margin-bottom: 20px; }
+
+  .canvas-wrap {
+    background: #1a2332;
+    border-radius: 8px;
+    padding: 16px;
+    margin-bottom: 16px;
+    border: 1px solid #2a3a4f;
+  }
+  canvas { display: block; width: 100%; height: auto; border-radius: 4px; }
+
+  .metrics {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 12px;
+    margin-bottom: 16px;
+  }
+  .metric {
+    background: #1a2332;
+    padding: 12px 14px;
+    border-radius: 6px;
+    border-left: 3px solid #4a9eff;
+  }
+  .metric-label { font-size: 11px; color: #8899a6; text-transform: uppercase; letter-spacing: 0.5px; }
+  .metric-value { font-size: 20px; font-weight: 600; margin-top: 4px; }
+  .status-stable { border-left-color: #4ade80; }
+  .status-congested { border-left-color: #fbbf24; }
+  .status-jammed { border-left-color: #ef4444; }
+
+  .panels { display: grid; grid-template-columns: 2fr 1fr; gap: 16px; }
+  .panel {
+    background: #1a2332;
+    border-radius: 8px;
+    padding: 16px;
+  }
+  .panel h3 { font-size: 13px; text-transform: uppercase; color: #8899a6; margin-bottom: 12px; letter-spacing: 0.5px; }
+
+  .control { margin-bottom: 14px; }
+  .control-header { display: flex; justify-content: space-between; font-size: 12px; margin-bottom: 6px; }
+  .control-label { color: #c4d0dd; }
+  .control-value { color: #4a9eff; font-variant-numeric: tabular-nums; }
+  input[type="range"] {
+    width: 100%;
+    -webkit-appearance: none;
+    height: 4px;
+    background: #2a3a4f;
+    border-radius: 2px;
+    outline: none;
+  }
+  input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 14px; height: 14px;
+    background: #4a9eff;
+    border-radius: 50%;
+    cursor: pointer;
+  }
+  input[type="range"]::-moz-range-thumb {
+    width: 14px; height: 14px;
+    background: #4a9eff;
+    border-radius: 50%;
+    cursor: pointer;
+    border: none;
+  }
+
+  .presets { display: flex; flex-direction: column; gap: 8px; }
+  .preset-btn {
+    background: #2a3a4f;
+    color: #e6e6e6;
+    border: none;
+    padding: 10px 12px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 12px;
+    text-align: left;
+    transition: background 0.15s;
+  }
+  .preset-btn:hover { background: #35475e; }
+  .preset-btn .desc { display: block; color: #8899a6; font-size: 10px; margin-top: 2px; }
+
+  .legend {
+    display: flex;
+    gap: 16px;
+    margin-top: 10px;
+    font-size: 11px;
+    color: #8899a6;
+  }
+  .legend-item { display: flex; align-items: center; gap: 6px; }
+  .legend-dot { width: 10px; height: 10px; border-radius: 50%; }
+</style>
+</head>
+<body>
+<div class="container">
+  <h1>Date Sorting Machine — Flow Simulation</h1>
+  <div class="subtitle">Explore how arrival rate, constraints, and variability interact in a constrained flow system.</div>
+
+  <div class="metrics">
+    <div class="metric"><div class="metric-label">Queue Length</div><div class="metric-value" id="m-queue">0</div></div>
+    <div class="metric"><div class="metric-label">Throughput (/s)</div><div class="metric-value" id="m-throughput">0.00</div></div>
+    <div class="metric"><div class="metric-label">Spacing CV</div><div class="metric-value" id="m-spacing">—</div></div>
+    <div class="metric status-stable" id="m-status-box"><div class="metric-label">Status</div><div class="metric-value" id="m-status">Stable</div></div>
+  </div>
+
+  <div class="canvas-wrap">
+    <canvas id="sim" width="1152" height="280"></canvas>
+    <div class="legend">
+      <div class="legend-item"><div class="legend-dot" style="background:#4ade80"></div>Free flow</div>
+      <div class="legend-item"><div class="legend-dot" style="background:#fbbf24"></div>Compressed</div>
+      <div class="legend-item"><div class="legend-dot" style="background:#ef4444"></div>Waiting / jammed</div>
+      <div class="legend-item"><div class="legend-dot" style="background:#4a9eff"></div>Sorted (final belt)</div>
+    </div>
+  </div>
+
+  <div class="panels">
+    <div class="panel">
+      <h3>Controls</h3>
+      <div class="control">
+        <div class="control-header"><span class="control-label">Arrival Rate (λ)</span><span class="control-value" id="v-lambda">1.5/s</span></div>
+        <input type="range" id="lambda" min="0.2" max="5" step="0.1" value="1.5">
+      </div>
+      <div class="control">
+        <div class="control-header"><span class="control-label">Star Wheel Speed (μ)</span><span class="control-value" id="v-mu">2.0/s</span></div>
+        <input type="range" id="mu" min="0.2" max="5" step="0.1" value="2.0">
+      </div>
+      <div class="control">
+        <div class="control-header"><span class="control-label">Feed Belt Speed</span><span class="control-value" id="v-belt">60</span></div>
+        <input type="range" id="belt" min="10" max="150" step="5" value="60">
+      </div>
+      <div class="control">
+        <div class="control-header"><span class="control-label">Friction / Contact Stiffness</span><span class="control-value" id="v-friction">0.5</span></div>
+        <input type="range" id="friction" min="0" max="1" step="0.05" value="0.5">
+      </div>
+      <div class="control">
+        <div class="control-header"><span class="control-label">Funnel Width</span><span class="control-value" id="v-funnel">0.6</span></div>
+        <input type="range" id="funnel" min="0.15" max="1" step="0.05" value="0.6">
+      </div>
+      <div class="control">
+        <div class="control-header"><span class="control-label">Arrival Randomness</span><span class="control-value" id="v-random">0.3</span></div>
+        <input type="range" id="random" min="0" max="1" step="0.05" value="0.3">
+      </div>
+    </div>
+
+    <div class="panel">
+      <h3>Preset Scenarios</h3>
+      <div class="presets">
+        <button class="preset-btn" data-preset="balanced">Balanced Flow<span class="desc">λ &lt; μ, smooth operation</span></button>
+        <button class="preset-btn" data-preset="overloaded">Overloaded System<span class="desc">λ &gt; μ, queue explodes</span></button>
+        <button class="preset-btn" data-preset="underutilized">Underutilized<span class="desc">Sparse, irregular output</span></button>
+        <button class="preset-btn" data-preset="clustered">High Variability<span class="desc">Bursty arrivals</span></button>
+        <button class="preset-btn" data-preset="jamming">Narrow Funnel<span class="desc">Bottleneck & jamming</span></button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+(() => {
+  const canvas = document.getElementById('sim');
+  const ctx = canvas.getContext('2d');
+  const W = canvas.width, H = canvas.height;
+
+  // Layout (pixel coordinates)
+  const FEED_START = 40;
+  const FUNNEL_START = 440;
+  const FUNNEL_END = 640;
+  const PICKUP_X = 680;
+  const FINAL_START = 720;
+  const TRACK_Y = H / 2;
+  const RADIUS = 9;
+
+  // State
+  const dates = [];
+  let nextId = 0;
+  let nextArrivalTime = 0;
+  let lastPickupTime = 0;
+  const dropoffTimes = [];
+  let simTime = 0;
+
+  // Params
+  const params = {
+    lambda: 1.5, mu: 2.0, belt: 60, friction: 0.5, funnel: 0.6, random: 0.3
+  };
+
+  // Bind sliders
+  const sliders = {
+    lambda: ['v-lambda', v => v.toFixed(1) + '/s'],
+    mu:     ['v-mu',     v => v.toFixed(1) + '/s'],
+    belt:   ['v-belt',   v => Math.round(v)],
+    friction: ['v-friction', v => v.toFixed(2)],
+    funnel: ['v-funnel', v => v.toFixed(2)],
+    random: ['v-random', v => v.toFixed(2)],
+  };
+  Object.keys(sliders).forEach(key => {
+    const el = document.getElementById(key);
+    const [labelId, fmt] = sliders[key];
+    const label = document.getElementById(labelId);
+    const update = () => {
+      params[key] = parseFloat(el.value);
+      label.textContent = fmt(params[key]);
+    };
+    el.addEventListener('input', update);
+    update();
+  });
+
+  // Presets
+  const presets = {
+    balanced:     { lambda: 1.5, mu: 2.0, belt: 60, friction: 0.4, funnel: 0.6, random: 0.2 },
+    overloaded:   { lambda: 4.0, mu: 1.2, belt: 80, friction: 0.5, funnel: 0.6, random: 0.3 },
+    underutilized:{ lambda: 0.4, mu: 3.0, belt: 50, friction: 0.3, funnel: 0.7, random: 0.5 },
+    clustered:    { lambda: 1.8, mu: 2.0, belt: 60, friction: 0.5, funnel: 0.6, random: 0.95 },
+    jamming:      { lambda: 2.5, mu: 2.0, belt: 70, friction: 0.85, funnel: 0.2, random: 0.3 },
+  };
+  document.querySelectorAll('.preset-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const p = presets[btn.dataset.preset];
+      Object.keys(p).forEach(k => {
+        document.getElementById(k).value = p[k];
+        document.getElementById(k).dispatchEvent(new Event('input'));
+      });
+    });
+  });
+
+  // Funnel geometry — returns half-width at x
+  function funnelHalfWidth(x) {
+    const maxHalf = 50;
+    const minHalf = 10 + (maxHalf - 10) * params.funnel * 0.4;
+    if (x < FUNNEL_START) return maxHalf;
+    if (x > FUNNEL_END) return minHalf;
+    const t = (x - FUNNEL_START) / (FUNNEL_END - FUNNEL_START);
+    const ease = t * t * (3 - 2 * t);
+    return maxHalf - (maxHalf - minHalf) * ease;
+  }
+
+  // Arrival scheduling — clustered exponential
+  function scheduleNextArrival() {
+    const base = 1 / Math.max(params.lambda, 0.01);
+    const jitter = params.random;
+    // Low random: near-uniform; high random: exponential w/ clustering
+    const u = Math.random();
+    const exp = -Math.log(1 - u + 1e-9);
+    const interval = base * ((1 - jitter) + jitter * exp);
+    // Clustering: occasional zero-gap arrivals
+    const clusterBoost = Math.random() < jitter * 0.4 ? 0.05 : 1;
+    nextArrivalTime = simTime + Math.max(0.02, interval * clusterBoost);
+  }
+  scheduleNextArrival();
+
+  // Spawn a date
+  function spawn() {
+    dates.push({
+      id: nextId++,
+      x: FEED_START,
+      y: TRACK_Y + (Math.random() - 0.5) * 60,
+      vx: params.belt,
+      state: 'free', // free, compressed, waiting, final
+      compressed: 0,
+    });
+  }
+
+  // Physics step
+  function step(dt) {
+    simTime += dt;
+
+    // Arrivals
+    while (simTime >= nextArrivalTime) {
+      spawn();
+      scheduleNextArrival();
+    }
+
+    // Pickup (star wheel discrete event)
+    const pickupInterval = 1 / Math.max(params.mu, 0.01);
+    if (simTime - lastPickupTime >= pickupInterval) {
+      // Remove frontmost waiting date near pickup
+      let frontIdx = -1, frontX = -Infinity;
+      for (let i = 0; i < dates.length; i++) {
+        const d = dates[i];
+        if (d.state !== 'final' && d.x >= PICKUP_X - 15 && d.x > frontX) {
+          frontX = d.x; frontIdx = i;
+        }
+      }
+      if (frontIdx >= 0) {
+        // Launch onto final belt
+        dates[frontIdx].state = 'final';
+        dates[frontIdx].x = FINAL_START;
+        dates[frontIdx].y = TRACK_Y;
+        dates[frontIdx].vx = params.belt * 1.4;
+        dropoffTimes.push(simTime);
+        if (dropoffTimes.length > 40) dropoffTimes.shift();
+        lastPickupTime = simTime;
+      }
+    }
+
+    // Update each date
+    for (let i = dates.length - 1; i >= 0; i--) {
+      const d = dates[i];
+
+      if (d.state === 'final') {
+        d.x += d.vx * dt;
+        if (d.x > W + 20) dates.splice(i, 1);
+        continue;
+      }
+
+      // Target velocity from belt
+      let targetVx = params.belt;
+
+      // Block at pickup point (physical queue)
+      if (d.x >= PICKUP_X - 2) {
+        targetVx = 0;
+        d.state = 'waiting';
+      }
+
+      // Funnel lateral convergence
+      const hw = funnelHalfWidth(d.x);
+      const dy = d.y - TRACK_Y;
+      if (Math.abs(dy) > hw) {
+        d.y = TRACK_Y + Math.sign(dy) * hw;
+      } else {
+        // Drift toward center inside funnel
+        if (d.x >= FUNNEL_START && d.x <= FUNNEL_END) {
+          d.y += (TRACK_Y - d.y) * dt * 3;
+        }
+      }
+
+      // Contact: check dates ahead
+      d.compressed = 0;
+      for (let j = 0; j < dates.length; j++) {
+        if (j === i) continue;
+        const o = dates[j];
+        if (o.state === 'final') continue;
+        const dx = o.x - d.x;
+        const dyy = o.y - d.y;
+        const dist = Math.sqrt(dx*dx + dyy*dyy);
+        const minDist = RADIUS * 2;
+        if (dist < minDist && dist > 0.1) {
+          const overlap = minDist - dist;
+          // Only block if the other is ahead
+          if (dx > 0) {
+            targetVx = Math.min(targetVx, o.vx * (1 - params.friction * 0.5));
+            d.compressed = Math.max(d.compressed, overlap / minDist);
+          }
+          // Push apart laterally to avoid stacking
+          const push = overlap * 0.3 * params.friction;
+          d.y -= (dyy / dist) * push;
+        }
+      }
+
+      // Funnel jamming: if funnel is very narrow and local density high, reduce speed
+      if (d.x >= FUNNEL_START && d.x <= FUNNEL_END && params.funnel < 0.35) {
+        const jamFactor = (0.35 - params.funnel) / 0.35;
+        targetVx *= (1 - jamFactor * d.compressed * 0.9);
+      }
+
+      // Smooth velocity toward target
+      d.vx += (targetVx - d.vx) * Math.min(1, dt * 8);
+      d.x += d.vx * dt;
+
+      // State classification
+      if (d.state !== 'waiting' || d.x < PICKUP_X - 5) {
+        if (d.compressed > 0.15) d.state = 'compressed';
+        else d.state = 'free';
+      }
+      if (d.x >= PICKUP_X - 2) d.state = 'waiting';
+    }
+  }
+
+  // Metrics
+  function computeMetrics() {
+    let queueLen = 0;
+    for (const d of dates) {
+      if (d.state === 'waiting' || (d.x > FUNNEL_END - 20 && d.state !== 'final')) queueLen++;
+    }
+
+    // Throughput over last 5 seconds
+    const window = 5;
+    const recent = dropoffTimes.filter(t => simTime - t <= window);
+    const throughput = recent.length / window;
+
+    // Spacing CV
+    let cv = null;
+    if (dropoffTimes.length >= 4) {
+      const gaps = [];
+      for (let i = 1; i < dropoffTimes.length; i++) gaps.push(dropoffTimes[i] - dropoffTimes[i-1]);
+      const mean = gaps.reduce((a,b)=>a+b,0) / gaps.length;
+      const variance = gaps.reduce((a,b)=>a+(b-mean)**2,0) / gaps.length;
+      cv = Math.sqrt(variance) / (mean + 1e-9);
+    }
+
+    // Status
+    const rho = params.lambda / params.mu;
+    let status = 'Stable', statusClass = 'status-stable';
+    if (queueLen > 12 || rho > 1.15) { status = 'Jammed'; statusClass = 'status-jammed'; }
+    else if (queueLen > 5 || rho > 0.9) { status = 'Congested'; statusClass = 'status-congested'; }
+
+    document.getElementById('m-queue').textContent = queueLen;
+    document.getElementById('m-throughput').textContent = throughput.toFixed(2);
+    document.getElementById('m-spacing').textContent = cv === null ? '—' : cv.toFixed(2);
+    document.getElementById('m-status').textContent = status;
+    const box = document.getElementById('m-status-box');
+    box.className = 'metric ' + statusClass;
+  }
+
+  // Rendering
+  function render() {
+    ctx.fillStyle = '#0f1419';
+    ctx.fillRect(0, 0, W, H);
+
+    // Region backgrounds
+    ctx.fillStyle = '#162030';
+    ctx.fillRect(FEED_START, TRACK_Y - 55, FUNNEL_START - FEED_START, 110);
+    ctx.fillRect(FINAL_START, TRACK_Y - 20, W - FINAL_START - 20, 40);
+
+    // Funnel shape
+    ctx.beginPath();
+    ctx.moveTo(FUNNEL_START, TRACK_Y - funnelHalfWidth(FUNNEL_START));
+    for (let x = FUNNEL_START; x <= FUNNEL_END; x += 4) {
+      ctx.lineTo(x, TRACK_Y - funnelHalfWidth(x));
+    }
+    ctx.lineTo(FUNNEL_END, TRACK_Y + funnelHalfWidth(FUNNEL_END));
+    for (let x = FUNNEL_END; x >= FUNNEL_START; x -= 4) {
+      ctx.lineTo(x, TRACK_Y + funnelHalfWidth(x));
+    }
+    ctx.closePath();
+    ctx.fillStyle = '#162030';
+    ctx.fill();
+    ctx.strokeStyle = '#3a4a60';
+    ctx.lineWidth = 2;
+    ctx.stroke();
+
+    // Density shading near funnel
+    let densityCount = 0;
+    for (const d of dates) {
+      if (d.x > FUNNEL_START - 40 && d.x < PICKUP_X + 10 && d.state !== 'final') densityCount++;
+    }
+    if (densityCount > 3) {
+      const alpha = Math.min(0.4, densityCount * 0.03);
+      ctx.fillStyle = `rgba(251, 191, 36, ${alpha})`;
+      ctx.fillRect(FUNNEL_START - 20, TRACK_Y - 60, PICKUP_X - FUNNEL_START + 30, 120);
+    }
+
+    // Pickup line (star wheel)
+    ctx.strokeStyle = '#ef4444';
+    ctx.lineWidth = 2;
+    ctx.setLineDash([4, 4]);
+    ctx.beginPath();
+    ctx.moveTo(PICKUP_X, TRACK_Y - 60);
+    ctx.lineTo(PICKUP_X, TRACK_Y + 60);
+    ctx.stroke();
+    ctx.setLineDash([]);
+
+    // Star wheel indicator (rotating circle)
+    const theta = simTime * params.mu * 0.8;
+    ctx.save();
+    ctx.translate(PICKUP_X, TRACK_Y - 75);
+    ctx.rotate(theta);
+    ctx.strokeStyle = '#4a9eff';
+    ctx.lineWidth = 1.5;
+    for (let i = 0; i < 6; i++) {
+      ctx.beginPath();
+      ctx.moveTo(0, 0);
+      ctx.lineTo(Math.cos(i * Math.PI / 3) * 10, Math.sin(i * Math.PI / 3) * 10);
+      ctx.stroke();
+    }
+    ctx.beginPath();
+    ctx.arc(0, 0, 10, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.restore();
+
+    // Labels
+    ctx.fillStyle = '#6a7a8f';
+    ctx.font = '11px -apple-system, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('FEED BELT', (FEED_START + FUNNEL_START) / 2, 30);
+    ctx.fillText('FUNNEL', (FUNNEL_START + FUNNEL_END) / 2, 30);
+    ctx.fillText('PICKUP', PICKUP_X, 30);
+    ctx.fillText('FINAL BELT', (FINAL_START + W - 20) / 2, 30);
+
+    // Final belt line
+    ctx.strokeStyle = '#2a3a4f';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(FINAL_START, TRACK_Y);
+    ctx.lineTo(W - 20, TRACK_Y);
+    ctx.stroke();
+
+    // Draw dates
+    for (const d of dates) {
+      let color;
+      if (d.state === 'final') color = '#4a9eff';
+      else if (d.state === 'waiting') color = '#ef4444';
+      else if (d.state === 'compressed') color = '#fbbf24';
+      else color = '#4ade80';
+
+      ctx.beginPath();
+      ctx.arc(d.x, d.y, RADIUS, 0, Math.PI * 2);
+      ctx.fillStyle = color;
+      ctx.fill();
+      ctx.strokeStyle = 'rgba(0,0,0,0.3)';
+      ctx.lineWidth = 1;
+      ctx.stroke();
+    }
+  }
+
+  // Main loop
+  let lastT = performance.now();
+  function loop(now) {
+    let dt = (now - lastT) / 1000;
+    if (dt > 0.1) dt = 0.1;
+    lastT = now;
+
+    // Sub-step for stability
+    const subs = 2;
+    for (let i = 0; i < subs; i++) step(dt / subs);
+
+    render();
+    computeMetrics();
+    requestAnimationFrame(loop);
+  }
+  requestAnimationFrame(loop);
+})();
+</script>
+</body>
+</html>
