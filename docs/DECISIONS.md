@@ -40,4 +40,4 @@ Format: `D-NNN — decision — rationale — date`. Agent-specific decisions an
 - **D-016 — Temporary Phase 2 skips.** The content package's behaviour-shape tests may use `it.skipIf(!engineReady)` only while the simulation engine is unmerged, because the parallel agents cannot run it yet. The skip condition clears automatically once `simulate` works. At the Phase 2 integration checkpoint, these tests must run and pass; a skip that is still active is a defect. — 2026-09-29
 
 ## Agent decision files
-_(indexed as agents create them)_
+- `docs/decisions/graph-analyst.md` — structural leverage formula, archetype loop-role patterns and scoring, polarity-check method, loop enumeration timings (Phase 2).
