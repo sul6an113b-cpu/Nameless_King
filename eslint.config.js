@@ -20,6 +20,7 @@ export default defineConfig([
     'playwright-report',
     'test-results',
     'Simulation',
+    '.claude',
     'packages/core/test/fixtures',
   ]),
 
