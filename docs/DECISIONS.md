@@ -37,10 +37,13 @@ Format: `D-NNN — decision — rationale — date`. Agent-specific decisions an
   - The `Simulation` file is left untouched.
 
   The user can revise any of these. — 2026-09-29
-- **D-016 — Temporary Phase 2 skips.** The content package's behaviour-shape tests may use `it.skipIf(!engineReady)` only while the simulation engine is unmerged, because the parallel agents cannot run it yet. The skip condition clears automatically once `simulate` works. At the Phase 2 integration checkpoint, these tests must run and pass; a skip that is still active is a defect. — 2026-09-29
+- **D-016 — Temporary Phase 2 skips.** The content package's behaviour-shape tests may use `it.skipIf(!engineReady)` only while the simulation engine is unmerged, because the parallel agents cannot run it yet. The skip condition clears automatically once `simulate` works. The same applies to the tests that are gated on loop analysis (methodologist decision M-5).
+  - At the Phase 2 integration checkpoint, these tests must run and pass; a skip that is still active is a defect.
+  - Verified at integration: `npx vitest run --project content` → 126 passed, 0 skipped. — 2026-09-29
 - **D-017 — `Assertion` gains `origin` (default `user`)**, so accepted AI-proposed assertions can be tagged `ai-proposed` like other elements. Additive with a default: saved v1 files still parse, so no migration is needed. — 2026-09-29
 
 ## Agent decision files
 - `docs/decisions/graph-analyst.md` — structural leverage formula, archetype loop-role patterns and scoring, polarity-check method, loop enumeration timings (Phase 2).
 - `docs/decisions/copilot.md` — tool-loop design, strict tool schemas (`toToolSchema`), budget enforcement, patch apply/preview semantics, mocking strategy (Phase 2).
 - `docs/decisions/sd-engine.md` — SE-01…SE-18: time-unit convention (365-day year = 12 months = 4 quarters), builtin grid rules, non-negative limiting (iterated to a fixed point), DELAY τ read at t0, health checks, numeric test tolerances (Phase 2).
+- `docs/decisions/methodologist.md` — sourcing and verification status per claim, illustrative parameters, shape-classifier definitions, engine behaviours the bundled models rely on (Phase 2).
