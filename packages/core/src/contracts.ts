@@ -88,6 +88,11 @@ export interface SimOptions {
   saveIds?: Id[];
   /** cooperative cancellation, checked between steps */
   signal?: { aborted: boolean };
+  /**
+   * Also return the full value vector (user variables + hidden builtin stocks/auxes, laid out per
+   * `CompiledModel.index`/`size`) at every saved step — needed by Loops That Matter to re-evaluate equations.
+   */
+  saveState?: boolean;
 }
 
 export interface SimResult {
@@ -99,6 +104,8 @@ export interface SimResult {
   /** first violation per assertion */
   assertions: { assertionId: Id; time: number; message: string }[];
   warnings: string[];
+  /** present only with `SimOptions.saveState`: one full value vector (length `CompiledModel.size`) per saved time */
+  state?: Float64Array[];
 }
 
 export interface CompiledModel {
