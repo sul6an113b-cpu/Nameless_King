@@ -37,9 +37,9 @@ This SPEC is the contract every agent codes against. The Zod schema in §3 is ow
 └────────────────────────────────────────────────────────────┘
 ```
 
-**Runtime topology.** `npm run dev` runs Vite on `http://127.0.0.1:5173` and the server on `http://127.0.0.1:8787`; Vite proxies `/api` to the server. `npm start` (after `npm run build`) runs the bundled server, which also serves `apps/web/dist` from the same origin. Both bind to `127.0.0.1` only.
+**Runtime topology.** `npm run dev` runs Vite on `http://127.0.0.1:5173` and the server on `http://127.0.0.1:8787`; Vite proxies `/api` to the server. `npm start` (after `npm run build`) runs the server, which also serves `apps/web/dist` from the same origin. Both bind to `127.0.0.1` only.
 
-**Package strategy.** Internal workspace packages export TypeScript source (`"exports": { ".": "./src/index.ts" }`); Vite, Vitest and `tsx` consume source directly. `npm run build` = `tsc -b` (typecheck all projects) + `vite build` (web) + `esbuild` bundle of the server. No package is published.
+**Package strategy.** Internal workspace packages export TypeScript source (`"exports": { ".": "./src/index.ts" }`); Vite and Vitest consume source directly, and the server runs on Node's built-in type stripping (§10). `npm run build` = `tsc --noEmit` for every workspace + `vite build` (web). No package is published.
 
 **Workspaces.** `packages/core` (`@looplab/core`), `packages/content` (`@looplab/content`), `apps/web` (`@looplab/web`), `apps/server` (`@looplab/server`). Dependency direction: `content → core`; `web → core, content`; `server → core, content`. `core` depends on nothing internal.
 
@@ -220,10 +220,10 @@ export const ModelObject = z.object({
   name: z.string().min(1).max(120),
   createdAt: z.string(), // ISO 8601
   updatedAt: z.string(),
-  frame: Frame.default({}),
+  frame: Frame.prefault({}),   // Zod 4: .prefault parses the default through the schema so inner defaults apply
   variables: z.array(Variable).default([]),
   links: z.array(Link).default([]),
-  simSpec: SimSpec.default({}),
+  simSpec: SimSpec.prefault({}),
   units: z.array(UnitDef).default([]),
   assertions: z.array(Assertion).default([]),
   scenarios: z.array(Scenario).default([]),
@@ -234,8 +234,8 @@ export const ModelObject = z.object({
     cld: z.record(z.string(), XY).default({}),
     sfd: z.record(z.string(), XY).default({}),
   }).default({ cld: {}, sfd: {} }),
-  settings: Settings.default({}),
-  decision: Decision.default({}),
+  settings: Settings.prefault({}),
+  decision: Decision.prefault({}),
 });
 
 /** Hard structural integrity. Soft issues (flow-link sync, polarity, units, …) are Model Health items, not parse errors. */
@@ -444,8 +444,34 @@ export const Patch = z.object({ id: z.string(), title: z.string().max(200), rati
 
 Every agent also owns `docs/decisions/<agent>.md` (its design decisions and tolerance justifications); `docs/DECISIONS.md` (orchestrator) indexes them. Tests are co-located (`*.test.ts[x]` next to the source) and owned by the source's owner; canvas-ui's own Playwright checks live in `apps/web/e2e/`, qa's in root `e2e/`. Each agent reports changes it needs outside its paths; the orchestrator makes them.
 
-## 10. Dependencies
-_Filled from research (exact versions); see §10 after research completes._
+## 10. Dependencies (exact versions, verified with `npm view` on 2026-09-29; full set resolves, `npm audit` 0 vulnerabilities — RESEARCH §Stack)
+
+**Runtime (15)** — adding any other runtime dependency is a hard stop for user approval.
+
+| Workspace | Package | Version | Role |
+|---|---|---|---|
+| packages/core | zod | 4.6.5 | model/patch/tool schemas (`z.config({ jitless: true })` so no generated code runs) |
+| packages/core | fast-xml-parser | 5.11.2 | XMILE import/export |
+| apps/web | react, react-dom | 19.3.0 | UI |
+| apps/web | @xyflow/react | 12.12.0 | CLD/SFD canvases |
+| apps/web | @dagrejs/dagre | 3.1.1 | auto-layout (MIT) — **replaces elkjs (EPL-2.0 OR GPL-3.0); needs your sign-off** |
+| apps/web | zustand | 5.0.15 | state (undo/redo hand-rolled) |
+| apps/web | uplot | 1.6.32 | time series + bands (10k-point capable) |
+| apps/web | html-to-image | 1.11.11 | PNG/SVG diagram export (version pinned per React Flow docs) |
+| apps/web | idb | 8.0.3 | IndexedDB autosave |
+| apps/web | marked | 18.0.14 | render copilot markdown in the panel |
+| apps/web | dompurify | 3.4.16 | sanitise that rendered markdown (model text is untrusted) |
+| apps/server | hono | 4.13.11 | HTTP routing, CORS, body limit, static files |
+| apps/server | @hono/node-server | 2.1.3 | Node adapter bound to 127.0.0.1 |
+| apps/server | @anthropic-ai/sdk | 0.129.0 | Claude API (pinned exact; 0.x releases weekly) |
+
+`packages/content` has no runtime dependencies. Hand-rolled on purpose (small, testable, no dependency): undo/redo, unit algebra, equation editor (textarea + autocomplete; CodeMirror only if the textarea proves inadequate — would need approval), Nelder–Mead, LHS, Spearman, PRNG, uPlot React wrapper, tornado/Pareto SVG, report HTML.
+
+**Dev (root, 23):** typescript **6.0.3** (7.0.2 is latest but typescript-eslint 8.71 requires `<6.1`), @types/react 19.3.0, @types/react-dom 19.3.0, @types/node 22.20.4, vite 8.3.1, @vitejs/plugin-react 6.1.1, vitest 5.0.2, @vitest/coverage-v8 5.0.2, fast-check 4.10.2, jsdom 30.1.1, @testing-library/react 16.3.3, @testing-library/dom 10.4.2, @testing-library/user-event 14.6.7, fake-indexeddb 6.2.5, @playwright/test **1.56.1** (matches the Chromium build pre-installed in this environment; on a Mac `npx playwright install chromium` fetches the matching browser), eslint 10.11.0, @eslint/js 10.0.1, typescript-eslint 8.71.0, eslint-plugin-react-hooks 7.1.1, eslint-plugin-react-refresh 0.5.7, globals 17.12.0, prettier 3.9.9, npm-run-all2 9.0.3.
+
+**Node:** `engines.node = "^22.22.2 || >=24.15.0"`, `.nvmrc` = 24 (Active LTS). Node 20 reached end-of-life on 2026-04-30 and Vitest 5 / ESLint 10 / jsdom 30 need Node 22.12+ — **this tightens the brief's "Node ≥ 20" and needs your confirmation.**
+
+**No build step for TypeScript on Node:** the server runs directly from TS source with Node's built-in type stripping (`node --env-file-if-exists=.env apps/server/src/main.ts`), so there is no tsx, dotenv, or esbuild. Consequence for all code: `erasableSyntaxOnly` (no enums, namespaces, parameter properties), explicit `.ts` import extensions, `"type": "module"`. `npm run build` = `tsc --noEmit` per workspace + `vite build`; `npm start` serves `apps/web/dist` and `/api` from the one Node process. Fallback if type stripping misbehaves with workspace symlinks: tsx as a dev-only tool (logged in DECISIONS).
 
 ## 11. Test plan — acceptance criteria → tests
 
