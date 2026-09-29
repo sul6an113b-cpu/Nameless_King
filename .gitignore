@@ -26,3 +26,6 @@ e2e/.artifacts/
 !.vscode/extensions.json
 .idea/
 *.log
+
+# agent git worktrees (local only)
+.claude/worktrees/
