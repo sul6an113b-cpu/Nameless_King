@@ -35,9 +35,13 @@ describe('reference-mode CSV import', () => {
   it('rejects bad input with a row number and never throws', () => {
     expect(parseReferenceCsv('')).toMatchObject({ ok: false });
     expect(parseReferenceCsv('a,b')).toMatchObject({ ok: false, error: 'No data rows found.' });
-    expect(parseReferenceCsv('0,1\n1,x')).toMatchObject({ ok: false, error: expect.stringContaining('Row 2') });
-    expect(parseReferenceCsv('0,1\n0,2')).toMatchObject({ ok: false, error: expect.stringContaining('ascending') });
-    expect(parseReferenceCsv('0\n1')).toMatchObject({ ok: false, error: expect.stringContaining('two columns') });
+    const err = (text: string) => {
+      const r = parseReferenceCsv(text);
+      return r.ok ? '' : r.error;
+    };
+    expect(err('0,1\n1,x')).toMatch(/^Row 2/);
+    expect(err('0,1\n0,2')).toMatch(/ascending/);
+    expect(err('0\n1')).toMatch(/two columns/);
     fc.assert(fc.property(fc.string(), (s) => typeof parseReferenceCsv(s).ok === 'boolean'));
   });
 });
@@ -64,9 +68,9 @@ describe('sketch pad', () => {
       [23, 90],
     ];
     const pts = finalizeStroke(raw, r);
-    for (let i = 1; i < pts.length; i++) expect(pts[i]![0]).toBeGreaterThan(pts[i - 1]![0]);
+    for (let i = 1; i < pts.length; i++) expect(pts[i][0]).toBeGreaterThan(pts[i - 1][0]);
     expect(pts).toHaveLength(3);
-    expect(pts[1]![1]).toBe(20);
+    expect(pts[1][1]).toBe(20);
     expect(finalizeStroke([], r)).toEqual([]);
   });
 });
@@ -89,14 +93,19 @@ describe('equation autocomplete', () => {
     expect(fns[0]).toMatchObject({ kind: 'builtin' });
     expect(fns.map((x) => x.label)).toContain('SMTH1');
     expect(suggest('Rework', ['Rework'], [])).toEqual([]); // nothing to complete once typed in full
-    expect(suggest('ste', [], builtins)[0]!.insert).toBe('STEP('); // functions open their argument list
-    expect(suggest('tim', [], builtins)[0]!.label).toBe('TIME');
+    expect(suggest('ste', [], builtins)[0].insert).toBe('STEP('); // functions open their argument list
+    expect(suggest('tim', [], builtins)[0].label).toBe('TIME');
   });
 
   it('applies a suggestion and places the caret after it', () => {
     const text = 'a + Pro * 2';
     const tok = tokenAt(text, 7)!;
-    const r = applySuggestion(text, tok, { kind: 'variable', label: 'Productivity', insert: 'Productivity', detail: '' });
+    const r = applySuggestion(text, tok, {
+      kind: 'variable',
+      label: 'Productivity',
+      insert: 'Productivity',
+      detail: '',
+    });
     expect(r).toEqual({ text: 'a + Productivity * 2', caret: 16 });
   });
 });
@@ -106,7 +115,8 @@ describe('lookup table helpers', () => {
     const rows = toRows({ xs: [0, 1, 2], ys: [0, 0.5, 1], mode: 'continuous' });
     expect(parseRows(rows)).toEqual({ ok: true, xs: [0, 1, 2], ys: [0, 0.5, 1] });
     expect(parseRows(rows.slice(0, 1))).toMatchObject({ ok: false });
-    expect(parseRows([...rows, { x: '2', y: '3' }])).toMatchObject({ ok: false, error: expect.stringContaining('Row 4') });
+    const bad = parseRows([...rows, { x: '2', y: '3' }]);
+    expect(bad.ok ? '' : bad.error).toMatch(/^Row 4/);
     expect(parseRows([{ x: 'a', y: '1' }, ...rows])).toMatchObject({ ok: false });
   });
 

@@ -22,7 +22,7 @@ describe('auto-layout (dagre)', () => {
     expect(Object.keys(pos).sort()).toEqual(['a', 'b', 'c', 'd']);
     const ps = Object.values(pos);
     for (let i = 0; i < ps.length; i++)
-      for (let j = i + 1; j < ps.length; j++) expect(overlaps(ps[i]!, ps[j]!)).toBe(false);
+      for (let j = i + 1; j < ps.length; j++) expect(overlaps(ps[i], ps[j])).toBe(false);
   });
 
   it('left-to-right: a chain goes from left to right', () => {
@@ -30,8 +30,8 @@ describe('auto-layout (dagre)', () => {
       { from: 'a', to: 'b' },
       { from: 'b', to: 'c' },
     ]);
-    expect(pos.a!.x).toBeLessThan(pos.b!.x);
-    expect(pos.b!.x).toBeLessThan(pos.c!.x);
+    expect(pos.a.x).toBeLessThan(pos.b.x);
+    expect(pos.b.x).toBeLessThan(pos.c.x);
   });
 
   it('ignores edges to unknown nodes and is deterministic', () => {
@@ -45,7 +45,7 @@ describe('auto-layout (dagre)', () => {
 
   it('runLayout falls back to the main thread where Web Workers are unavailable', async () => {
     const pos = await runLayout(['a', 'b'].map(node), [{ from: 'a', to: 'b' }]);
-    expect(pos.a!.x).toBeLessThan(pos.b!.x);
+    expect(pos.a.x).toBeLessThan(pos.b.x);
   });
 
   it('lays out 150 nodes quickly enough for the main-thread fallback', () => {
@@ -66,6 +66,6 @@ describe('free-spot placement for new nodes', () => {
     const taken: { x: number; y: number }[] = [];
     for (let i = 0; i < 12; i++) taken.push(freeSpot({ x: 0, y: 0 }, taken));
     for (let i = 0; i < taken.length; i++)
-      for (let j = i + 1; j < taken.length; j++) expect(overlaps(taken[i]!, taken[j]!)).toBe(false);
+      for (let j = i + 1; j < taken.length; j++) expect(overlaps(taken[i], taken[j])).toBe(false);
   });
 });

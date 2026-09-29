@@ -1,6 +1,15 @@
 import { describe, expect, it } from 'vitest';
 import fc from 'fast-check';
-import { arrowHead, boundaryPoint, center, curvedEdge, delayMark, pipeEdge, selfLoopEdge, type Box } from './geometry.ts';
+import {
+  arrowHead,
+  boundaryPoint,
+  center,
+  curvedEdge,
+  delayMark,
+  pipeEdge,
+  selfLoopEdge,
+  type Box,
+} from './geometry.ts';
 
 const rect = (x: number, y: number, w = 100, h = 40): Box => ({ x, y, w, h, shape: 'rect' });
 const circle = (x: number, y: number, d = 24): Box => ({ x, y, w: d, h: d, shape: 'circle' });
@@ -22,15 +31,19 @@ describe('edge geometry', () => {
 
   it('property: boundary points of rectangles lie on the (inflated) rectangle border', () => {
     fc.assert(
-      fc.property(fc.double({ min: -1000, max: 1000, noNaN: true }), fc.double({ min: -1000, max: 1000, noNaN: true }), (tx, ty) => {
-        const b = rect(0, 0, 120, 36);
-        const c = center(b);
-        fc.pre(Math.hypot(tx - c.x, ty - c.y) > 1);
-        const p = boundaryPoint(b, { x: tx, y: ty }, 0);
-        const onVertical = Math.abs(Math.abs(p.x - c.x) - 60) < 1e-6 && Math.abs(p.y - c.y) <= 18 + 1e-6;
-        const onHorizontal = Math.abs(Math.abs(p.y - c.y) - 18) < 1e-6 && Math.abs(p.x - c.x) <= 60 + 1e-6;
-        return onVertical || onHorizontal;
-      }),
+      fc.property(
+        fc.double({ min: -1000, max: 1000, noNaN: true }),
+        fc.double({ min: -1000, max: 1000, noNaN: true }),
+        (tx, ty) => {
+          const b = rect(0, 0, 120, 36);
+          const c = center(b);
+          fc.pre(Math.hypot(tx - c.x, ty - c.y) > 1);
+          const p = boundaryPoint(b, { x: tx, y: ty }, 0);
+          const onVertical = Math.abs(Math.abs(p.x - c.x) - 60) < 1e-6 && Math.abs(p.y - c.y) <= 18 + 1e-6;
+          const onHorizontal = Math.abs(Math.abs(p.y - c.y) - 18) < 1e-6 && Math.abs(p.x - c.x) <= 60 + 1e-6;
+          return onVertical || onHorizontal;
+        },
+      ),
     );
   });
 

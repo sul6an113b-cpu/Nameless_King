@@ -23,14 +23,14 @@ export interface RunsState {
   shown: number[];
   /** plotted variable → colour slot 0..7 */
   slots: Record<Id, number>;
+  /** sequence number of the next run (restarts at 1 for a new model) */
+  nextSeq: number;
   addRun: (result: SimResult, ms: number, defaults: Id[]) => void;
   removeRun: (seq: number) => void;
   toggleShown: (seq: number) => void;
   togglePlotted: (id: Id) => void;
   clear: () => void;
 }
-
-let seq = 0;
 
 function freeSlot(slots: Record<Id, number>): number | null {
   const used = new Set(Object.values(slots));
@@ -42,8 +42,10 @@ export const useRunsStore = create<RunsState>()((set, get) => ({
   runs: [],
   shown: [],
   slots: {},
+  nextSeq: 1,
   addRun(result, ms, defaults) {
-    const run: Run = { seq: ++seq, name: `Run ${seq}`, result, ms };
+    const seq = get().nextSeq;
+    const run: Run = { seq, name: `Run ${seq}`, result, ms };
     const runs = [...get().runs, run].slice(-MAX_RUNS);
     const kept = new Set(runs.map((r) => r.seq));
     const shown = [...get().shown.filter((s) => kept.has(s)), run.seq].slice(-MAX_SHOWN);
@@ -52,7 +54,7 @@ export const useRunsStore = create<RunsState>()((set, get) => ({
       slots = {};
       for (const id of defaults.slice(0, MAX_PLOTTED)) slots[id] = Object.keys(slots).length;
     }
-    set({ runs, shown, slots });
+    set({ runs, shown, slots, nextSeq: seq + 1 });
   },
   removeRun(s) {
     set({ runs: get().runs.filter((r) => r.seq !== s), shown: get().shown.filter((x) => x !== s) });
@@ -73,7 +75,7 @@ export const useRunsStore = create<RunsState>()((set, get) => ({
     set({ slots });
   },
   clear() {
-    set({ runs: [], shown: [] });
+    set({ runs: [], shown: [], slots: {}, nextSeq: 1 });
   },
 }));
 
