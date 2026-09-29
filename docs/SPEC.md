@@ -259,7 +259,7 @@ export type Link = z.infer<typeof Link>;
 
 **Other schema files (orchestrator-owned, Phase 1):**
 - `schema/patch.ts` — the patch contract (§7.3).
-- `schema/migrate.ts` — `migrateModel(json: unknown): { model: Model; fromVersion: number; warnings: string[] }`. Registry `migrations: Record<number, (json) => json>` applied in order up to `SCHEMA_VERSION`, then `ModelSchema.parse`. A file with `schemaVersion > SCHEMA_VERSION` is rejected with a clear message. Legacy/unknown JSON → typed error, never a crash.
+- `schema/migrate.ts` — `migrateModel(json: unknown): { ok: true; model; fromVersion; warnings } | { ok: false; error; issues }` (never throws). Registry `migrations: Record<number, (json) => json>` (`migrations[v]` upgrades v → v+1) applied in order up to `SCHEMA_VERSION`, then `ModelSchema.safeParse`. A file with `schemaVersion > SCHEMA_VERSION` is rejected with a clear message. Legacy/unknown JSON → typed error, never a crash.
 - `schema/factory.ts` — `createEmptyModel(name, opts?: { now?: string; id?: string }): Model`, `newId(prefix): Id` (crypto.getRandomValues, base36).
 
 ## 4. Core model operations — `packages/core/src/model/` (orchestrator, Phase 1)
@@ -282,6 +282,8 @@ Pure, immutable (`(model, …args) => Model`), each covered by unit tests. The w
 - **Never** `eval` / `new Function` on user text: parse → AST → compiled closures over a `Float64Array` state.
 
 ## 6. Module interfaces (packages/core)
+
+The TypeScript source of truth for these signatures is `packages/core/src/contracts.ts` (types) plus the Phase-1 stubs in each module's `index.ts` (functions throwing `NotImplementedError` until the owner delivers). Both were written in Phase 1; the snippets below are summaries.
 
 ### 6.1 Parser — `src/parser/` (sd-engine)
 ```ts
@@ -432,7 +434,7 @@ export const Patch = z.object({ id: z.string(), title: z.string().max(200), rati
 
 | Owner | Paths (write access) |
 |---|---|
-| orchestrator | root configs (`package.json` ×all, `package-lock.json`, `tsconfig*.json`, `eslint.config.js`, `.prettierrc`, `vitest.config.ts`, `playwright.config.ts`, `.gitignore`, `.env.example`), `packages/core/src/{schema,model}/**`, `packages/core/src/index.ts`, `scripts/**`, `README.md`, `CLAUDE.md`, `docs/{SPEC,RESEARCH,DECISIONS,PROGRESS,BLOCKERS,ARCHITECTURE}.md`, `.claude/**` |
+| orchestrator | root configs (`package.json` ×all, `package-lock.json`, `tsconfig*.json`, `eslint.config.js`, `.prettierrc.json`, `vitest.config.ts`, `playwright.config.ts`, `.gitignore`, `.env.example`, `.nvmrc`), `packages/core/src/{schema,model}/**`, `packages/core/src/{index,contracts,stub}.ts`, `tests/meta/**`, `scripts/**`, `README.md`, `CLAUDE.md`, `docs/{SPEC,RESEARCH,DECISIONS,PROGRESS,BLOCKERS,ARCHITECTURE}.md`, `.claude/**` |
 | sd-engine | `packages/core/src/{parser,units,sim}/**`, `packages/core/test/fixtures/sim/**` |
 | graph-analyst | `packages/core/src/graph/**`, `packages/core/test/fixtures/graph/**` |
 | canvas-ui | `apps/web/**` except `apps/web/src/copilot/**` and the Phase-3 analysis worker files |
@@ -471,7 +473,7 @@ Every agent also owns `docs/decisions/<agent>.md` (its design decisions and tole
 
 **Node:** `engines.node = "^22.22.2 || >=24.15.0"`, `.nvmrc` = 24 (Active LTS). Node 20 reached end-of-life on 2026-04-30 and Vitest 5 / ESLint 10 / jsdom 30 need Node 22.12+ — **this tightens the brief's "Node ≥ 20" and needs your confirmation.**
 
-**No build step for TypeScript on Node:** the server runs directly from TS source with Node's built-in type stripping (`node --env-file-if-exists=.env apps/server/src/main.ts`), so there is no tsx, dotenv, or esbuild. Consequence for all code: `erasableSyntaxOnly` (no enums, namespaces, parameter properties), explicit `.ts` import extensions, `"type": "module"`. `npm run build` = `tsc --noEmit` per workspace + `vite build`; `npm start` serves `apps/web/dist` and `/api` from the one Node process. Fallback if type stripping misbehaves with workspace symlinks: tsx as a dev-only tool (logged in DECISIONS).
+**No build step for TypeScript on Node:** the server runs directly from TS source with Node's built-in type stripping (`node apps/server/src/main.ts`; `.env` is loaded in code with `process.loadEnvFile`, because `node --watch` crashes on `--env-file-if-exists` when the file is absent), so there is no tsx, dotenv, or esbuild. Consequence for all code: `erasableSyntaxOnly` (no enums, namespaces, parameter properties), explicit `.ts` import extensions, `"type": "module"`. `npm run build` = `tsc --noEmit` per workspace + `vite build`; `npm start` serves `apps/web/dist` and `/api` from the one Node process. Fallback if type stripping misbehaves with workspace symlinks: tsx as a dev-only tool (logged in DECISIONS).
 
 ## 11. Test plan — acceptance criteria → tests
 

@@ -1,0 +1,14 @@
+{
+  "name": "@looplab/server",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Local copilot server bound to 127.0.0.1: /api/health, /api/copilot; serves the built web app.",
+  "dependencies": {
+    "@anthropic-ai/sdk": "0.129.0",
+    "@hono/node-server": "2.1.3",
+    "@looplab/content": "0.1.0",
+    "@looplab/core": "0.1.0",
+    "hono": "4.13.11"
+  }
+}

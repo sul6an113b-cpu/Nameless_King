@@ -23,5 +23,20 @@ Format: `D-NNN — decision — rationale — date`. Agent-specific decisions an
 
   All three should be revisited after Phase 4. — 2026-09-29
 
+- **D-014 — Phase 1 scaffold choices.**
+  - Contract types live in `packages/core/src/contracts.ts`.
+  - Every module starts as a stub with the SPEC signatures, so parallel agents compile against the same interfaces from day one.
+  - `migrateModel` returns a result union instead of throwing.
+  - `.env` is loaded in code with `process.loadEnvFile`. Why: `node --watch` crashes on `--env-file-if-exists` when `.env` is absent (seen on Node 22.22.2).
+  - Vite proxies `/api` with `changeOrigin: true`, because the server rejects any Host other than `127.0.0.1|localhost:<port>` (DNS-rebinding guard).
+  - `noUncheckedIndexedAccess` stays off, to keep numeric hot loops readable; strict mode is on. — 2026-09-29
+- **D-015 — Open Phase 0 questions resolved by default when the user said "Start Phase 1".**
+  - No pushing: the brief's ground rule stands.
+  - dagre replaces elkjs (license).
+  - Node `^22.22.2 || >=24.15.0`.
+  - The `Simulation` file is left untouched.
+
+  The user can revise any of these. — 2026-09-29
+
 ## Agent decision files
 _(indexed as agents create them)_

@@ -1,0 +1,13 @@
+{
+  "name": "@looplab/content",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Archetypes, Meadows leverage points and example models for LoopLab.",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "dependencies": {
+    "@looplab/core": "0.1.0"
+  }
+}

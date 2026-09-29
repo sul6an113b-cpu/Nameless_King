@@ -23,7 +23,8 @@ Source of truth: `docs/BRIEF.md` (scope), `docs/SPEC.md` (contracts). Research: 
 
 ## Ownership (see SPEC §9)
 - Write only inside your owned paths. `package.json` files, the lockfile, `tsconfig*`, lint/test configs,
-  `packages/core/src/{schema,model}` and `packages/core/src/index.ts` belong to the orchestrator — request changes in your report.
+  `packages/core/src/{schema,model}`, `packages/core/src/{index,contracts,stub}.ts` belong to the orchestrator — request changes in your report.
+- Interfaces: `packages/core/src/contracts.ts` + the stub in your module's `index.ts` are your contract; replace the stubs.
 - Record your design decisions and tolerance justifications in `docs/decisions/<your-agent>.md`.
 - New runtime dependency not in SPEC §10 = hard stop for user approval. Dev-only tools: log in DECISIONS.
 

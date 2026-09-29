@@ -1,0 +1,14 @@
+{
+  "name": "@looplab/core",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Pure TypeScript core: schema, model ops, parser, units, simulation, graph and behavioural analysis, XMILE, report, copilot protocol.",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "dependencies": {
+    "fast-xml-parser": "5.11.2",
+    "zod": "4.6.5"
+  }
+}
