@@ -1,32 +1,58 @@
-/** Copilot protocol (SPEC §7) — owner: copilot. Phase-1 stub: request/response types and patch helpers. */
-import type { Id, LoopKey, Model } from '../schema/model.ts';
+/**
+ * Copilot protocol (SPEC §6.9, §7) — owner: copilot. Request/response types shared by server and web, the
+ * output-tool schemas, and the patch helpers. Never imports the Anthropic SDK (the web bundle includes this file).
+ */
 import type { Patch } from '../schema/patch.ts';
-import { notImplemented } from '../stub.ts';
+import type { Finding } from './schemas.ts';
 
-export type CopilotMode = 'interview' | 'critique' | 'explain' | 'intervene' | 'report';
-export type Stage = 'frame' | 'map' | 'analyze' | 'quantify' | 'test' | 'decide';
+export {
+  AskQuestionInput,
+  COPILOT_MODES,
+  ChatTurnSchema,
+  CopilotModeSchema,
+  CopilotRequestSchema,
+  FindingSchema,
+  MAX_CHAT_TURNS,
+  MAX_TURN_CHARS,
+  MODE_OUTPUTS,
+  OUTPUT_TOOL_NAMES,
+  ProposePatchInput,
+  RespondInput,
+  StageSchema,
+  ToolPatchOp,
+  UPDATABLE_FIELDS,
+  modelElementIds,
+  toCorePatch,
+  type ChatTurn,
+  type CopilotMode,
+  type CopilotRequest,
+  type Finding,
+  type OutputToolName,
+  type Stage,
+  type ToCorePatchResult,
+} from './schemas.ts';
+export {
+  aiProposedElements,
+  applyPatch,
+  markConfirmed,
+  opTarget,
+  previewPatch,
+  type AiElement,
+  type ApplyPatchResult,
+  type PatchPreview,
+} from './apply.ts';
 
-export interface ChatTurn {
-  role: 'user' | 'assistant';
-  text: string;
-}
-
-export interface CopilotRequest {
-  mode: CopilotMode;
-  stage: Stage;
-  model: Model;
-  messages: ChatTurn[];
-  focus?: { elementIds?: Id[]; loopKeys?: LoopKey[] };
-}
-
+/** One tool call of a copilot request, shown in the UI trace. */
 export interface ToolTraceEntry {
   name: string;
+  /** validated input (raw input when validation failed) */
   input: unknown;
   ok: boolean;
   summary: string;
   ms: number;
 }
 
+/** Token usage of one API call (SPEC §7.2 caching). Total input = input + cacheCreation + cacheRead. */
 export interface UsageEntry {
   call: number;
   inputTokens: number;
@@ -35,40 +61,32 @@ export interface UsageEntry {
   cacheReadInputTokens: number;
 }
 
-export interface Finding {
-  elementIds: Id[];
-  severity: 'error' | 'warning' | 'info';
-  rule: string;
-  message: string;
-}
-
 export type CopilotOutput =
-  | { kind: 'patch'; patch: Patch; message?: string }
-  | { kind: 'question'; question: string; options?: string[]; why?: string }
-  | { kind: 'answer'; markdown: string; findings?: Finding[]; hypotheses: string[] };
+  | { kind: 'patch'; patch: Patch; hypotheses: string[] }
+  | { kind: 'question'; question: string; options: string[]; why: string }
+  | { kind: 'answer'; markdown: string; findings: Finding[]; hypotheses: string[] };
+
+export type CopilotErrorCode =
+  | 'bad-request'
+  | 'no-key'
+  | 'no-model'
+  | 'refusal'
+  | 'truncated'
+  | 'invalid-output'
+  | 'no-output'
+  | 'iteration-cap'
+  | 'unexpected-stop'
+  | 'api-error'
+  | 'aborted'
+  | 'network'
+  | 'internal';
+
+export interface CopilotError {
+  code: CopilotErrorCode;
+  message: string;
+  detail?: unknown;
+}
 
 export type CopilotResponse =
   | { ok: true; output: CopilotOutput; trace: ToolTraceEntry[]; usage: UsageEntry[]; model: string }
-  | { ok: false; error: { code: string; message: string; detail?: unknown }; trace: ToolTraceEntry[]; usage: UsageEntry[] };
-
-export interface ApplyPatchResult {
-  model: Model;
-  applied: string[];
-  skipped: { opId: string; reason: string }[];
-}
-
-export interface PatchPreview {
-  added: { variables: Id[]; links: Id[] };
-  changed: Id[];
-  removed: Id[];
-  /** the model as it would look if every op were accepted (for ghost rendering) */
-  preview: Model;
-}
-
-export function applyPatch(_model: Model, _patch: Patch, _acceptedOpIds: ReadonlySet<string>): ApplyPatchResult {
-  return notImplemented('protocol.applyPatch');
-}
-
-export function previewPatch(_model: Model, _patch: Patch): PatchPreview {
-  return notImplemented('protocol.previewPatch');
-}
+  | { ok: false; error: CopilotError; trace: ToolTraceEntry[]; usage: UsageEntry[] };
