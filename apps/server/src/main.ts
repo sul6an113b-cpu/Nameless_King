@@ -13,7 +13,9 @@ loadDotEnv();
 const env = readServerEnv(process.env);
 
 const copilot =
-  env.apiKey && env.model ? createCopilotHandler({ client: createAnthropicClient(env.apiKey), model: env.model }) : null;
+  env.apiKey && env.model
+    ? createCopilotHandler({ client: createAnthropicClient(env.apiKey), model: env.model })
+    : null;
 
 const app = createApp({
   port: env.port,
@@ -25,7 +27,11 @@ const app = createApp({
 });
 app.use('/*', serveStatic({ root: 'apps/web/dist' }));
 
-const status = copilot ? `ready (${env.model})` : env.apiKey ? 'disabled (no CLAUDE_MODEL)' : 'disabled (no API key in .env)';
+const status = copilot
+  ? `ready (${env.model})`
+  : env.apiKey
+    ? 'disabled (no CLAUDE_MODEL)'
+    : 'disabled (no API key in .env)';
 createServer(app, env.port, (info) => {
   console.log(`LoopLab server on http://${HOST}:${info.port} — copilot ${status}`);
 });

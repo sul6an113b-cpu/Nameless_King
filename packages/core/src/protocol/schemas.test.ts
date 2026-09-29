@@ -14,20 +14,32 @@ import {
   toCorePatch,
 } from './schemas.ts';
 
-const model = addVariable(createEmptyModel('M', { id: 'm_1', now: '2026-09-29T00:00:00.000Z' }), { id: 'v_a', name: 'A' });
+const model = addVariable(createEmptyModel('M', { id: 'm_1', now: '2026-09-29T00:00:00.000Z' }), {
+  id: 'v_a',
+  name: 'A',
+});
 
 describe('CopilotRequestSchema', () => {
   it('accepts a valid request and applies model defaults', () => {
-    const r = CopilotRequestSchema.safeParse({ mode: 'critique', stage: 'map', model, messages: [{ role: 'user', text: 'hi' }] });
+    const r = CopilotRequestSchema.safeParse({
+      mode: 'critique',
+      stage: 'map',
+      model,
+      messages: [{ role: 'user', text: 'hi' }],
+    });
     expect(r.success).toBe(true);
   });
 
   it('rejects unknown modes, invalid models and oversized chats', () => {
     expect(CopilotRequestSchema.safeParse({ mode: 'hack', stage: 'map', model, messages: [] }).success).toBe(false);
     const broken = { ...model, links: [{ id: 'l_x', from: 'v_a', to: 'v_missing' }] };
-    expect(CopilotRequestSchema.safeParse({ mode: 'explain', stage: 'map', model: broken, messages: [] }).success).toBe(false);
+    expect(CopilotRequestSchema.safeParse({ mode: 'explain', stage: 'map', model: broken, messages: [] }).success).toBe(
+      false,
+    );
     const many = Array.from({ length: 41 }, () => ({ role: 'user', text: 'x' }));
-    expect(CopilotRequestSchema.safeParse({ mode: 'explain', stage: 'map', model, messages: many }).success).toBe(false);
+    expect(CopilotRequestSchema.safeParse({ mode: 'explain', stage: 'map', model, messages: many }).success).toBe(
+      false,
+    );
   });
 });
 
@@ -42,13 +54,20 @@ describe('mode outputs', () => {
   });
 
   it('validates ask_question and respond shapes', () => {
-    expect(AskQuestionInput.safeParse({ question: 'What drives rework?', options: [], why: 'boundary' }).success).toBe(true);
+    expect(AskQuestionInput.safeParse({ question: 'What drives rework?', options: [], why: 'boundary' }).success).toBe(
+      true,
+    );
     expect(AskQuestionInput.safeParse({ question: '', options: [], why: '' }).success).toBe(false);
-    expect(AskQuestionInput.safeParse({ question: 'q', options: ['1', '2', '3', '4', '5', '6', '7'], why: '' }).success).toBe(false);
+    expect(
+      AskQuestionInput.safeParse({ question: 'q', options: ['1', '2', '3', '4', '5', '6', '7'], why: '' }).success,
+    ).toBe(false);
     expect(RespondInput.safeParse({ markdown: '# Loops', findings: [], hypotheses: [] }).success).toBe(true);
     expect(
-      RespondInput.safeParse({ markdown: 'x', findings: [{ elementIds: ['v_a'], severity: 'fatal', rule: 'r', message: 'm' }], hypotheses: [] })
-        .success,
+      RespondInput.safeParse({
+        markdown: 'x',
+        findings: [{ elementIds: ['v_a'], severity: 'fatal', rule: 'r', message: 'm' }],
+        hypotheses: [],
+      }).success,
     ).toBe(false);
   });
 });
@@ -60,7 +79,16 @@ describe('toCorePatch', () => {
     hypotheses: ['Rework raises work remaining'],
     ops: [
       { op: 'add_variable', id: 'v_r', name: 'Rework', kind: 'variable', equation: '', units: '', doc: '' },
-      { op: 'add_link', id: 'l_ar', from: 'v_a', to: 'v_r', polarity: '+', delay: false, confidence: 'medium', note: 'errors' },
+      {
+        op: 'add_link',
+        id: 'l_ar',
+        from: 'v_a',
+        to: 'v_r',
+        polarity: '+',
+        delay: false,
+        confidence: 'medium',
+        note: 'errors',
+      },
       { op: 'annotate_loop', loopKey: 'v_a>v_r', name: 'R1', note: 'n' },
       { op: 'add_scenario', id: 's_1', name: 'S', note: '', overrides: [{ varId: 'v_a', equation: '2' }] },
       { op: 'add_intervention', id: 'i_1', name: 'I', description: '', leverage: 6, scenarioId: '', rationale: '' },
@@ -76,7 +104,18 @@ describe('toCorePatch', () => {
     const r = toCorePatch(input, model, 'p_1');
     if (!r.ok) throw new Error(r.errors.join('; '));
     expect(Patch.safeParse(r.patch).success).toBe(true);
-    expect(r.patch.ops.map((o) => o.opId)).toEqual(['op1', 'op2', 'op3', 'op4', 'op5', 'op6', 'op7', 'op8', 'op9', 'op10']);
+    expect(r.patch.ops.map((o) => o.opId)).toEqual([
+      'op1',
+      'op2',
+      'op3',
+      'op4',
+      'op5',
+      'op6',
+      'op7',
+      'op8',
+      'op9',
+      'op10',
+    ]);
     expect(r.patch.ops[0]).toEqual({
       opId: 'op1',
       op: 'add',
@@ -92,9 +131,17 @@ describe('toCorePatch', () => {
   });
 
   it('annotating an already-annotated loop becomes an update', () => {
-    const annotated = { ...model, loopAnnotations: [{ key: 'v_a>v_r', name: 'old', note: '', origin: 'user' as const }] };
+    const annotated = {
+      ...model,
+      loopAnnotations: [{ key: 'v_a>v_r', name: 'old', note: '', origin: 'user' as const }],
+    };
     const r = toCorePatch(input, annotated, 'p_1');
-    expect(r.ok && r.patch.ops[2]).toMatchObject({ op: 'update', entity: 'loopAnnotation', id: 'v_a>v_r', changes: { name: 'R1' } });
+    expect(r.ok && r.patch.ops[2]).toMatchObject({
+      op: 'update',
+      entity: 'loopAnnotation',
+      id: 'v_a>v_r',
+      changes: { name: 'R1' },
+    });
   });
 
   it('rejects fields that the entity cannot update and uncoercible values', () => {

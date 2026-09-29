@@ -29,7 +29,16 @@ export const STRICT_KEYWORDS: ReadonlySet<string> = new Set([
 ]);
 
 const STRICT_FORMATS: ReadonlySet<string> = new Set([
-  'date-time', 'time', 'date', 'duration', 'email', 'hostname', 'uri', 'ipv4', 'ipv6', 'uuid',
+  'date-time',
+  'time',
+  'date',
+  'duration',
+  'email',
+  'hostname',
+  'uri',
+  'ipv4',
+  'ipv6',
+  'uuid',
 ]);
 
 /** Keywords whose value is data (copied verbatim), or a map of names → schemas. */

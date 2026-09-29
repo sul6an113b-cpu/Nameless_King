@@ -59,8 +59,13 @@ const AddVariableOp = z.object({
   op: z.literal('add_variable'),
   id: idField('New unique variable id: "v_" + lower_snake_case, e.g. "v_rework_backlog".'),
   name: z.string().min(1).max(80).describe('Noun phrase with a clear positive sense, e.g. "Rework Backlog".'),
-  kind: VarKind.describe('"variable" for a qualitative CLD variable; stock/flow/aux/constant/lookup only when quantifying.'),
-  equation: z.string().max(4000).describe('Equation, initial value (stock) or number (constant); "" for a CLD variable.'),
+  kind: VarKind.describe(
+    '"variable" for a qualitative CLD variable; stock/flow/aux/constant/lookup only when quantifying.',
+  ),
+  equation: z
+    .string()
+    .max(4000)
+    .describe('Equation, initial value (stock) or number (constant); "" for a CLD variable.'),
   units: z.string().max(120).describe('Units such as "tasks", "tasks/week", "dmnl"; "" if unknown.'),
   doc: z.string().max(4000).describe('One-line definition; say "Hypothesis:" when it is one.'),
 });
@@ -88,9 +93,7 @@ const AddScenarioOp = z.object({
   id: idField('New unique scenario id: "s_" + short name.'),
   name: z.string().min(1).max(80),
   note: z.string().max(2000),
-  overrides: z
-    .array(z.object({ varId: idField('Variable id to override.'), equation: z.string().max(4000) }))
-    .max(50),
+  overrides: z.array(z.object({ varId: idField('Variable id to override.'), equation: z.string().max(4000) })).max(50),
 });
 
 const AddInterventionOp = z.object({
@@ -163,7 +166,10 @@ export type ProposePatchInput = z.infer<typeof ProposePatchInput>;
 
 export const AskQuestionInput = z.object({
   question: z.string().min(1).max(1000),
-  options: z.array(z.string().min(1).max(200)).max(6).describe('Up to 6 short suggested answers; [] for open questions.'),
+  options: z
+    .array(z.string().min(1).max(200))
+    .max(6)
+    .describe('Up to 6 short suggested answers; [] for open questions.'),
   why: z.string().max(1000).describe('Why the answer matters for the model.'),
 });
 export type AskQuestionInput = z.infer<typeof AskQuestionInput>;
@@ -189,7 +195,8 @@ const BOOL = z.enum(['true', 'false']).transform((s) => s === 'true');
 const LEVERAGE = z.coerce.number().int().min(1).max(12);
 
 function coerceField(entity: PatchEntity, field: string, value: string): unknown {
-  if (field === 'nonNegative' || field === 'delay' || field === 'enabled') return BOOL.parse(value.trim().toLowerCase());
+  if (field === 'nonNegative' || field === 'delay' || field === 'enabled')
+    return BOOL.parse(value.trim().toLowerCase());
   if (entity === 'intervention' && field === 'leverage') return LEVERAGE.parse(value.trim());
   if (entity === 'intervention' && field === 'scenarioId') return value.trim() === '' ? null : value.trim();
   return value;
@@ -221,7 +228,13 @@ export function toCorePatch(input: ProposePatchInput, model: Model, patchId: str
       case 'annotate_loop':
         ops.push(
           annotated.has(op.loopKey)
-            ? { opId, op: 'update', entity: 'loopAnnotation', id: op.loopKey, changes: { name: op.name, note: op.note } }
+            ? {
+                opId,
+                op: 'update',
+                entity: 'loopAnnotation',
+                id: op.loopKey,
+                changes: { name: op.name, note: op.note },
+              }
             : { opId, op: 'add', entity: 'loopAnnotation', value: { key: op.loopKey, name: op.name, note: op.note } },
         );
         break;
@@ -232,7 +245,12 @@ export function toCorePatch(input: ProposePatchInput, model: Model, patchId: str
       }
       case 'add_intervention': {
         const { op: _o, scenarioId, ...rest } = op;
-        ops.push({ opId, op: 'add', entity: 'intervention', value: { ...rest, scenarioId: scenarioId.trim() || null } });
+        ops.push({
+          opId,
+          op: 'add',
+          entity: 'intervention',
+          value: { ...rest, scenarioId: scenarioId.trim() || null },
+        });
         break;
       }
       case 'add_assertion': {
@@ -243,11 +261,19 @@ export function toCorePatch(input: ProposePatchInput, model: Model, patchId: str
       case 'update': {
         const allowed: readonly string[] = UPDATABLE_FIELDS[op.entity];
         if (!allowed.includes(op.field)) {
-          errors.push(`ops[${i}]: field "${op.field}" cannot be updated on a ${op.entity}; allowed: ${allowed.join(', ')}`);
+          errors.push(
+            `ops[${i}]: field "${op.field}" cannot be updated on a ${op.entity}; allowed: ${allowed.join(', ')}`,
+          );
           break;
         }
         try {
-          ops.push({ opId, op: 'update', entity: op.entity, id: op.id, changes: { [op.field]: coerceField(op.entity, op.field, op.value) } });
+          ops.push({
+            opId,
+            op: 'update',
+            entity: op.entity,
+            id: op.id,
+            changes: { [op.field]: coerceField(op.entity, op.field, op.value) },
+          });
         } catch {
           errors.push(`ops[${i}]: invalid value "${op.value.slice(0, 40)}" for ${op.entity}.${op.field}`);
         }

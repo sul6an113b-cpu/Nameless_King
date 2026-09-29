@@ -55,14 +55,18 @@ const usageLine = (u: UsageEntry) =>
 async function run(label: string, req: CopilotRequest): Promise<CopilotResponse> {
   const t0 = Date.now();
   const res = await handler(req);
-  console.log(`\n${label}: ${res.ok ? res.output.kind : `error ${res.error.code}`} in ${((Date.now() - t0) / 1000).toFixed(1)} s`);
+  console.log(
+    `\n${label}: ${res.ok ? res.output.kind : `error ${res.error.code}`} in ${((Date.now() - t0) / 1000).toFixed(1)} s`,
+  );
   console.log(`  tools: ${res.trace.map((t) => `${t.name}${t.ok ? '' : '(!)'}`).join(', ') || '-'}`);
   res.usage.forEach((u) => console.log(usageLine(u)));
   if (!res.ok) {
     console.log(`  ${res.error.message}`);
     if (res.error.detail !== undefined) console.log(`  detail: ${JSON.stringify(res.error.detail).slice(0, 600)}`);
     if (/too complex|schema/i.test(res.error.message))
-      console.log('  hint: if the strict propose_patch schema is rejected, set PROPOSE_PATCH_STRICT = false in copilot/tools.ts');
+      console.log(
+        '  hint: if the strict propose_patch schema is rejected, set PROPOSE_PATCH_STRICT = false in copilot/tools.ts',
+      );
   }
   return res;
 }
@@ -89,12 +93,19 @@ if (interview.ok && interview.output.kind === 'patch') {
   const patch = interview.output.patch;
   check(Patch.safeParse(patch).success, `patch is schema-valid (${patch.ops.length} ops: "${patch.title}")`);
   const applied = applyPatch(sample, patch, new Set(patch.ops.map((o) => o.opId)));
-  check(applied.skipped.length === 0, `every op applies (${applied.applied.length} applied, ${applied.skipped.length} skipped)`);
+  check(
+    applied.skipped.length === 0,
+    `every op applies (${applied.applied.length} applied, ${applied.skipped.length} skipped)`,
+  );
   patched = applied.model;
   check(ModelSchema.safeParse(patched).success, 'patched model satisfies ModelSchema');
-  check(patched.variables.length >= 3 && patched.links.length >= 3, `CLD has ${patched.variables.length} variables, ${patched.links.length} links`);
   check(
-    patched.variables.every((v) => v.origin === 'ai-proposed') && patched.links.every((l) => l.origin === 'ai-proposed'),
+    patched.variables.length >= 3 && patched.links.length >= 3,
+    `CLD has ${patched.variables.length} variables, ${patched.links.length} links`,
+  );
+  check(
+    patched.variables.every((v) => v.origin === 'ai-proposed') &&
+      patched.links.every((l) => l.origin === 'ai-proposed'),
     'accepted elements are tagged ai-proposed',
   );
 }
@@ -107,7 +118,10 @@ const critique = await run('Critique', {
 });
 check(critique.ok, 'Critique returns a valid answer');
 const firstCall = critique.usage[0];
-check((firstCall?.cacheReadInputTokens ?? 0) > 0, `second request reads the cached prefix (${firstCall?.cacheReadInputTokens ?? 0} tokens)`);
+check(
+  (firstCall?.cacheReadInputTokens ?? 0) > 0,
+  `second request reads the cached prefix (${firstCall?.cacheReadInputTokens ?? 0} tokens)`,
+);
 
 const all = [...interview.usage, ...critique.usage];
 const sum = (k: keyof UsageEntry) => all.reduce((s, u) => s + u[k], 0);

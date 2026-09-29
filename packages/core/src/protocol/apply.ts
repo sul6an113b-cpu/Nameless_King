@@ -114,7 +114,11 @@ function applyVariable(m: Model, op: PatchOp): Model {
     return next;
   }
   if (op.op === 'remove') return removeVariable(m, op.id);
-  checkFields(op.changes, ['name', 'kind', 'equation', 'units', 'doc', 'nonNegative', 'graph', 'uncertainty'], 'variable');
+  checkFields(
+    op.changes,
+    ['name', 'kind', 'equation', 'units', 'doc', 'nonNegative', 'graph', 'uncertainty'],
+    'variable',
+  );
   const { name, kind, ...rest } = op.changes;
   let next = m;
   if (kind !== undefined) next = setKind(next, op.id, parseEntity(VarKind, kind, 'kind'));
@@ -140,7 +144,11 @@ function applyLoopAnnotation(m: Model, op: PatchOp): Model {
   const current = list.find((x) => x.key === op.id) ?? fail(`loop annotation "${op.id}" not found`);
   if (op.op === 'remove') return { ...m, loopAnnotations: list.filter((x) => x !== current) };
   checkFields(op.changes, ['name', 'note'], 'loop annotation');
-  const next = parseEntity(LoopAnnotation, { ...current, ...op.changes, key: current.key, origin: AI }, 'loop annotation');
+  const next = parseEntity(
+    LoopAnnotation,
+    { ...current, ...op.changes, key: current.key, origin: AI },
+    'loop annotation',
+  );
   return { ...m, loopAnnotations: list.map((x) => (x === current ? next : x)) };
 }
 
@@ -253,7 +261,11 @@ export function applyPatch(model: Model, patch: Patch, acceptedOpIds: ReadonlySe
   const check = ModelSchema.safeParse(r.model);
   if (!check.success) {
     const reason = `the patched model is invalid (${check.error.issues[0]?.message ?? 'unknown'}); nothing was applied`;
-    return { model, applied: [], skipped: patch.ops.filter((o) => acceptedOpIds.has(o.opId)).map((o) => ({ opId: o.opId, reason })) };
+    return {
+      model,
+      applied: [],
+      skipped: patch.ops.filter((o) => acceptedOpIds.has(o.opId)).map((o) => ({ opId: o.opId, reason })),
+    };
   }
   return r;
 }
@@ -305,11 +317,16 @@ export function aiProposedElements(model: Model): AiElement[] {
   for (const v of model.variables) if (v.origin === AI) out.push({ entity: 'variable', id: v.id, label: v.name });
   for (const l of model.links)
     if (l.origin === AI)
-      out.push({ entity: 'link', id: l.id, label: `${name.get(l.from) ?? l.from} → ${name.get(l.to) ?? l.to} (${l.polarity})` });
+      out.push({
+        entity: 'link',
+        id: l.id,
+        label: `${name.get(l.from) ?? l.from} → ${name.get(l.to) ?? l.to} (${l.polarity})`,
+      });
   for (const a of model.loopAnnotations)
     if (a.origin === AI) out.push({ entity: 'loopAnnotation', id: a.key, label: a.name || a.key });
   for (const s of model.scenarios) if (s.origin === AI) out.push({ entity: 'scenario', id: s.id, label: s.name });
-  for (const iv of model.interventions) if (iv.origin === AI) out.push({ entity: 'intervention', id: iv.id, label: iv.name });
+  for (const iv of model.interventions)
+    if (iv.origin === AI) out.push({ entity: 'intervention', id: iv.id, label: iv.name });
   return out;
 }
 

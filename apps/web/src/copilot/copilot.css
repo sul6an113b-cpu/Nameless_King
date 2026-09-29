@@ -1,0 +1,268 @@
+/* Copilot panel (owner: copilot). Uses the theme tokens from styles.css; fits the 340 px dock. */
+.copilot {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  font-size: 13px;
+}
+.copilot button {
+  font: inherit;
+  padding: 4px 8px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--bg);
+  color: var(--text);
+  cursor: pointer;
+}
+.copilot button:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+.copilot button:focus-visible,
+.copilot textarea:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+.copilot .cp-primary {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+}
+.cp-modes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+.cp-modes button {
+  flex: 1 1 auto;
+  padding: 4px 6px;
+  font-size: 12px;
+}
+.cp-modes button.active {
+  border-color: var(--accent);
+  color: var(--accent);
+  font-weight: 600;
+}
+.cp-small {
+  font-size: 12px;
+  margin: 0;
+}
+.cp-row {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+.cp-log {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.cp-msg {
+  padding: 8px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  overflow-wrap: anywhere;
+}
+.cp-msg p {
+  margin: 0 0 4px;
+}
+.cp-user {
+  background: var(--bg);
+  align-self: flex-end;
+  max-width: 90%;
+}
+.cp-assistant {
+  background: var(--panel);
+}
+.cp-question {
+  font-weight: 600;
+}
+.cp-options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 4px;
+}
+.cp-md h1,
+.cp-md h2,
+.cp-md h3 {
+  font-size: 13px;
+  margin: 8px 0 4px;
+}
+.cp-md p,
+.cp-md ul,
+.cp-md ol {
+  margin: 0 0 6px;
+}
+.cp-md ul,
+.cp-md ol,
+.cp-findings,
+.cp-hyp {
+  padding-left: 18px;
+}
+.cp-md code,
+.copilot code {
+  font-size: 12px;
+}
+.cp-findings,
+.cp-hyp {
+  margin: 4px 0 0;
+  font-size: 12px;
+}
+.cp-sev-error strong {
+  color: var(--reinforcing);
+}
+.cp-sev-warning strong {
+  color: var(--accent);
+}
+.cp-hyp li {
+  font-style: italic;
+}
+.cp-run {
+  margin-top: 6px;
+}
+.cp-trace summary,
+.cp-ai summary {
+  cursor: pointer;
+  font-size: 12px;
+  color: var(--muted);
+}
+.cp-trace ol {
+  margin: 4px 0 0;
+  padding-left: 18px;
+  font-size: 12px;
+}
+.cp-bad code {
+  color: var(--reinforcing);
+}
+.cp-usage {
+  list-style: none;
+  margin: 4px 0 0;
+  padding: 0;
+  font:
+    11px/1.4 ui-monospace,
+    SFMono-Regular,
+    Menlo,
+    monospace;
+  color: var(--muted);
+}
+.cp-error {
+  border: 1px solid var(--reinforcing);
+  border-radius: 8px;
+  padding: 8px;
+}
+.cp-error p {
+  margin: 4px 0 0;
+}
+.cp-patch {
+  border: 1px solid var(--accent);
+  border-radius: 8px;
+  padding: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.cp-patch-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+}
+.cp-ops {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.cp-op {
+  display: grid;
+  grid-template-columns: 14px 1fr auto auto;
+  gap: 4px;
+  align-items: start;
+  padding: 4px;
+  border-radius: 6px;
+}
+.cp-op-accept {
+  background: color-mix(in srgb, var(--balancing) 14%, transparent);
+}
+.cp-op-reject .cp-op-text,
+.cp-op-reject .cp-sign {
+  opacity: 0.55;
+  text-decoration: line-through;
+}
+.cp-op-text {
+  overflow-wrap: anywhere;
+}
+.cp-op-warn {
+  display: block;
+  font-size: 11px;
+  color: var(--reinforcing);
+}
+.cp-sign {
+  font-weight: 700;
+  text-align: center;
+}
+.cp-sign-add {
+  color: var(--balancing);
+}
+.cp-sign-remove {
+  color: var(--reinforcing);
+}
+.cp-sign-update {
+  color: var(--accent);
+}
+.copilot .cp-icon {
+  padding: 0 6px;
+  line-height: 20px;
+}
+.copilot .cp-icon[aria-pressed='true'] {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+.cp-ai ul {
+  list-style: none;
+  margin: 4px 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.cp-ai li {
+  display: flex;
+  justify-content: space-between;
+  gap: 6px;
+  align-items: center;
+}
+.cp-ai li button {
+  flex: none;
+  white-space: nowrap;
+}
+.cp-badge {
+  display: inline-block;
+  min-width: 18px;
+  padding: 0 4px;
+  border-radius: 9px;
+  background: var(--accent);
+  color: #fff;
+  text-align: center;
+  font-size: 11px;
+}
+.cp-composer {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.cp-composer textarea {
+  width: 100%;
+  resize: vertical;
+  font: inherit;
+  padding: 6px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--panel);
+  color: var(--text);
+}

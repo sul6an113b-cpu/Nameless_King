@@ -4,7 +4,13 @@
  * (tools → system) never changes.
  */
 import type Anthropic from '@anthropic-ai/sdk';
-import { AskQuestionInput, OUTPUT_TOOL_NAMES, ProposePatchInput, RespondInput, type OutputToolName } from '@looplab/core';
+import {
+  AskQuestionInput,
+  OUTPUT_TOOL_NAMES,
+  ProposePatchInput,
+  RespondInput,
+  type OutputToolName,
+} from '@looplab/core';
 import type { z } from 'zod';
 import { READ_TOOL_DESCRIPTIONS, READ_TOOL_INPUTS, READ_TOOL_NAMES, type ReadToolName } from './readTools.ts';
 import { toToolSchema } from './toolSchema.ts';
@@ -64,4 +70,5 @@ export const TOOLS: readonly Anthropic.Tool[] = deepFreeze(
 );
 
 export const isReadTool = (name: string): name is ReadToolName => (READ_TOOL_NAMES as readonly string[]).includes(name);
-export const isOutputTool = (name: string): name is OutputToolName => (OUTPUT_TOOL_NAMES as readonly string[]).includes(name);
+export const isOutputTool = (name: string): name is OutputToolName =>
+  (OUTPUT_TOOL_NAMES as readonly string[]).includes(name);

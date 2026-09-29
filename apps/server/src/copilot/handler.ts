@@ -46,7 +46,11 @@ const MAX_TOOL_RESULT_CHARS = 30_000;
 
 /** The frozen system block; its cache breakpoint covers tools + system (tools render first). */
 export const SYSTEM_BLOCKS: readonly Anthropic.TextBlockParam[] = Object.freeze([
-  Object.freeze({ type: 'text' as const, text: SYSTEM_PROMPT, cache_control: Object.freeze({ type: 'ephemeral' as const }) }),
+  Object.freeze({
+    type: 'text' as const,
+    text: SYSTEM_PROMPT,
+    cache_control: Object.freeze({ type: 'ephemeral' as const }),
+  }),
 ]);
 
 export interface CopilotHandlerOptions {
@@ -62,7 +66,10 @@ export type CopilotHandler = (req: CopilotRequest, opts?: { signal?: AbortSignal
 /** Inputs are Zod-validated against READ_TOOL_INPUTS[name] before the call. */
 type AnyReadTool = (model: Model, input: unknown, ctx: ToolContext) => ToolRunResult;
 
-export function requestBody(model: string, messages: Anthropic.MessageParam[]): Anthropic.MessageCreateParamsNonStreaming {
+export function requestBody(
+  model: string,
+  messages: Anthropic.MessageParam[],
+): Anthropic.MessageCreateParamsNonStreaming {
   return {
     model,
     max_tokens: MAX_TOKENS,
@@ -86,16 +93,24 @@ function toUsage(call: number, u: Anthropic.Usage): UsageEntry {
 }
 
 function apiError(e: unknown, aborted: boolean): CopilotError {
-  if (e instanceof Anthropic.APIUserAbortError || aborted) return { code: 'aborted', message: 'The request was cancelled; nothing was changed.' };
+  if (e instanceof Anthropic.APIUserAbortError || aborted)
+    return { code: 'aborted', message: 'The request was cancelled; nothing was changed.' };
   if (e instanceof Anthropic.APIConnectionError)
-    return { code: 'api-error', message: 'Could not reach the Anthropic API (connection error or timeout); nothing was changed.' };
+    return {
+      code: 'api-error',
+      message: 'Could not reach the Anthropic API (connection error or timeout); nothing was changed.',
+    };
   if (e instanceof Anthropic.APIError) {
     const body = e.error as { error?: { message?: unknown } } | undefined;
     const detail = typeof body?.error?.message === 'string' ? body.error.message.slice(0, 300) : 'request failed';
     return {
       code: 'api-error',
       message: `Anthropic API error${typeof e.status === 'number' ? ` ${e.status}` : ''}${e.type ? ` (${e.type})` : ''}: ${detail}`,
-      detail: { status: typeof e.status === 'number' ? e.status : null, type: e.type ?? null, requestId: e.requestID ?? null },
+      detail: {
+        status: typeof e.status === 'number' ? e.status : null,
+        type: e.type ?? null,
+        requestId: e.requestID ?? null,
+      },
     };
   }
   return { code: 'internal', message: 'The copilot failed unexpectedly; nothing was changed.' };
@@ -108,7 +123,8 @@ const prettify = (e: z.ZodError) => z.prettifyError(e);
 /** Validate an output-tool call: allowed in this mode, Zod-valid, and (for patches) applicable to the model. */
 export function validateOutput(name: OutputToolName, input: unknown, req: CopilotRequest): Validated {
   const allowed = MODE_OUTPUTS[req.mode];
-  if (!allowed.includes(name)) return { ok: false, error: `${name} is not allowed in ${req.mode} mode; answer with ${allowed.join(' or ')}.` };
+  if (!allowed.includes(name))
+    return { ok: false, error: `${name} is not allowed in ${req.mode} mode; answer with ${allowed.join(' or ')}.` };
   switch (name) {
     case 'propose_patch': {
       const p = ProposePatchInput.safeParse(input);
@@ -122,7 +138,11 @@ export function validateOutput(name: OutputToolName, input: unknown, req: Copilo
         const lines = check.skipped.map((s) => `- ops[${index.get(s.opId)}]: ${s.reason}`);
         return { ok: false, error: `These ops cannot be applied to the current model:\n${lines.join('\n')}` };
       }
-      return { ok: true, output: { kind: 'patch', patch, hypotheses: p.data.hypotheses }, summary: `patch with ${patch.ops.length} ops` };
+      return {
+        ok: true,
+        output: { kind: 'patch', patch, hypotheses: p.data.hypotheses },
+        summary: `patch with ${patch.ops.length} ops`,
+      };
     }
     case 'ask_question': {
       const q = AskQuestionInput.safeParse(input);
@@ -135,7 +155,10 @@ export function validateOutput(name: OutputToolName, input: unknown, req: Copilo
       const known = modelElementIds(req.model);
       const unknown = [...new Set(r.data.findings.flatMap((f) => f.elementIds).filter((id) => !known.has(id)))];
       if (unknown.length > 0)
-        return { ok: false, error: `findings cite element ids that are not in the model: ${unknown.join(', ')}. Cite ids from <model_data>.` };
+        return {
+          ok: false,
+          error: `findings cite element ids that are not in the model: ${unknown.join(', ')}. Cite ids from <model_data>.`,
+        };
       return { ok: true, output: { kind: 'answer', ...r.data }, summary: `answer, ${r.data.findings.length} findings` };
     }
   }
@@ -157,21 +180,35 @@ export function createCopilotHandler(options: CopilotHandlerOptions): CopilotHan
 
     const modelJson = jsonData(modelForPrompt(req.model));
     if (modelJson.length > MAX_MODEL_CHARS)
-      return fail({ code: 'bad-request', message: `The model is too large for the copilot (${modelJson.length} > ${MAX_MODEL_CHARS} characters of JSON).` });
+      return fail({
+        code: 'bad-request',
+        message: `The model is too large for the copilot (${modelJson.length} > ${MAX_MODEL_CHARS} characters of JSON).`,
+      });
 
-    const messages: Anthropic.MessageParam[] = [{ role: 'user', content: [{ type: 'text', text: buildRequestMessage(req, modelJson) }] }];
+    const messages: Anthropic.MessageParam[] = [
+      { role: 'user', content: [{ type: 'text', text: buildRequestMessage(req, modelJson) }] },
+    ];
     const ctx: ToolContext = { simulated: [] };
     let readCalls = 0;
     let retried = false;
 
     const runReadTool = (call: Anthropic.ToolUseBlock): Anthropic.ToolResultBlockParam => {
       const t0 = performance.now();
-      const result = (content: string, isError: boolean, entry: Omit<ToolTraceEntry, 'ms'>): Anthropic.ToolResultBlockParam => {
+      const result = (
+        content: string,
+        isError: boolean,
+        entry: Omit<ToolTraceEntry, 'ms'>,
+      ): Anthropic.ToolResultBlockParam => {
         trace.push({ ...entry, ms: Math.round(performance.now() - t0) });
         return { type: 'tool_result', tool_use_id: call.id, content, ...(isError ? { is_error: true } : {}) };
       };
       if (!isReadTool(call.name))
-        return result(`Unknown tool "${call.name}".`, true, { name: call.name, input: call.input, ok: false, summary: 'unknown tool' });
+        return result(`Unknown tool "${call.name}".`, true, {
+          name: call.name,
+          input: call.input,
+          ok: false,
+          summary: 'unknown tool',
+        });
       if (readCalls >= MAX_READ_CALLS)
         return result(
           `Read-tool budget exhausted (${MAX_READ_CALLS} calls). Answer now with an output tool (${allowed}).`,
@@ -180,21 +217,42 @@ export function createCopilotHandler(options: CopilotHandlerOptions): CopilotHan
         );
       const parsed = READ_TOOL_INPUTS[call.name].safeParse(call.input);
       if (!parsed.success)
-        return result(`Invalid input for ${call.name}:\n${prettify(parsed.error)}`, true, { name: call.name, input: call.input, ok: false, summary: 'invalid input' });
+        return result(`Invalid input for ${call.name}:\n${prettify(parsed.error)}`, true, {
+          name: call.name,
+          input: call.input,
+          ok: false,
+          summary: 'invalid input',
+        });
       readCalls++;
       try {
         const run = (readTools[call.name] as AnyReadTool)(req.model, parsed.data, ctx);
-        return result(toolText(run.content), false, { name: call.name, input: parsed.data, ok: run.ok, summary: run.summary });
+        return result(toolText(run.content), false, {
+          name: call.name,
+          input: parsed.data,
+          ok: run.ok,
+          summary: run.summary,
+        });
       } catch (e) {
-        const message = e instanceof ToolInputError ? e.message : `${call.name} failed: ${e instanceof Error ? e.message : String(e)}`;
-        return result(message, true, { name: call.name, input: parsed.data, ok: false, summary: message.slice(0, 120) });
+        const message =
+          e instanceof ToolInputError
+            ? e.message
+            : `${call.name} failed: ${e instanceof Error ? e.message : String(e)}`;
+        return result(message, true, {
+          name: call.name,
+          input: parsed.data,
+          ok: false,
+          summary: message.slice(0, 120),
+        });
       }
     };
 
     for (let iteration = 1; iteration <= MAX_ITERATIONS; iteration++) {
       let res: Anthropic.Message;
       try {
-        res = await options.client.messages.create(requestBody(options.model, messages), signal ? { signal } : undefined);
+        res = await options.client.messages.create(
+          requestBody(options.model, messages),
+          signal ? { signal } : undefined,
+        );
       } catch (e) {
         return fail(apiError(e, signal?.aborted ?? false));
       }
@@ -202,23 +260,41 @@ export function createCopilotHandler(options: CopilotHandlerOptions): CopilotHan
 
       if (res.stop_reason === 'refusal') {
         const category = res.stop_details?.category;
-        return fail({ code: 'refusal', message: `Claude declined this request${category ? ` (category: ${category})` : ''}; nothing was changed.` });
+        return fail({
+          code: 'refusal',
+          message: `Claude declined this request${category ? ` (category: ${category})` : ''}; nothing was changed.`,
+        });
       }
       if (res.stop_reason === 'max_tokens' || res.stop_reason === 'model_context_window_exceeded')
-        return fail({ code: 'truncated', message: 'The answer was cut off before it was complete; nothing was changed.' });
+        return fail({
+          code: 'truncated',
+          message: 'The answer was cut off before it was complete; nothing was changed.',
+        });
       if (res.stop_reason !== 'tool_use' && res.stop_reason !== 'end_turn')
-        return fail({ code: 'unexpected-stop', message: `Unexpected stop reason "${res.stop_reason ?? 'none'}"; nothing was changed.` });
+        return fail({
+          code: 'unexpected-stop',
+          message: `Unexpected stop reason "${res.stop_reason ?? 'none'}"; nothing was changed.`,
+        });
 
       // Verbatim echo (thinking blocks included). An empty turn is not sent back; consecutive user turns are merged by the API.
       if (res.content.length > 0) messages.push({ role: 'assistant', content: res.content });
       const calls = res.content.filter((b): b is Anthropic.ToolUseBlock => b.type === 'tool_use');
 
       if (calls.length === 0) {
-        if (retried) return fail({ code: 'no-output', message: 'Claude answered without an output tool twice; nothing was changed.' });
+        if (retried)
+          return fail({
+            code: 'no-output',
+            message: 'Claude answered without an output tool twice; nothing was changed.',
+          });
         retried = true;
         messages.push({
           role: 'user',
-          content: [{ type: 'text', text: `Answer by calling an output tool (${allowed}). Plain text is not shown to the engineer.` }],
+          content: [
+            {
+              type: 'text',
+              text: `Answer by calling an output tool (${allowed}). Plain text is not shown to the engineer.`,
+            },
+          ],
         });
         continue;
       }
@@ -230,10 +306,20 @@ export function createCopilotHandler(options: CopilotHandlerOptions): CopilotHan
           continue;
         }
         const v = validateOutput(call.name, call.input, req);
-        trace.push({ name: call.name, input: call.input, ok: v.ok, summary: v.ok ? v.summary : 'invalid output', ms: 0 });
+        trace.push({
+          name: call.name,
+          input: call.input,
+          ok: v.ok,
+          summary: v.ok ? v.summary : 'invalid output',
+          ms: 0,
+        });
         if (v.ok) return { ok: true, output: v.output, trace, usage, model: options.model };
         if (retried)
-          return fail({ code: 'invalid-output', message: `Claude's ${call.name} answer was invalid twice; nothing was changed.`, detail: v.error });
+          return fail({
+            code: 'invalid-output',
+            message: `Claude's ${call.name} answer was invalid twice; nothing was changed.`,
+            detail: v.error,
+          });
         retried = true;
         results.push({
           type: 'tool_result',
@@ -244,6 +330,9 @@ export function createCopilotHandler(options: CopilotHandlerOptions): CopilotHan
       }
       messages.push({ role: 'user', content: results });
     }
-    return fail({ code: 'iteration-cap', message: `Stopped after ${MAX_ITERATIONS} API calls without an answer; nothing was changed.` });
+    return fail({
+      code: 'iteration-cap',
+      message: `Stopped after ${MAX_ITERATIONS} API calls without an answer; nothing was changed.`,
+    });
   };
 }

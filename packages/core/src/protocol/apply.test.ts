@@ -17,13 +17,51 @@ function base(): Model {
 const patch = (ops: PatchOp[]): Patch => ({ id: 'p_1', title: 't', rationale: 'r', ops });
 
 const FULL: PatchOp[] = [
-  { opId: 'op1', op: 'add', entity: 'variable', value: { id: 'v_c', name: 'Quality', kind: 'variable', equation: '', units: '', doc: '' } },
-  { opId: 'op2', op: 'add', entity: 'link', value: { id: 'l_bc', from: 'v_b', to: 'v_c', polarity: '-', delay: true, note: 'rework hurts quality', confidence: 'medium' } },
-  { opId: 'op3', op: 'add', entity: 'link', value: { id: 'l_ca', from: 'v_c', to: 'v_a', polarity: '-', delay: false, note: '', confidence: 'low' } },
+  {
+    opId: 'op1',
+    op: 'add',
+    entity: 'variable',
+    value: { id: 'v_c', name: 'Quality', kind: 'variable', equation: '', units: '', doc: '' },
+  },
+  {
+    opId: 'op2',
+    op: 'add',
+    entity: 'link',
+    value: {
+      id: 'l_bc',
+      from: 'v_b',
+      to: 'v_c',
+      polarity: '-',
+      delay: true,
+      note: 'rework hurts quality',
+      confidence: 'medium',
+    },
+  },
+  {
+    opId: 'op3',
+    op: 'add',
+    entity: 'link',
+    value: { id: 'l_ca', from: 'v_c', to: 'v_a', polarity: '-', delay: false, note: '', confidence: 'low' },
+  },
   { opId: 'op4', op: 'update', entity: 'link', id: 'l_ab', changes: { polarity: '-' } },
-  { opId: 'op5', op: 'add', entity: 'loopAnnotation', value: { key: 'v_a>v_b>v_c', name: 'R1 Rework spiral', note: 'n' } },
-  { opId: 'op6', op: 'add', entity: 'scenario', value: { id: 's_qa', name: 'More QA', note: '', overrides: [{ varId: 'v_c', equation: '1' }] } },
-  { opId: 'op7', op: 'add', entity: 'intervention', value: { id: 'i_qa', name: 'Add QA', description: '', leverage: 12, scenarioId: 's_qa', rationale: '' } },
+  {
+    opId: 'op5',
+    op: 'add',
+    entity: 'loopAnnotation',
+    value: { key: 'v_a>v_b>v_c', name: 'R1 Rework spiral', note: 'n' },
+  },
+  {
+    opId: 'op6',
+    op: 'add',
+    entity: 'scenario',
+    value: { id: 's_qa', name: 'More QA', note: '', overrides: [{ varId: 'v_c', equation: '1' }] },
+  },
+  {
+    opId: 'op7',
+    op: 'add',
+    entity: 'intervention',
+    value: { id: 'i_qa', name: 'Add QA', description: '', leverage: 12, scenarioId: 's_qa', rationale: '' },
+  },
   { opId: 'op8', op: 'add', entity: 'assertion', value: { id: 'a_pos', expr: 'Rework >= 0', note: '' } },
 ];
 const ALL = new Set(FULL.map((o) => o.opId));
@@ -69,9 +107,20 @@ describe('applyPatch', () => {
       { opId: 'x2', op: 'add', entity: 'variable', value: { id: 'v_dup', name: 'rework' } }, // duplicate canonical name
       { opId: 'x3', op: 'update', entity: 'link', id: 'l_ab', changes: { from: 'v_b' } }, // endpoints are not updatable
       { opId: 'x4', op: 'add', entity: 'intervention', value: { id: 'i_x', name: 'X', leverage: 99 } },
-      { opId: 'x5', op: 'add', entity: 'intervention', value: { id: 'i_y', name: 'Y', leverage: 3, scenarioId: 's_none' } },
+      {
+        opId: 'x5',
+        op: 'add',
+        entity: 'intervention',
+        value: { id: 'i_y', name: 'Y', leverage: 3, scenarioId: 's_none' },
+      },
       { opId: 'x6', op: 'remove', entity: 'scenario', id: 's_none' },
-      { opId: 'x7', op: 'update', entity: 'variable', id: 'v_a', changes: { units: 'tasks', kind: 'stock', equation: '100' } },
+      {
+        opId: 'x7',
+        op: 'update',
+        entity: 'variable',
+        id: 'v_a',
+        changes: { units: 'tasks', kind: 'stock', equation: '100' },
+      },
     ];
     const r = applyPatch(base(), patch(ops), new Set(ops.map((o) => o.opId)));
     expect(r.applied).toEqual(['x7']);
@@ -82,7 +131,12 @@ describe('applyPatch', () => {
     expect(reasons.x4).toMatch(/leverage/);
     expect(reasons.x5).toMatch(/s_none/);
     expect(reasons.x6).toMatch(/not found/);
-    expect(r.model.variables[0]).toMatchObject({ kind: 'stock', units: 'tasks', equation: '100', origin: 'ai-proposed' });
+    expect(r.model.variables[0]).toMatchObject({
+      kind: 'stock',
+      units: 'tasks',
+      equation: '100',
+      origin: 'ai-proposed',
+    });
   });
 
   it('removing a variable cascades its links; a later op on a removed link is skipped', () => {
@@ -101,7 +155,14 @@ describe('applyPatch', () => {
     m = addVariable(m, { id: 'v_s', name: 'Backlog', kind: 'stock', equation: '10' });
     const r = applyPatch(
       m,
-      patch([{ opId: 'f1', op: 'add', entity: 'variable', value: { id: 'v_f', name: 'Completion', kind: 'flow', flow: { from: 'v_s', to: null } } }]),
+      patch([
+        {
+          opId: 'f1',
+          op: 'add',
+          entity: 'variable',
+          value: { id: 'v_f', name: 'Completion', kind: 'flow', flow: { from: 'v_s', to: null } },
+        },
+      ]),
       new Set(['f1']),
     );
     expect(r.skipped).toEqual([]);
@@ -120,13 +181,21 @@ describe('applyPatch', () => {
 
   it('property: any accepted subset yields a schema-valid model, and every op is either applied, skipped or rejected', () => {
     fc.assert(
-      fc.property(fc.array(opArb, { minLength: 1, maxLength: 12 }), fc.array(fc.boolean(), { minLength: 12, maxLength: 12 }), (ops, picks) => {
-        const uniq = ops.map((o, i) => ({ ...o, opId: `g${i}` }));
-        const accepted = new Set(uniq.filter((_, i) => picks[i]).map((o) => o.opId));
-        const r = applyPatch(base(), patch(uniq), accepted);
-        const accounted = new Set([...r.applied, ...r.skipped.map((s) => s.opId)]);
-        return ModelSchema.safeParse(r.model).success && [...accepted].every((id) => accounted.has(id)) && r.applied.every((id) => accepted.has(id));
-      }),
+      fc.property(
+        fc.array(opArb, { minLength: 1, maxLength: 12 }),
+        fc.array(fc.boolean(), { minLength: 12, maxLength: 12 }),
+        (ops, picks) => {
+          const uniq = ops.map((o, i) => ({ ...o, opId: `g${i}` }));
+          const accepted = new Set(uniq.filter((_, i) => picks[i]).map((o) => o.opId));
+          const r = applyPatch(base(), patch(uniq), accepted);
+          const accounted = new Set([...r.applied, ...r.skipped.map((s) => s.opId)]);
+          return (
+            ModelSchema.safeParse(r.model).success &&
+            [...accepted].every((id) => accounted.has(id)) &&
+            r.applied.every((id) => accepted.has(id))
+          );
+        },
+      ),
     );
   });
 });
@@ -144,7 +213,12 @@ const opArb: fc.Arbitrary<PatchOp> = fc.oneof(
     opId: fc.constant('o'),
     op: fc.constant('add' as const),
     entity: fc.constant('link' as const),
-    value: fc.record({ id: fc.constantFrom('l_1', 'l_2', 'l_ab'), from: idArb, to: idArb, polarity: fc.constantFrom('+', '-', '?', 'x') }),
+    value: fc.record({
+      id: fc.constantFrom('l_1', 'l_2', 'l_ab'),
+      from: idArb,
+      to: idArb,
+      polarity: fc.constantFrom('+', '-', '?', 'x'),
+    }),
   }),
   fc.record({
     opId: fc.constant('o'),

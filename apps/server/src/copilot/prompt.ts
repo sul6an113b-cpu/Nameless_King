@@ -108,7 +108,10 @@ export function modelForPrompt(model: Model): unknown {
 }
 
 /** The first (and only request-specific) user message. */
-export function buildRequestMessage(req: CopilotRequest, modelJson: string = jsonData(modelForPrompt(req.model))): string {
+export function buildRequestMessage(
+  req: CopilotRequest,
+  modelJson: string = jsonData(modelForPrompt(req.model)),
+): string {
   const lines = [
     `Mode: ${req.mode}`,
     `Stage: ${req.stage}`,

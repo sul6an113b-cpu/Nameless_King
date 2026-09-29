@@ -6,7 +6,10 @@ import Anthropic from '@anthropic-ai/sdk';
 
 export interface CopilotClient {
   messages: {
-    create(body: Anthropic.MessageCreateParamsNonStreaming, opts?: { signal?: AbortSignal }): Promise<Anthropic.Message>;
+    create(
+      body: Anthropic.MessageCreateParamsNonStreaming,
+      opts?: { signal?: AbortSignal },
+    ): Promise<Anthropic.Message>;
   };
 }
 

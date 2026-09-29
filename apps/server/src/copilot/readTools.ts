@@ -39,7 +39,12 @@ export const READ_TOOL_INPUTS = {
   simulate_scenario: z.object({
     scenarioId: z.string().max(64).describe('Existing scenario id to start from; "" for the baseline.'),
     overrides: z
-      .array(z.object({ varId, equation: z.string().min(1).max(4000).describe('Replacement equation, e.g. "0.8" or "STEP(10, 6)".') }))
+      .array(
+        z.object({
+          varId,
+          equation: z.string().min(1).max(4000).describe('Replacement equation, e.g. "0.8" or "STEP(10, 6)".'),
+        }),
+      )
       .max(50)
       .describe('Extra equation overrides on top of the scenario; [] for none.'),
     saveIds: z.array(varId).max(12).describe('Variables to report; [] = KPI variables and stocks.'),
@@ -51,7 +56,9 @@ export const READ_TOOL_INPUTS = {
     params: z
       .array(z.object({ varId, min: z.number(), max: z.number() }))
       .max(20)
-      .describe('Constants to vary one at a time with their low/high values; [] = constants with an uncertainty range.'),
+      .describe(
+        'Constants to vary one at a time with their low/high values; [] = constants with an uncertainty range.',
+      ),
   }),
   get_leverage: z.object({}),
 } satisfies Record<ReadToolName, z.ZodType>;
@@ -115,7 +122,11 @@ export function adapt(what: string, fn: () => ToolRunResult): ToolRunResult {
     return fn();
   } catch (e) {
     if (isNotImplemented(e))
-      return { ok: false, content: { available: false, message: `${what} is not available yet in this LoopLab build.` }, summary: 'not available yet' };
+      return {
+        ok: false,
+        content: { available: false, message: `${what} is not available yet in this LoopLab build.` },
+        summary: 'not available yet',
+      };
     throw e;
   }
 }
@@ -133,14 +144,21 @@ function requireVars(model: Model, ids: string[], what: string): void {
 
 function modelSummary(model: Model): ToolRunResult {
   const linked = new Set(model.links.flatMap((l) => [l.from, l.to]));
-  const count = <T extends string>(xs: T[]) => xs.reduce<Record<string, number>>((acc, x) => ({ ...acc, [x]: (acc[x] ?? 0) + 1 }), {});
+  const count = <T extends string>(xs: T[]) =>
+    xs.reduce<Record<string, number>>((acc, x) => ({ ...acc, [x]: (acc[x] ?? 0) + 1 }), {});
   const summary = {
     name: model.name,
     problem: model.frame.problem,
     purpose: model.frame.purpose,
     horizon: model.simSpec,
     kpis: model.frame.kpis.map((k) => ({ id: k.id, name: k.name, varId: k.varId, goal: k.goal, target: k.target })),
-    referenceModes: model.frame.referenceModes.map((r) => ({ id: r.id, name: r.name, varId: r.varId, label: r.label, points: r.points.length })),
+    referenceModes: model.frame.referenceModes.map((r) => ({
+      id: r.id,
+      name: r.name,
+      varId: r.varId,
+      label: r.label,
+      points: r.points.length,
+    })),
     excluded: model.frame.excluded.map((b) => b.name),
     counts: {
       variables: model.variables.length,
@@ -150,12 +168,20 @@ function modelSummary(model: Model): ToolRunResult {
       loopAnnotations: model.loopAnnotations.length,
     },
     isolatedVariables: model.variables.filter((v) => !linked.has(v.id)).map((v) => v.id),
-    missingEquations: model.variables.filter((v) => v.kind !== 'variable' && v.kind !== 'lookup' && v.equation.trim() === '').map((v) => v.id),
+    missingEquations: model.variables
+      .filter((v) => v.kind !== 'variable' && v.kind !== 'lookup' && v.equation.trim() === '')
+      .map((v) => v.id),
     unknownPolarityLinks: model.links.filter((l) => l.polarity === '?').map((l) => l.id),
     lowConfidenceLinks: model.links.filter((l) => l.confidence === 'low').map((l) => l.id),
     delayedLinks: model.links.filter((l) => l.delay).map((l) => l.id),
     scenarios: model.scenarios.map((s) => ({ id: s.id, name: s.name, overrides: s.overrides.length })),
-    interventions: model.interventions.map((iv) => ({ id: iv.id, name: iv.name, leverage: iv.leverage, scenarioId: iv.scenarioId, status: iv.status })),
+    interventions: model.interventions.map((iv) => ({
+      id: iv.id,
+      name: iv.name,
+      leverage: iv.leverage,
+      scenarioId: iv.scenarioId,
+      status: iv.status,
+    })),
     assertions: model.assertions.map((a) => ({ id: a.id, expr: a.expr, enabled: a.enabled })),
   };
   return { ok: true, content: summary, summary: `${model.variables.length} variables, ${model.links.length} links` };
@@ -212,16 +238,26 @@ export const coreReadTools: ReadToolImpls = {
   get_health: (model) =>
     adapt('Model Health', () => {
       const report = runHealth(model, { runIntegrationTest: true });
-      const items = report.items.slice(0, 50).map((i) => ({ check: i.check, severity: i.severity, message: i.message, elementIds: i.elementIds }));
+      const items = report.items
+        .slice(0, 50)
+        .map((i) => ({ check: i.check, severity: i.severity, message: i.message, elementIds: i.elementIds }));
       const errors = report.items.filter((i) => i.severity === 'error').length;
-      return { ok: true, content: { ok: report.ok, total: report.items.length, items }, summary: `${report.items.length} items, ${errors} errors` };
+      return {
+        ok: true,
+        content: { ok: report.ok, total: report.items.length, items },
+        summary: `${report.items.length} items, ${errors} errors`,
+      };
     }),
 
   simulate_scenario: (model, input, ctx) =>
     adapt('Simulation', () => {
       const base = input.scenarioId ? model.scenarios.find((s) => s.id === input.scenarioId) : undefined;
       if (input.scenarioId && !base) throw new ToolInputError(`unknown scenario id "${input.scenarioId}"`);
-      requireVars(model, input.overrides.map((o) => o.varId), 'overrides');
+      requireVars(
+        model,
+        input.overrides.map((o) => o.varId),
+        'overrides',
+      );
       requireVars(model, input.saveIds, 'saveIds');
       const scenario: Scenario = {
         id: base?.id ?? 's_copilot',
@@ -235,7 +271,10 @@ export const coreReadTools: ReadToolImpls = {
       if (!compiled.ok)
         return {
           ok: true,
-          content: { compiled: false, errors: compiled.errors.slice(0, 20).map((e) => ({ message: e.message, elementIds: e.elementIds })) },
+          content: {
+            compiled: false,
+            errors: compiled.errors.slice(0, 20).map((e) => ({ message: e.message, elementIds: e.elementIds })),
+          },
           summary: `compile failed (${compiled.errors.length} errors)`,
         };
       const kpiIds = model.frame.kpis.map((k) => k.varId).filter((id): id is Id => id !== null);
@@ -252,11 +291,24 @@ export const coreReadTools: ReadToolImpls = {
           if (y < min) min = y;
           if (y > max) max = y;
         }
-        return { id, name: name(id), final: sig(ys[ys.length - 1] ?? NaN), min: sig(min), max: sig(max), points: downsample(result.time, ys) };
+        return {
+          id,
+          name: name(id),
+          final: sig(ys[ys.length - 1] ?? NaN),
+          min: sig(min),
+          max: sig(max),
+          points: downsample(result.time, ys),
+        };
       });
       return {
         ok: true,
-        content: { compiled: true, spec: result.spec, series, assertions: result.assertions, warnings: result.warnings },
+        content: {
+          compiled: true,
+          spec: result.spec,
+          series,
+          assertions: result.assertions,
+          warnings: result.warnings,
+        },
         summary: `simulated ${series.length} series to t=${result.spec.stop}`,
       };
     }),
@@ -267,8 +319,11 @@ export const coreReadTools: ReadToolImpls = {
       const params: ParamRange[] =
         input.params.length > 0
           ? input.params
-          : model.variables.flatMap((v) => (v.uncertainty ? [{ varId: v.id, min: v.uncertainty.min, max: v.uncertainty.max }] : []));
-      if (params.length === 0) throw new ToolInputError('no parameters: pass params or give constants an uncertainty range');
+          : model.variables.flatMap((v) =>
+              v.uncertainty ? [{ varId: v.id, min: v.uncertainty.min, max: v.uncertainty.max }] : [],
+            );
+      if (params.length === 0)
+        throw new ToolInputError('no parameters: pass params or give constants an uncertainty range');
       const { rows } = oatSensitivity(model, params, { varId: input.kpiVarId, statistic: input.statistic });
       const name = nameOf(model);
       return {
@@ -284,7 +339,14 @@ export const coreReadTools: ReadToolImpls = {
       const name = nameOf(model);
       return {
         ok: true,
-        content: { rows: rows.slice(0, 15).map((r) => ({ varId: r.varId, name: name(r.varId), score: sig(r.score), cumulativeShare: sig(r.cumulativeShare) })) },
+        content: {
+          rows: rows.slice(0, 15).map((r) => ({
+            varId: r.varId,
+            name: name(r.varId),
+            score: sig(r.score),
+            cumulativeShare: sig(r.cumulativeShare),
+          })),
+        },
         summary: `${rows.length} variables ranked`,
       };
     }),

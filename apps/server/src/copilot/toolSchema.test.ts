@@ -13,7 +13,10 @@ describe('toToolSchema', () => {
       tags: z.array(z.string()).min(1).max(5),
       many: z.array(z.string()).min(2),
       kind: z.enum(['a', 'b']),
-      item: z.discriminatedUnion('op', [z.object({ op: z.literal('x'), v: z.boolean() }), z.object({ op: z.literal('y') })]),
+      item: z.discriminatedUnion('op', [
+        z.object({ op: z.literal('x'), v: z.boolean() }),
+        z.object({ op: z.literal('y') }),
+      ]),
       maybe: z.number().nullable(),
       empty: z.object({}),
     });
@@ -27,8 +30,18 @@ describe('toToolSchema', () => {
         kind: { type: 'string', enum: ['a', 'b'] },
         item: {
           anyOf: [
-            { type: 'object', properties: { op: { type: 'string', const: 'x' }, v: { type: 'boolean' } }, required: ['op', 'v'], additionalProperties: false },
-            { type: 'object', properties: { op: { type: 'string', const: 'y' } }, required: ['op'], additionalProperties: false },
+            {
+              type: 'object',
+              properties: { op: { type: 'string', const: 'x' }, v: { type: 'boolean' } },
+              required: ['op', 'v'],
+              additionalProperties: false,
+            },
+            {
+              type: 'object',
+              properties: { op: { type: 'string', const: 'y' } },
+              required: ['op'],
+              additionalProperties: false,
+            },
           ],
         },
         maybe: { type: ['number', 'null'] },
@@ -57,7 +70,10 @@ describe('the copilot tool array under strict-mode limits', () => {
     expect(TOOLS.every((t) => t.strict === true)).toBe(true);
     const stats = strictStats(schemas);
     expect(stats.unsupported).toEqual([]);
-    for (const s of schemas) expect(JSON.stringify(s)).not.toMatch(/"(oneOf|\$schema|minLength|maxLength|minimum|maximum|maxItems|exclusiveMinimum|exclusiveMaximum|multipleOf)"/);
+    for (const s of schemas)
+      expect(JSON.stringify(s)).not.toMatch(
+        /"(oneOf|\$schema|minLength|maxLength|minimum|maximum|maxItems|exclusiveMinimum|exclusiveMaximum|multipleOf)"/,
+      );
     expect([...STRICT_KEYWORDS]).not.toContain('oneOf');
   });
 
@@ -67,7 +83,12 @@ describe('the copilot tool array under strict-mode limits', () => {
     expect(stats.optionalParams).toBeLessThanOrEqual(24);
     expect(stats.unionParams).toBeLessThanOrEqual(16);
     // Recorded in docs/decisions/copilot.md: 9 tools, 0 optional params, 2 union params (patch ops, simulate stop).
-    expect({ tools: TOOLS.length, ...stats, unsupported: undefined }).toEqual({ tools: 9, optionalParams: 0, unionParams: 2, unsupported: undefined });
+    expect({ tools: TOOLS.length, ...stats, unsupported: undefined }).toEqual({
+      tools: 9,
+      optionalParams: 0,
+      unionParams: 2,
+      unsupported: undefined,
+    });
   });
 
   it('tool names are valid and descriptions substantial', () => {
@@ -78,11 +99,18 @@ describe('the copilot tool array under strict-mode limits', () => {
   });
 
   it('the Zod schemas behind the tools accept what the JSON schemas describe (round trip of examples)', () => {
-    expect(READ_TOOL_INPUTS.simulate_scenario.safeParse({ scenarioId: '', overrides: [], saveIds: [], stop: null }).success).toBe(true);
+    expect(
+      READ_TOOL_INPUTS.simulate_scenario.safeParse({ scenarioId: '', overrides: [], saveIds: [], stop: null }).success,
+    ).toBe(true);
     expect(AskQuestionInput.safeParse({ question: 'q?', options: [], why: '' }).success).toBe(true);
     expect(RespondInput.safeParse({ markdown: 'm', findings: [], hypotheses: [] }).success).toBe(true);
     expect(
-      ProposePatchInput.safeParse({ title: 't', rationale: 'r', hypotheses: [], ops: [{ op: 'remove', entity: 'link', id: 'l_1' }] }).success,
+      ProposePatchInput.safeParse({
+        title: 't',
+        rationale: 'r',
+        hypotheses: [],
+        ops: [{ op: 'remove', entity: 'link', id: 'l_1' }],
+      }).success,
     ).toBe(true);
   });
 });

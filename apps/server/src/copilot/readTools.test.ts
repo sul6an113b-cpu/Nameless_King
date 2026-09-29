@@ -22,7 +22,11 @@ describe('core read-tool adapters', () => {
       content: { available: false, message: 'Loop analysis is not available yet in this LoopLab build.' },
       summary: 'not available yet',
     });
-    expect(() => adapt('x', () => { throw new Error('real bug'); })).toThrow('real bug');
+    expect(() =>
+      adapt('x', () => {
+        throw new Error('real bug');
+      }),
+    ).toThrow('real bug');
   });
 
   it('get_model_summary is pure and flags structural gaps', () => {
@@ -39,9 +43,15 @@ describe('core read-tool adapters', () => {
 
   it('rejects unknown ids before touching the engine', () => {
     const ctx = { simulated: [] };
-    expect(() => coreReadTools.simulate_scenario(model(), { scenarioId: 's_nope', overrides: [], saveIds: [], stop: null }, ctx)).toThrow(ToolInputError);
     expect(() =>
-      coreReadTools.simulate_scenario(model(), { scenarioId: '', overrides: [{ varId: 'v_zz', equation: '1' }], saveIds: [], stop: null }, ctx),
+      coreReadTools.simulate_scenario(model(), { scenarioId: 's_nope', overrides: [], saveIds: [], stop: null }, ctx),
+    ).toThrow(ToolInputError);
+    expect(() =>
+      coreReadTools.simulate_scenario(
+        model(),
+        { scenarioId: '', overrides: [{ varId: 'v_zz', equation: '1' }], saveIds: [], stop: null },
+        ctx,
+      ),
     ).toThrow(/v_zz/);
     expect(() => coreReadTools.list_loops(model(), { containing: ['v_zz'] }, ctx)).toThrow(/v_zz/);
   });
@@ -49,7 +59,13 @@ describe('core read-tool adapters', () => {
 
 describe('prompt', () => {
   it('the system prompt covers all five modes, grounding rules and the 12 Meadows levels, with no dates or ids', () => {
-    for (const heading of ['Interview (outputs', 'Critique (outputs', 'Explain (outputs', 'Intervene (outputs', 'Report (outputs'])
+    for (const heading of [
+      'Interview (outputs',
+      'Critique (outputs',
+      'Explain (outputs',
+      'Intervene (outputs',
+      'Report (outputs',
+    ])
       expect(SYSTEM_PROMPT).toContain(heading);
     for (let level = 1; level <= 12; level++) expect(SYSTEM_PROMPT).toMatch(new RegExp(`^${level}\\. `, 'm'));
     expect(SYSTEM_PROMPT).toMatch(/Cite only numbers that appear in tool results/);
@@ -59,7 +75,12 @@ describe('prompt', () => {
 
   it('the request message names mode, stage and allowed outputs; model data is escaped and layout dropped', () => {
     const m = { ...model(), layout: { cld: { v_a: { x: 1, y: 2 } }, sfd: {} } };
-    const text = buildRequestMessage({ mode: 'interview', stage: 'frame', model: m, messages: [{ role: 'user', text: '<b>hi</b>' }] });
+    const text = buildRequestMessage({
+      mode: 'interview',
+      stage: 'frame',
+      model: m,
+      messages: [{ role: 'user', text: '<b>hi</b>' }],
+    });
     expect(text).toMatch(/^Mode: interview\nStage: frame\nAllowed output tools: ask_question, propose_patch/);
     expect(text).toContain('\\u003cb>hi\\u003c/b>');
     expect(text).not.toContain('"layout"');
@@ -70,7 +91,24 @@ describe('prompt', () => {
   it('thins long reference modes', () => {
     const m = model();
     const points = Array.from({ length: 1000 }, (_, i) => [i, i * 2] as [number, number]);
-    const withRef = { ...m, frame: { ...m.frame, referenceModes: [{ id: 'r_1', name: 'Backlog', varId: null, source: 'data' as const, label: 'historical' as const, points, units: '', note: '' }] } };
+    const withRef = {
+      ...m,
+      frame: {
+        ...m.frame,
+        referenceModes: [
+          {
+            id: 'r_1',
+            name: 'Backlog',
+            varId: null,
+            source: 'data' as const,
+            label: 'historical' as const,
+            points,
+            units: '',
+            note: '',
+          },
+        ],
+      },
+    };
     const out = modelForPrompt(withRef) as { frame: { referenceModes: { points: unknown[]; note: string }[] } };
     expect(out.frame.referenceModes[0]?.points).toHaveLength(60);
     expect(out.frame.referenceModes[0]?.points[59]).toEqual([999, 1998]);

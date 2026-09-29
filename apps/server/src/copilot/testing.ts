@@ -6,7 +6,12 @@ export type Block = Record<string, unknown> & { type: string };
 type Step = { content: Block[]; stop_reason?: Anthropic.StopReason; stop_details?: unknown } | Error;
 
 let nextId = 1;
-export const toolUse = (name: string, input: unknown): Block => ({ type: 'tool_use', id: `toolu_${nextId++}`, name, input });
+export const toolUse = (name: string, input: unknown): Block => ({
+  type: 'tool_use',
+  id: `toolu_${nextId++}`,
+  name,
+  input,
+});
 export const thinking = (signature = 'sig'): Block => ({ type: 'thinking', thinking: '', signature });
 export const text = (t: string): Block => ({ type: 'text', text: t, citations: null });
 
@@ -21,12 +26,20 @@ export function message(step: Exclude<Step, Error>, call: number): Anthropic.Mes
     stop_sequence: null,
     stop_details: step.stop_details ?? null,
     container: null,
-    usage: { input_tokens: 100 + call, output_tokens: 20, cache_creation_input_tokens: call === 1 ? 3000 : 0, cache_read_input_tokens: call === 1 ? 0 : 3000 },
+    usage: {
+      input_tokens: 100 + call,
+      output_tokens: 20,
+      cache_creation_input_tokens: call === 1 ? 3000 : 0,
+      cache_read_input_tokens: call === 1 ? 0 : 3000,
+    },
   } as unknown as Anthropic.Message;
 }
 
 /** A client that replays `steps` in order and records a deep copy of every request body. */
-export function fakeClient(steps: Step[] | ((call: number) => Step)): { client: CopilotClient; bodies: Anthropic.MessageCreateParamsNonStreaming[] } {
+export function fakeClient(steps: Step[] | ((call: number) => Step)): {
+  client: CopilotClient;
+  bodies: Anthropic.MessageCreateParamsNonStreaming[];
+} {
   const bodies: Anthropic.MessageCreateParamsNonStreaming[] = [];
   const client: CopilotClient = {
     messages: {

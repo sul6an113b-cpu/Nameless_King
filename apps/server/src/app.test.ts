@@ -36,8 +36,16 @@ describe('server scaffold', () => {
 });
 
 describe('/api/copilot', () => {
-  const model = addVariable(createEmptyModel('M', { id: 'm_1', now: '2026-09-29T00:00:00.000Z' }), { id: 'v_a', name: 'A' });
-  const body: CopilotRequest = { mode: 'critique', stage: 'map', model, messages: [{ role: 'user', text: 'secret-body-text' }] };
+  const model = addVariable(createEmptyModel('M', { id: 'm_1', now: '2026-09-29T00:00:00.000Z' }), {
+    id: 'v_a',
+    name: 'A',
+  });
+  const body: CopilotRequest = {
+    mode: 'critique',
+    stage: 'map',
+    model,
+    messages: [{ role: 'user', text: 'secret-body-text' }],
+  };
   const answer: CopilotResponse = {
     ok: true,
     output: { kind: 'answer', markdown: 'fine', findings: [], hypotheses: [] },
@@ -53,27 +61,49 @@ describe('/api/copilot', () => {
       calls.push(r);
       return Promise.resolve(answer);
     };
-    const a = createApp({ port: 8787, allowedOrigins: ['http://127.0.0.1:5173'], hasKey: true, model: 'claude-test', copilot, log: (l) => logs.push(l) });
+    const a = createApp({
+      port: 8787,
+      allowedOrigins: ['http://127.0.0.1:5173'],
+      hasKey: true,
+      model: 'claude-test',
+      copilot,
+      log: (l) => logs.push(l),
+    });
     return { a, calls, logs };
   }
   const post = (a: ReturnType<typeof createApp>, payload: string, headers: Record<string, string> = {}) =>
-    a.request('/api/copilot', { method: 'POST', body: payload, headers: { ...HOST, 'content-type': 'application/json', ...headers } });
+    a.request('/api/copilot', {
+      method: 'POST',
+      body: payload,
+      headers: { ...HOST, 'content-type': 'application/json', ...headers },
+    });
 
   it('runs the handler on a validated request and logs no body, header or key', async () => {
     const { a, calls, logs } = withCopilot();
-    const res = await post(a, JSON.stringify(body), { origin: 'http://127.0.0.1:5173', 'x-api-key': 'sk-ant-should-not-log' });
+    const res = await post(a, JSON.stringify(body), {
+      origin: 'http://127.0.0.1:5173',
+      'x-api-key': 'sk-ant-should-not-log',
+    });
     expect(res.status).toBe(200);
     expect(await res.json()).toEqual(answer);
     expect(calls[0]?.model.variables[0]?.name).toBe('A');
-    expect(logs).toEqual([expect.stringMatching(/^copilot critique: answer · 1 API call\(s\) · tools get_health · \d+ ms$/)]);
+    expect(logs).toEqual([
+      expect.stringMatching(/^copilot critique: answer · 1 API call\(s\) · tools get_health · \d+ ms$/),
+    ]);
     expect(logs.join('')).not.toMatch(/secret-body-text|sk-ant/);
   });
 
   it('health reports ready / no-model', async () => {
     const { a } = withCopilot();
-    expect(await (await a.request('/api/health', { headers: HOST })).json()).toEqual({ ok: true, copilot: 'ready', model: 'claude-test' });
+    expect(await (await a.request('/api/health', { headers: HOST })).json()).toEqual({
+      ok: true,
+      copilot: 'ready',
+      model: 'claude-test',
+    });
     const noModel = createApp({ port: 8787, allowedOrigins: [], hasKey: true, model: null });
-    expect(await (await noModel.request('/api/health', { headers: HOST })).json()).toMatchObject({ copilot: 'no-model' });
+    expect(await (await noModel.request('/api/health', { headers: HOST })).json()).toMatchObject({
+      copilot: 'no-model',
+    });
   });
 
   it('without a key the copilot answers 503 no-key and never echoes the key', async () => {

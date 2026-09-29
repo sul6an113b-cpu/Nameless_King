@@ -39,7 +39,10 @@ export function createApp(cfg: AppConfig): Hono {
       return c.json({ ok: false, error: 'forbidden origin' }, 403);
     await next();
   });
-  app.use('/api/*', cors({ origin: cfg.allowedOrigins, allowMethods: ['GET', 'POST'], allowHeaders: ['Content-Type'] }));
+  app.use(
+    '/api/*',
+    cors({ origin: cfg.allowedOrigins, allowMethods: ['GET', 'POST'], allowHeaders: ['Content-Type'] }),
+  );
 
   app.get('/api/health', (c) =>
     c.json({ ok: true, copilot: !cfg.hasKey ? 'no-key' : !cfg.model ? 'no-model' : 'ready', model: cfg.model }),
@@ -67,7 +70,13 @@ export function createApp(cfg: AppConfig): Hono {
       }
       const parsed = CopilotRequestSchema.safeParse(body);
       if (!parsed.success)
-        return c.json(failure({ code: 'bad-request', message: `Invalid copilot request:\n${z.prettifyError(parsed.error).slice(0, 2000)}` }), 400);
+        return c.json(
+          failure({
+            code: 'bad-request',
+            message: `Invalid copilot request:\n${z.prettifyError(parsed.error).slice(0, 2000)}`,
+          }),
+          400,
+        );
 
       const t0 = Date.now();
       const res = await copilot(parsed.data, { signal: c.req.raw.signal });
