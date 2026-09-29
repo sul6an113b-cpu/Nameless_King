@@ -80,10 +80,12 @@ describe('compiled model', () => {
     expect(new Set(Object.values(c.index)).size).toBe(5);
   });
 
-  it('lists direct dependencies (equation references, and flows for stocks)', () => {
+  it('lists direct dependencies (equation references with a value, and flows for stocks)', () => {
     const c = compile(vars);
     expect(c.deps[idOf('S')].sort()).toEqual([idOf('inflow'), idOf('outflow')].sort());
-    expect(c.deps[idOf('outflow')]).toEqual([idOf('S'), idOf('rate'), idOf('effect')]);
+    expect(c.deps[idOf('outflow')]).toEqual([idOf('S'), idOf('rate')]); // the table `effect` has no value
+    expect(Object.keys(c.deps).sort()).toEqual([...c.varIds].sort());
+    for (const ds of Object.values(c.deps)) for (const d of ds) expect(c.index[d]).toBeDefined();
     expect(c.deps[idOf('report')]).toEqual([idOf('outflow')]);
     expect(c.deps[idOf('rate')]).toEqual([]);
   });
@@ -100,6 +102,22 @@ describe('compiled model', () => {
     expect(c.evalVar(idOf('report'), v, 0)).toBe(6);
     expect(c.evalVar(idOf('S'), v, 0)).toBe(4);
     expect(() => c.evalVar('v_nope', v, 0)).toThrow(/not a quantified variable/);
+  });
+
+  it('hoists each stateful call once: hidden slots follow the user slots', () => {
+    const c = compile([
+      { name: 'x', eq: 'TIME' },
+      { name: 'y', eq: 'DELAY1(SMTH1(x, 2), 3) + DELAY(SMTH3(x, 3), 2) + PREVIOUS(x) + INIT(x)' },
+    ]);
+    // 2 user slots + SMTH1 (1) + DELAY1 (1) + SMTH3 (3) + DELAY (1) + PREVIOUS (1) + INIT (1)
+    expect(c.size).toBe(10);
+    expect(Math.max(...Object.values(c.index))).toBe(1);
+  });
+
+  it('compiles and runs an empty model', () => {
+    const r = simulate(buildModel([], { simSpec: { stop: 2, dt: 1 } }));
+    expect(Array.from(r.time)).toEqual([0, 1, 2]);
+    expect(r.series).toEqual({});
   });
 
   it('can be run repeatedly with different specs and overrides', () => {

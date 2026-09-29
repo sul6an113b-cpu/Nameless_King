@@ -592,11 +592,13 @@ export function compileProgram(model: Model, scenario?: Scenario): { program?: P
    * Stages start at initial·τ/n (initial = the initial output; default: the input at STARTTIME).
    */
   function materialDelay(n: Extract<Ast, { k: 'call' }>, order: number, initIdx: number, deps: Set<number>): E {
-    const input = expr(n.args[0], new Set<number>()).f;
+    const dIn = new Set<number>();
+    const input = expr(n.args[0], dIn).f;
     const dTau = new Set<number>();
     const tau = expr(n.args[1], dTau).f;
     const dInit = new Set<number>(dTau);
-    const init = n.args[initIdx] ? expr(n.args[initIdx], dInit).f : expr(n.args[0], dInit).f;
+    const init = n.args[initIdx] ? expr(n.args[initIdx], dInit).f : input;
+    if (!n.args[initIdx]) for (const d of dIn) dInit.add(d);
     const slots: number[] = [];
     for (let k = 0; k < order; k++) slots.push(newSlot(`${n.fn} stage ${k + 1} in ${owner.name}`));
     const out = (s: number): Fn => (v, t) => (v[s] * order) / tau(v, t);
@@ -613,10 +615,12 @@ export function compileProgram(model: Model, scenario?: Scenario): { program?: P
 
   /** DELAY (fixed pipeline): input from τ ago; τ is evaluated once at STARTTIME and must be a multiple of DT. */
   function pipelineDelay(n: Extract<Ast, { k: 'call' }>, deps: Set<number>): E {
-    const input = expr(n.args[0], new Set<number>()).f;
+    const dIn = new Set<number>();
+    const input = expr(n.args[0], dIn).f;
     const dInit = new Set<number>();
     const tau = expr(n.args[1], dInit).f;
-    const init = n.args[2] ? expr(n.args[2], dInit).f : expr(n.args[0], dInit).f;
+    const init = n.args[2] ? expr(n.args[2], dInit).f : input;
+    if (!n.args[2]) for (const d of dIn) dInit.add(d);
     const slot = newSlot(`DELAY in ${owner.name}`);
     const who = owner;
     const pipe = { buf: new Float64Array(1), head: 0 };
@@ -785,13 +789,15 @@ export function compileProgram(model: Model, scenario?: Scenario): { program?: P
 
   const deps: Record<Id, Id[]> = {};
   for (const v of model.variables) {
+    if (index[v.id] === undefined) continue;
     if (v.kind === 'stock') deps[v.id] = flows.filter((f) => f.flow?.to === v.id || f.flow?.from === v.id).map((f) => f.id);
     else {
       const ast = asts.get(v.id);
+      // value-bearing variables only (graphical-function tables have no slot)
       deps[v.id] = ast
         ? referencedNames(ast)
             .map((name) => byName.get(name)?.id)
-            .filter((x): x is Id => x !== undefined)
+            .filter((x): x is Id => x !== undefined && index[x] !== undefined)
         : [];
     }
   }
