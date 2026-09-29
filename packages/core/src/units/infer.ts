@@ -271,7 +271,7 @@ export function inferUnits(model: Model): { byVar: Record<Id, Dim | null>; issue
         else if (!sameUnit(fu, want))
           warn(
             [f.id, v.id],
-            `Flow "${f.name}" is in ${f.units} but stock "${v.name}" changes per ${timeUnit}: convert by a factor of ${Number((want.scale / fu.scale).toPrecision(4))}`,
+            `Flow "${f.name}" is in ${f.units} but stock "${v.name}" changes per ${timeUnit}: convert by a factor of ${Number((fu.scale / want.scale).toPrecision(4))}`,
           );
       }
     }

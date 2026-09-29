@@ -78,7 +78,7 @@ export function formatDim(d: Dim, timeUnit?: string): string {
     const e = d.dims[k];
     let name = k;
     if (k === TIME_DIM) {
-      scale *= tuDays ** e;
+      scale *= tuDays ** -e; // dayᵉ = (unit / tuDays)ᵉ
       name = timeName;
     }
     const term = Math.abs(e) === 1 ? name : `${name}^${Math.abs(e)}`;
