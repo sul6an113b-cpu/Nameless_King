@@ -17,6 +17,23 @@ if (!('ResizeObserver' in globalThis)) {
   Object.defineProperty(globalThis, 'ResizeObserver', { value: ResizeObserverStub, writable: true });
 }
 
+// uPlot and the theme hook query media features; jsdom has no matchMedia.
+if (!('matchMedia' in globalThis)) {
+  Object.defineProperty(globalThis, 'matchMedia', {
+    writable: true,
+    value: (query: string) => ({
+      matches: false,
+      media: query,
+      onchange: null,
+      addEventListener() {},
+      removeEventListener() {},
+      addListener() {},
+      removeListener() {},
+      dispatchEvent: () => false,
+    }),
+  });
+}
+
 if (!('DOMMatrixReadOnly' in globalThis)) {
   class DOMMatrixReadOnlyStub {
     m22: number;
