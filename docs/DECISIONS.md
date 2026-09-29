@@ -43,3 +43,4 @@ Format: `D-NNN — decision — rationale — date`. Agent-specific decisions an
 ## Agent decision files
 - `docs/decisions/graph-analyst.md` — structural leverage formula, archetype loop-role patterns and scoring, polarity-check method, loop enumeration timings (Phase 2).
 - `docs/decisions/copilot.md` — tool-loop design, strict tool schemas (`toToolSchema`), budget enforcement, patch apply/preview semantics, mocking strategy (Phase 2).
+- `docs/decisions/sd-engine.md` — SE-01…SE-18: time-unit convention (365-day year = 12 months = 4 quarters), builtin grid rules, non-negative limiting (iterated to a fixed point), DELAY τ read at t0, health checks, numeric test tolerances (Phase 2).
