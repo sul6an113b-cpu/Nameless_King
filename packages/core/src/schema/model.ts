@@ -145,6 +145,7 @@ export const Assertion = z.object({
   expr: z.string().min(1).max(500), // e.g. 'Backlog >= 0'; evaluated every saved step
   note: z.string().max(1000).default(''),
   enabled: z.boolean().default(true),
+  origin: Origin.default('user'),
 });
 export type Assertion = z.infer<typeof Assertion>;
 
