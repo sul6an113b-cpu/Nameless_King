@@ -60,20 +60,34 @@ export function runProgram(p: Program, spec: SimSpec, opts: SimOptions = {}): Si
   }
   const nDyn = dynSlots.length;
   const nonNeg = p.nonNeg;
+  /**
+   * outₖ ← min(outₖ, max(0, S/DT + Σin − Σ_{j<k} outⱼ)) in priority order (conserves material).
+   * Limiting one stock's outflow can shrink another non-negative stock's inflow, so passes repeat until
+   * nothing changes (flows only decrease; capped at one pass per non-negative stock).
+   */
+  const limitOutflows = () => {
+    for (let pass = 0; pass <= nonNeg.length; pass++) {
+      let changed = false;
+      for (let k = 0; k < nonNeg.length; k++) {
+        const s = nonNeg[k];
+        let avail = v[s.slot] / dt;
+        for (let j = 0; j < s.inflows.length; j++) avail += v[s.inflows[j]];
+        for (let j = 0; j < s.outflows.length; j++) {
+          const o = s.outflows[j];
+          const limit = avail > 0 ? avail : 0;
+          if (v[o] > limit) {
+            v[o] = limit;
+            changed = true;
+          }
+          avail -= v[o];
+        }
+      }
+      if (!changed) return;
+    }
+  };
   const evaluate = (t: number) => {
     for (let i = 0; i < nDyn; i++) v[dynSlots[i]] = dynFns[i](v, t);
-    for (let k = 0; k < nonNeg.length; k++) {
-      // outₖ ← min(outₖ, max(0, S/DT + Σin − Σ_{j<k} outⱼ)), in priority order (conserves material)
-      const s = nonNeg[k];
-      let avail = v[s.slot] / dt;
-      for (let j = 0; j < s.inflows.length; j++) avail += v[s.inflows[j]];
-      for (let j = 0; j < s.outflows.length; j++) {
-        const o = s.outflows[j];
-        const limit = avail > 0 ? avail : 0;
-        if (v[o] > limit) v[o] = limit;
-        avail -= v[o];
-      }
-    }
+    if (nonNeg.length > 0) limitOutflows();
   };
 
   // ── stocks: user stocks (net flow via CSR) then hidden stocks ──

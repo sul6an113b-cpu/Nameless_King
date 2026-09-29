@@ -152,59 +152,160 @@ function binValue(op: BinOp, a: number, b: number): number {
   }
 }
 
-/** Closure for a binary operation; the four arithmetic operators get slot/constant fast paths (hot loop). */
+/**
+ * Closure makers for one binary operator by operand kind (s = slot read, c = constant, g = any closure).
+ * Folding slot reads and constants into their parent roughly halves the number of (megamorphic) closure
+ * calls in the hot loop.
+ */
+interface OpMakers {
+  ss(i: number, j: number): Fn;
+  sc(i: number, c: number): Fn;
+  cs(c: number, j: number): Fn;
+  sg(i: number, b: Fn): Fn;
+  gs(a: Fn, j: number): Fn;
+  cg(c: number, b: Fn): Fn;
+  gc(a: Fn, c: number): Fn;
+  gg(a: Fn, b: Fn): Fn;
+}
+
+const FAST: Partial<Record<BinOp, OpMakers>> = {
+  '+': {
+    ss: (i, j) => (v) => v[i] + v[j],
+    sc: (i, c) => (v) => v[i] + c,
+    cs: (c, j) => (v) => c + v[j],
+    sg: (i, b) => (v, t) => v[i] + b(v, t),
+    gs: (a, j) => (v, t) => a(v, t) + v[j],
+    cg: (c, b) => (v, t) => c + b(v, t),
+    gc: (a, c) => (v, t) => a(v, t) + c,
+    gg: (a, b) => (v, t) => a(v, t) + b(v, t),
+  },
+  '-': {
+    ss: (i, j) => (v) => v[i] - v[j],
+    sc: (i, c) => (v) => v[i] - c,
+    cs: (c, j) => (v) => c - v[j],
+    sg: (i, b) => (v, t) => v[i] - b(v, t),
+    gs: (a, j) => (v, t) => a(v, t) - v[j],
+    cg: (c, b) => (v, t) => c - b(v, t),
+    gc: (a, c) => (v, t) => a(v, t) - c,
+    gg: (a, b) => (v, t) => a(v, t) - b(v, t),
+  },
+  '*': {
+    ss: (i, j) => (v) => v[i] * v[j],
+    sc: (i, c) => (v) => v[i] * c,
+    cs: (c, j) => (v) => c * v[j],
+    sg: (i, b) => (v, t) => v[i] * b(v, t),
+    gs: (a, j) => (v, t) => a(v, t) * v[j],
+    cg: (c, b) => (v, t) => c * b(v, t),
+    gc: (a, c) => (v, t) => a(v, t) * c,
+    gg: (a, b) => (v, t) => a(v, t) * b(v, t),
+  },
+  '/': {
+    ss: (i, j) => (v) => v[i] / v[j],
+    sc: (i, c) => (v) => v[i] / c,
+    cs: (c, j) => (v) => c / v[j],
+    sg: (i, b) => (v, t) => v[i] / b(v, t),
+    gs: (a, j) => (v, t) => a(v, t) / v[j],
+    cg: (c, b) => (v, t) => c / b(v, t),
+    gc: (a, c) => (v, t) => a(v, t) / c,
+    gg: (a, b) => (v, t) => a(v, t) / b(v, t),
+  },
+  '<': {
+    ss: (i, j) => (v) => (v[i] < v[j] ? 1 : 0),
+    sc: (i, c) => (v) => (v[i] < c ? 1 : 0),
+    cs: (c, j) => (v) => (c < v[j] ? 1 : 0),
+    sg: (i, b) => (v, t) => (v[i] < b(v, t) ? 1 : 0),
+    gs: (a, j) => (v, t) => (a(v, t) < v[j] ? 1 : 0),
+    cg: (c, b) => (v, t) => (c < b(v, t) ? 1 : 0),
+    gc: (a, c) => (v, t) => (a(v, t) < c ? 1 : 0),
+    gg: (a, b) => (v, t) => (a(v, t) < b(v, t) ? 1 : 0),
+  },
+  '<=': {
+    ss: (i, j) => (v) => (v[i] <= v[j] ? 1 : 0),
+    sc: (i, c) => (v) => (v[i] <= c ? 1 : 0),
+    cs: (c, j) => (v) => (c <= v[j] ? 1 : 0),
+    sg: (i, b) => (v, t) => (v[i] <= b(v, t) ? 1 : 0),
+    gs: (a, j) => (v, t) => (a(v, t) <= v[j] ? 1 : 0),
+    cg: (c, b) => (v, t) => (c <= b(v, t) ? 1 : 0),
+    gc: (a, c) => (v, t) => (a(v, t) <= c ? 1 : 0),
+    gg: (a, b) => (v, t) => (a(v, t) <= b(v, t) ? 1 : 0),
+  },
+  '>': {
+    ss: (i, j) => (v) => (v[i] > v[j] ? 1 : 0),
+    sc: (i, c) => (v) => (v[i] > c ? 1 : 0),
+    cs: (c, j) => (v) => (c > v[j] ? 1 : 0),
+    sg: (i, b) => (v, t) => (v[i] > b(v, t) ? 1 : 0),
+    gs: (a, j) => (v, t) => (a(v, t) > v[j] ? 1 : 0),
+    cg: (c, b) => (v, t) => (c > b(v, t) ? 1 : 0),
+    gc: (a, c) => (v, t) => (a(v, t) > c ? 1 : 0),
+    gg: (a, b) => (v, t) => (a(v, t) > b(v, t) ? 1 : 0),
+  },
+  '>=': {
+    ss: (i, j) => (v) => (v[i] >= v[j] ? 1 : 0),
+    sc: (i, c) => (v) => (v[i] >= c ? 1 : 0),
+    cs: (c, j) => (v) => (c >= v[j] ? 1 : 0),
+    sg: (i, b) => (v, t) => (v[i] >= b(v, t) ? 1 : 0),
+    gs: (a, j) => (v, t) => (a(v, t) >= v[j] ? 1 : 0),
+    cg: (c, b) => (v, t) => (c >= b(v, t) ? 1 : 0),
+    gc: (a, c) => (v, t) => (a(v, t) >= c ? 1 : 0),
+    gg: (a, b) => (v, t) => (a(v, t) >= b(v, t) ? 1 : 0),
+  },
+};
+
+/** Closure for a binary operation (constant operands on both sides are folded before this is called). */
 function binClosure(op: BinOp, A: E, B: E): Fn {
   const a = A.f;
   const b = B.f;
-  if (op === '+' || op === '-' || op === '*' || op === '/') {
-    const i = A.slot;
-    const j = B.slot;
-    const ca = A.c;
-    const cb = B.c;
-    if (i !== undefined && j !== undefined) {
-      if (op === '+') return (v) => v[i] + v[j];
-      if (op === '-') return (v) => v[i] - v[j];
-      if (op === '*') return (v) => v[i] * v[j];
-      return (v) => v[i] / v[j];
-    }
-    if (i !== undefined && cb !== undefined) {
-      if (op === '+') return (v) => v[i] + cb;
-      if (op === '-') return (v) => v[i] - cb;
-      if (op === '*') return (v) => v[i] * cb;
-      return (v) => v[i] / cb;
-    }
-    if (ca !== undefined && j !== undefined) {
-      if (op === '+') return (v) => ca + v[j];
-      if (op === '-') return (v) => ca - v[j];
-      if (op === '*') return (v) => ca * v[j];
-      return (v) => ca / v[j];
-    }
-    if (op === '+') return (v, t) => a(v, t) + b(v, t);
-    if (op === '-') return (v, t) => a(v, t) - b(v, t);
-    if (op === '*') return (v, t) => a(v, t) * b(v, t);
-    return (v, t) => a(v, t) / b(v, t);
+  const m = FAST[op];
+  if (m) {
+    const { slot: i, c: ca } = A;
+    const { slot: j, c: cb } = B;
+    if (i !== undefined) return j !== undefined ? m.ss(i, j) : cb !== undefined ? m.sc(i, cb) : m.sg(i, b);
+    if (ca !== undefined) return j !== undefined ? m.cs(ca, j) : m.cg(ca, b);
+    return j !== undefined ? m.gs(a, j) : cb !== undefined ? m.gc(a, cb) : m.gg(a, b);
   }
   switch (op) {
     case '^':
       return (v, t) => a(v, t) ** b(v, t);
     case 'mod':
       return (v, t) => fmod(a(v, t), b(v, t));
-    case '<':
-      return (v, t) => (a(v, t) < b(v, t) ? 1 : 0);
-    case '<=':
-      return (v, t) => (a(v, t) <= b(v, t) ? 1 : 0);
-    case '>':
-      return (v, t) => (a(v, t) > b(v, t) ? 1 : 0);
-    case '>=':
-      return (v, t) => (a(v, t) >= b(v, t) ? 1 : 0);
     case '=':
       return (v, t) => (a(v, t) === b(v, t) ? 1 : 0);
     case '<>':
       return (v, t) => (a(v, t) !== b(v, t) ? 1 : 0);
     case 'and':
       return (v, t) => (a(v, t) !== 0 && b(v, t) !== 0 ? 1 : 0);
-    case 'or':
+    default: // 'or' (the other operators are in FAST)
       return (v, t) => (a(v, t) !== 0 || b(v, t) !== 0 ? 1 : 0);
+  }
+}
+
+/** One closure per math function, so V8 can inline the Math call. */
+function mathClosure(fn: string, a: Fn): Fn {
+  switch (fn) {
+    case 'ABS':
+      return (v, t) => Math.abs(a(v, t));
+    case 'EXP':
+      return (v, t) => Math.exp(a(v, t));
+    case 'LN':
+      return (v, t) => Math.log(a(v, t));
+    case 'LOG10':
+      return (v, t) => Math.log10(a(v, t));
+    case 'SQRT':
+      return (v, t) => Math.sqrt(a(v, t));
+    case 'INT':
+      return (v, t) => Math.floor(a(v, t));
+    case 'SIN':
+      return (v, t) => Math.sin(a(v, t));
+    case 'COS':
+      return (v, t) => Math.cos(a(v, t));
+    case 'TAN':
+      return (v, t) => Math.tan(a(v, t));
+    case 'ARCSIN':
+      return (v, t) => Math.asin(a(v, t));
+    case 'ARCCOS':
+      return (v, t) => Math.acos(a(v, t));
+    default: // ARCTAN
+      return (v, t) => Math.atan(a(v, t));
   }
 }
 
@@ -336,9 +437,7 @@ export function compileProgram(model: Model, scenario?: Scenario): { program?: P
     const math = MATH1[fn];
     if (math) {
       const A = expr(args[0], deps);
-      if (A.c !== undefined) return K(math(A.c));
-      const a = A.f;
-      return { f: (v, t) => math(a(v, t)) };
+      return A.c !== undefined ? K(math(A.c)) : { f: mathClosure(fn, A.f) };
     }
     switch (fn) {
       case 'MIN':
