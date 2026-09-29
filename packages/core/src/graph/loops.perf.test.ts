@@ -1,6 +1,7 @@
 /**
  * Acceptance criterion (BRIEF): "a 150-variable graph finishes in < 2 s or stops at the cap (default 1,000 loops)".
- * Measured on the dev container (2026-09-29): dense graph to the cap ≈ 10–30 ms; SD-like full enumeration ≈ 3 ms.
+ * Measured on the dev container (2026-09-29, median of 7): dense graph to the cap ≈ 19 ms, sparse ≈ 9 ms, SD-like
+ * full enumeration ≈ 3 ms (docs/decisions/graph-analyst.md G-009).
  */
 import { describe, expect, it } from 'vitest';
 import type { FindLoopsResult } from '../contracts.ts';

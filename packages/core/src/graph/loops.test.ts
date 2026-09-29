@@ -33,7 +33,9 @@ describe('findLoops on hand-verified fixtures', () => {
         expect(loop.linkIds).toHaveLength(loop.length);
         expect(loop.key).toBe(loop.varIds.join('>'));
         expect(loop.key).toBe(loopKey(loop.varIds));
-        loop.varIds.forEach((from, i) => expect(loop.linkIds[i]).toBe(linkId(from, loop.varIds[(i + 1) % loop.length])));
+        loop.varIds.forEach((from, i) =>
+          expect(loop.linkIds[i]).toBe(linkId(from, loop.varIds[(i + 1) % loop.length])),
+        );
       }
     });
   }

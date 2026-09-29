@@ -73,6 +73,12 @@ const sharedVars = (a: LoopView, b: LoopView): Id[] => a.loop.varIds.filter((id)
 const sharedLinkCount = (a: LoopView, b: LoopView): number => a.loop.linkIds.filter((id) => b.links.has(id)).length;
 const disjoint = (a: LoopView, b: LoopView): boolean => a.loop.varIds.every((id) => !b.vars.has(id));
 
+function push<K, V>(map: Map<K, V[]>, key: K, value: V): void {
+  const list = map.get(key);
+  if (list) list.push(value);
+  else map.set(key, [value]);
+}
+
 function makeView(loop: Loop, linkById: Map<Id, Link>): LoopView | undefined {
   if (loop.type === 'U') return undefined;
   const links = loop.linkIds.map((id) => linkById.get(id));
@@ -93,8 +99,10 @@ function makeView(loop: Loop, linkById: Map<Id, Link>): LoopView | undefined {
 /** Archetype candidates, strongest first (at most 50). */
 export function matchArchetypes(model: Model, loops: Loop[]): ArchetypeCandidate[] {
   const linkById = new Map(model.links.map((l) => [l.id, l]));
+  // Self-loops are left out: every template loop links at least two variables, and a one-variable loop would
+  // make the same variable play several roles.
   const views = loops
-    .filter((l) => l.length <= MAX_MATCH_LOOP_LENGTH)
+    .filter((l) => l.length >= 2 && l.length <= MAX_MATCH_LOOP_LENGTH)
     .sort(compareLoops)
     .map((l) => makeView(l, linkById))
     .filter((v): v is LoopView => v !== undefined)
@@ -104,7 +112,7 @@ export function matchArchetypes(model: Model, loops: Loop[]): ArchetypeCandidate
   const q = (id: Id | undefined): string => `"${(id !== undefined && names.get(id)) || id}"`;
   const onLoop = variablesOnLoops(buildCausalGraph(model));
   const incoming = new Map<Id, Id[]>();
-  for (const l of model.links) incoming.set(l.to, [...(incoming.get(l.to) ?? []), l.from]);
+  for (const l of model.links) push(incoming, l.to, l.from);
   /** First variable on no loop that drives one of `targets` (a constraint, standard or resource limit). */
   const exogenousDriver = (targets: Iterable<Id>): Id | undefined => {
     for (const t of targets) {
@@ -115,7 +123,7 @@ export function matchArchetypes(model: Model, loops: Loop[]): ArchetypeCandidate
   };
 
   const byVar = new Map<Id, number[]>();
-  views.forEach((v, i) => v.loop.varIds.forEach((id) => byVar.set(id, [...(byVar.get(id) ?? []), i])));
+  views.forEach((v, i) => v.loop.varIds.forEach((id) => push(byVar, id, i)));
 
   const drafts: Draft[] = [];
   const add = (d: Draft) => {
@@ -150,6 +158,8 @@ export function matchArchetypes(model: Model, loops: Loop[]): ArchetypeCandidate
       if (b2 === b1 || b2.type !== 'B' || !disjoint(b2, r)) continue;
       let condition = succ(b1, x);
       while (!b2.vars.has(condition)) condition = succ(b1, condition);
+      const capacity = pred(b2, condition);
+      const investment = pred(b2, capacity);
       const standard = exogenousDriver(b2.loop.varIds.filter((id) => !b1.vars.has(id)));
       const delayed = delayOutside(b2, b1);
       add({
@@ -159,12 +169,12 @@ export function matchArchetypes(model: Model, loops: Loop[]): ArchetypeCandidate
           ['state', x],
           ['growingAction', succ(r, x)],
           ['slowingAction', condition],
-          ['capacity', pred(b2, condition)],
-          ['investment', succ(b2, condition)],
+          ['capacity', capacity],
+          ['investment', investment],
           ['performanceStandard', standard],
         ],
         score: 0.7 + (delayed ? 0.2 : 0) + (standard ? 0.05 : 0),
-        explanation: `Growth of ${q(x)} through ${q(succ(r, x))} is held back by ${q(condition)}, and the capacity loop through ${q(succ(b2, condition))} that would relieve it ${delayed ? 'acts only after a delay' : 'competes with the growth loop'}.`,
+        explanation: `Growth of ${q(x)} through ${q(succ(r, x))} is held back by ${q(condition)}, and the investment loop through ${q(capacity)} that would relieve it ${delayed ? 'acts only after a delay' : 'competes with the growth loop'}.`,
       });
     }
   };
@@ -181,6 +191,8 @@ export function matchArchetypes(model: Model, loops: Loop[]): ArchetypeCandidate
     while (shared(end)) end++;
     const problem = at(b, start);
     const fix = at(b, end);
+    const consequence = succ(r, fix);
+    if (b.vars.has(consequence)) return; // the R loop must pass through a consequence outside the fix loop
     const rDelay = delayOutside(r, b);
     add({
       archetypeId: 'fixes-that-fail',
@@ -188,10 +200,10 @@ export function matchArchetypes(model: Model, loops: Loop[]): ArchetypeCandidate
       roles: [
         ['problem', problem],
         ['fix', fix],
-        ['consequence', succ(r, fix)],
+        ['consequence', consequence],
       ],
       score: 0.55 + (rDelay ? 0.3 : 0) + (delayOutside(b, r) ? 0 : 0.1),
-      explanation: `The balancing loop ${q(problem)} → ${q(fix)} relieves the problem, but the reinforcing loop through ${q(succ(r, fix))} feeds it back${rDelay ? ' after a delay' : ''}.`,
+      explanation: `The balancing loop through the fix ${q(fix)} relieves ${q(problem)}, but the reinforcing loop through ${q(consequence)} feeds the problem back${rDelay ? ' after a delay' : ''}.`,
     });
   };
 
@@ -296,8 +308,10 @@ export function matchArchetypes(model: Model, loops: Loop[]): ArchetypeCandidate
     if (!pair) return;
     const [r1, r2] = pair;
     // Where each B loop leaves its party's R loop (the activity) and re-enters it (the gain).
-    const exit = (b: LoopView, r: LoopView) => b.loop.varIds.find((id) => r.vars.has(id) && !r.vars.has(succ(b, id))) as Id;
-    const entry = (b: LoopView, r: LoopView) => b.loop.varIds.find((id) => r.vars.has(id) && !r.vars.has(pred(b, id))) as Id;
+    const exit = (b: LoopView, r: LoopView) =>
+      b.loop.varIds.find((id) => r.vars.has(id) && !r.vars.has(succ(b, id))) as Id;
+    const entry = (b: LoopView, r: LoopView) =>
+      b.loop.varIds.find((id) => r.vars.has(id) && !r.vars.has(pred(b, id))) as Id;
     const activityA = exit(b1, r1);
     let total = succ(b1, activityA);
     while (!b2.vars.has(total)) total = succ(b1, total);
@@ -346,7 +360,11 @@ export function matchArchetypes(model: Model, loops: Loop[]): ArchetypeCandidate
         else if (sameOut) erodingGoals(a, b, touch);
         else if (inSign(a, touch) !== outSign(a, touch) && inSign(b, touch) !== outSign(b, touch))
           twoParties('escalation', a, b, touch);
-      } else if (touch !== undefined && inSign(a, touch) !== inSign(b, touch) && outSign(a, touch) !== outSign(b, touch)) {
+      } else if (
+        touch !== undefined &&
+        inSign(a, touch) !== inSign(b, touch) &&
+        outSign(a, touch) !== outSign(b, touch)
+      ) {
         twoParties('success-to-the-successful', a, b, touch);
       }
     }
@@ -359,7 +377,10 @@ export function matchArchetypes(model: Model, loops: Loop[]): ArchetypeCandidate
 function finalize(drafts: Draft[]): ArchetypeCandidate[] {
   const best = new Map<string, Draft>();
   for (const d of drafts) {
-    const id = `${d.archetypeId}|${d.views.map((v) => v.loop.key).sort(compareIds).join('|')}`;
+    const id = `${d.archetypeId}|${d.views
+      .map((v) => v.loop.key)
+      .sort(compareIds)
+      .join('|')}`;
     const prev = best.get(id);
     if (!prev || d.score > prev.score) best.set(id, d);
   }

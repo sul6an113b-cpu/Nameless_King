@@ -89,7 +89,12 @@ function flowFinding(from: Variable, stockId: Id): Finding | undefined {
   return implied && { implied, basis: 'flow', states: 0, positive: 0, negative: 0 };
 }
 
-function equationFinding(evalVar: VarEvaluator, targetId: Id, sourceIndex: number, states: State[]): Finding | undefined {
+function equationFinding(
+  evalVar: VarEvaluator,
+  targetId: Id,
+  sourceIndex: number,
+  states: State[],
+): Finding | undefined {
   let evaluated = 0;
   let positive = 0;
   let negative = 0;
@@ -173,8 +178,7 @@ function initialRun(model: Model, compiled?: CompiledModel): SimResult | undefin
 function sampleRows(count: number): number[] {
   if (count <= POLARITY_MAX_SAMPLES) return Array.from({ length: count }, (_, i) => i);
   const rows = new Set<number>();
-  for (let i = 0; i < POLARITY_MAX_SAMPLES; i++)
-    rows.add(Math.round((i * (count - 1)) / (POLARITY_MAX_SAMPLES - 1)));
+  for (let i = 0; i < POLARITY_MAX_SAMPLES; i++) rows.add(Math.round((i * (count - 1)) / (POLARITY_MAX_SAMPLES - 1)));
   return [...rows];
 }
 
