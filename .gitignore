@@ -1,0 +1,28 @@
+# dependencies
+node_modules/
+
+# build output
+dist/
+*.tsbuildinfo
+coverage/
+
+# secrets — never commit
+.env
+.env.*
+!.env.example
+
+# third-party test suites fetched locally (see docs/DECISIONS.md)
+vendor/
+
+# test artifacts
+playwright-report/
+test-results/
+blob-report/
+e2e/.artifacts/
+
+# editor / OS
+.DS_Store
+.vscode/*
+!.vscode/extensions.json
+.idea/
+*.log
