@@ -1,54 +1,20 @@
 /**
  * Test support for the content package (imported by *.test.ts only; not re-exported from index.ts).
- * - Readiness probes for modules built in parallel (engine, graph, parser): a probe is "ready" unless the stub
- *   throws `NotImplementedError`, so any other failure surfaces as a real test failure.
- * - `structureIssues`: static checks every bundled model must pass today, before the engine exists.
+ * - `simulateScenario`: compile a model with one of its scenarios and run it.
+ * - `structureIssues`: static checks every bundled model must pass (no simulation needed).
  */
 import {
   BUILTIN_NAMES,
-  NotImplementedError,
   RESERVED_WORDS,
   canonicalName,
   compileModel,
-  findLoops,
   impliedFlowLinks,
   parseEquation,
   referencedNames,
-  simulate,
   type Model,
   type Scenario,
   type SimResult,
 } from '@looplab/core';
-import { buildModel } from './build.ts';
-
-/** A two-variable drain model used only to probe whether a module is implemented. */
-export const probeModel: Model = buildModel({
-  id: 'm_probe',
-  name: 'Probe',
-  simSpec: { start: 0, stop: 1, dt: 0.25, method: 'euler', timeUnit: 'month' },
-  variables: [
-    { id: 'v_level', name: 'Level', kind: 'stock', eq: '1', units: 'dmnl' },
-    { id: 'v_drain', name: 'Drain', kind: 'flow', eq: 'Level / Drain_time', units: '1/month', from: 'v_level' },
-    { id: 'v_time', name: 'Drain time', kind: 'constant', eq: '2', units: 'month', range: [1, 3] },
-  ],
-  links: [
-    ['v_level', 'v_drain', '+'],
-    ['v_time', 'v_drain', '-'],
-  ],
-});
-
-function implemented(probe: () => unknown): boolean {
-  try {
-    probe();
-    return true;
-  } catch (e) {
-    return !(e instanceof NotImplementedError);
-  }
-}
-
-export const engineReady = implemented(() => simulate(probeModel));
-export const graphReady = implemented(() => findLoops(probeModel));
-export const parserReady = implemented(() => parseEquation('1'));
 
 /** Run a model's scenario through the engine (compile with the scenario, then simulate with its SimSpec overrides). */
 export function simulateScenario(model: Model, scenarioId: string): SimResult {
@@ -63,19 +29,11 @@ export function simulateScenario(model: Model, scenarioId: string): SimResult {
 
 const NON_VARIABLE_NAMES = new Set([...BUILTIN_NAMES, ...RESERVED_WORDS]);
 
-/**
- * Canonical names referenced by an equation. Uses the real parser once it is merged; until then a small tokenizer
- * that understands numbers (incl. 1e-3), quoted names, identifiers and function calls.
- */
+/** Canonical variable names referenced by an equation (via the core parser), plus the functions it calls. */
 export function equationReferences(eq: string): { names: string[]; calls: string[] } {
-  if (parserReady) {
-    const r = parseEquation(eq);
-    if (!r.ok) throw new Error(`Parse error in "${eq}": ${r.error.message}`);
-    return { names: referencedNames(r.ast).filter((n) => !NON_VARIABLE_NAMES.has(n)), calls: callsOf(eq) };
-  }
-  const names = new Set<string>();
-  for (const t of tokens(eq)) if (t.kind === 'name' && !NON_VARIABLE_NAMES.has(t.canon)) names.add(t.canon);
-  return { names: [...names], calls: callsOf(eq) };
+  const r = parseEquation(eq);
+  if (!r.ok) throw new Error(`Parse error in "${eq}": ${r.error.message}`);
+  return { names: referencedNames(r.ast).filter((n) => !NON_VARIABLE_NAMES.has(n)), calls: callsOf(eq) };
 }
 
 type Token = { kind: 'num' | 'name' | 'call' | 'op'; canon: string };

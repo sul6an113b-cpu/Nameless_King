@@ -136,3 +136,25 @@ Everything below follows SPEC §5 and was exercised with the scratch reference i
   - `bibliography` and `cite` (full references for report appendices).
   - `tankHeight` (the analytic solution).
 - `src/testing.ts` holds the test helpers and is not exported.
+
+## Phase 2 integration review
+
+Scope: engine (`packages/core/src/{parser,units,sim}`), loop analysis (`packages/core/src/graph`), copilot prompt (`apps/server/src/copilot/prompt.ts`), checked against Sterman (2000), Senge (1990), Kim (1992), Meadows (1999) and RESEARCH §XMILE 2–3. Result: **0 blockers, 1 major, 5 minors.** Nothing here needs to change before Phase 3 begins; the major item should be fixed before LTM relies on `evalVar`.
+
+### Engine — 0 blockers, 1 major, 3 minors
+Verified correct: STEP (`TIME + DT/2 > t0`), PULSE (volume/DT, repeats every interval, fires at the next grid time when off-grid), RAMP (with end time), SMTH1/3/N (all stages start at init, each stage τ/n), DELAY1/3/N (stages start at init·τ/n, output Sₙ·n/τ), DELAY pipeline (output = input(t−τ), checked by hand for m = 1 and m > 1), PREVIOUS/INIT, Euler/RK4 staging (compile.ts:568–668, run.ts:150–180), outflow limiting in priority order, and TIME = start + n·DT. The units convention (year = 12 months = 365 d) and the stock = flow × time rule (infer.ts:262–276) are sound.
+- **MAJOR — health.ts:71–77 (with model.ts:263, run.ts:38).** `integrationTest` runs the shared `CompiledModel` at DT/2. That mutates `program.env.dt`, and `checkPolarity` then calls `evalVar` against a DT of DT/2, so PULSE magnitudes, STEP thresholds and `DT` references differ from the baseline run whose states it samples. LTM (Phase 3) would hit the same problem after any re-run at another DT. *Fix:* run `checkPolarity` before `integrationTest`, and in `runProgram` restore `env` in a `finally` block (or make `evalVar` take the `SimSpec` of the result it reads).
+- minor — health.ts:225. "Euler is exact on the DT grid" overstates the case: Euler has O(DT) truncation error everywhere. *Fix:* "Euler applies jumps exactly at grid times".
+- minor — run.ts:68–87. A non-negative stock limits only its outflows, so a negative-valued (bi-directional) inflow can still drive it below 0. *Fix:* document this in SE-13, and add a health info item when a non-negative stock has an inflow that is not `nonNegative`.
+- minor — health.ts (no check). Nothing flags a stock with no inflows and no outflows, which is a common modelling slip and makes the stock a disguised constant. *Fix:* add a `flow-link` warning for it.
+
+### Loop analysis — 0 blockers, 0 majors, 1 minor
+R/B typing (loops.ts:36–43; an even number of "−" links is R, any "?" is U), the loop-key rotation and self-loops follow Sterman's polarity rule. The loop-role patterns match Senge (1990, Appendix 2) and Kim (1992): Fixes that Fail is B + R sharing the fix path; Shifting the Burden is two B loops plus a side-effect R loop; Eroding Goals is a goal loop plus a delayed condition loop; Escalation is two B loops (a figure-8 that is R overall); Success to the Successful is two R loops coupled through the allocation; Tragedy of the Commons is two R loops, each coupled to a B loop, sharing the commons. All 8 bundled canonical CLDs are proposed by the matcher (content tests).
+- minor — archetypes.ts:255–260. The Escalation and Success-to-the-Successful score rewards symmetry through equal loop *length*, but Kim (1992) treats symmetry of *role*, not length. *Fix:* weight the symmetry bonus lower (0.1), or compare link-sign patterns instead of lengths.
+
+### Copilot prompt — 0 blockers, 0 majors, 1 minor
+The prompt gets these right: polarity defined with "above/below what it would otherwise have been" (Sterman ch. 5), variables named as nouns with no built-in direction, R/B/U labelling, explicit goals on balancing loops, grounding (cite only tool numbers, label hypotheses), untrusted-data handling, and a Meadows list whose names and order (12→1) match Meadows (1999).
+- minor — prompt.ts:32. Relating delay marks to "the time horizon of the problem" is looser than Sterman's criterion, which is a delay long relative to the dynamics of interest. *Fix:* "Mark a delay when it is long relative to the other time constants that matter to the behaviour."
+
+### Content cleanup (Task B)
+The D-016 / M-5 gates (`engineReady`, `graphReady`, `parserReady`, the probe model and the pre-parser tokenizer path) are removed from `packages/content/src/{testing,archetypes.test,examples.test}.ts`. All content tests now run unconditionally: 126/126 passing, with 0 skips.

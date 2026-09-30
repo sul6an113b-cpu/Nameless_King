@@ -3,7 +3,7 @@ import { ArchetypeId, ModelSchema, findLoops, matchArchetypes, runHealth, simula
 import { archetypes } from './archetypes/index.ts';
 import { explainShape } from './shapes.ts';
 import { bibliography } from './sources.ts';
-import { engineReady, graphReady, loopCounts, simulateScenario, structureIssues } from './testing.ts';
+import { loopCounts, simulateScenario, structureIssues } from './testing.ts';
 
 /** Hand-verified feedback loops of each canonical CLD (Kim 1992 templates; see the archetype files). */
 const cldLoops: Record<ArchetypeId, { R: number; B: number }> = {
@@ -94,8 +94,7 @@ describe('archetype library (static)', () => {
 
 describe('archetype behaviour (engine)', () => {
   for (const a of archetypes) {
-    // SKIP-REASON: engine not merged yet (docs/DECISIONS.md#D-016)
-    it.skipIf(!engineReady)(
+    it(
       `${a.name}: SFD passes Model Health (no errors; no unit, integration-error or polarity findings)`,
       () => {
         const health = runHealth(a.sfd, { runIntegrationTest: true });
@@ -105,8 +104,7 @@ describe('archetype behaviour (engine)', () => {
       },
     );
 
-    // SKIP-REASON: engine not merged yet (docs/DECISIONS.md#D-016)
-    it.skipIf(!engineReady)(`${a.name}: KPI shows the signature shape "${a.signature.shape}"`, () => {
+    it(`${a.name}: KPI shows the signature shape "${a.signature.shape}"`, () => {
       const result = simulate(a.sfd);
       for (const [id, s] of Object.entries(result.series)) expect(s.every(Number.isFinite), id).toBe(true);
       expect(result.assertions).toEqual([]);
@@ -114,8 +112,7 @@ describe('archetype behaviour (engine)', () => {
       expect(verdict, verdict.reason).toMatchObject({ match: true });
     });
 
-    // SKIP-REASON: engine not merged yet (docs/DECISIONS.md#D-016)
-    it.skipIf(!engineReady)(`${a.name}: every scenario compiles and runs`, () => {
+    it(`${a.name}: every scenario compiles and runs`, () => {
       for (const s of a.sfd.scenarios) {
         const r = simulateScenario(a.sfd, s.id);
         for (const [id, series] of Object.entries(r.series))
@@ -125,8 +122,7 @@ describe('archetype behaviour (engine)', () => {
 
     const breaker = breaksSignature[a.id];
     if (breaker) {
-      // SKIP-REASON: engine not merged yet (docs/DECISIONS.md#D-016)
-      it.skipIf(!engineReady)(`${a.name}: scenario ${breaker} removes the signature`, () => {
+      it(`${a.name}: scenario ${breaker} removes the signature`, () => {
         const r = simulateScenario(a.sfd, breaker);
         const verdict = explainShape(a.signature.shape, r.series[a.signature.kpi] ?? []);
         expect(verdict.match, verdict.reason).toBe(false);
@@ -137,8 +133,7 @@ describe('archetype behaviour (engine)', () => {
 
 describe('archetype structure (loop analysis)', () => {
   for (const a of archetypes) {
-    // SKIP-REASON: graph module not merged yet (docs/decisions/methodologist.md#m-5; same policy as docs/DECISIONS.md#D-016)
-    it.skipIf(!graphReady)(`${a.name}: findLoops returns the hand-verified R/B loops of the CLD`, () => {
+    it(`${a.name}: findLoops returns the hand-verified R/B loops of the CLD`, () => {
       const { loops, truncated } = findLoops(a.cld);
       expect(truncated).toBe(false);
       expect({ R: loops.filter((l) => l.type === 'R').length, B: loops.filter((l) => l.type === 'B').length }).toEqual(
@@ -146,8 +141,7 @@ describe('archetype structure (loop analysis)', () => {
       );
     });
 
-    // SKIP-REASON: graph module not merged yet (docs/decisions/methodologist.md#m-5; same policy as docs/DECISIONS.md#D-016)
-    it.skipIf(!graphReady)(`${a.name}: the archetype matcher proposes it for its canonical CLD`, () => {
+    it(`${a.name}: the archetype matcher proposes it for its canonical CLD`, () => {
       const candidates = matchArchetypes(a.cld, findLoops(a.cld).loops);
       expect(candidates.map((c) => c.archetypeId)).toContain(a.id);
     });

@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { ModelSchema, runHealth, simulate, type SimResult } from '@looplab/core';
 import { examples } from './examples/index.ts';
 import { bibliography } from './sources.ts';
-import { engineReady, loopCounts, simulateScenario, structureIssues } from './testing.ts';
+import { loopCounts, simulateScenario, structureIssues } from './testing.ts';
 
 const byId = (id: string) => {
   const e = examples.find((x) => x.id === id);
@@ -115,8 +115,7 @@ describe('example models (static)', () => {
 
 describe('example models (engine)', () => {
   for (const e of examples) {
-    // SKIP-REASON: engine not merged yet (docs/DECISIONS.md#D-016)
-    it.skipIf(!engineReady)(
+    it(
       `${e.title}: passes Model Health and simulates with finite values and no assertion violations`,
       () => {
         const health = runHealth(e.model, { runIntegrationTest: true });
@@ -136,13 +135,11 @@ describe('example models (engine)', () => {
 
   // Tolerances: docs/decisions/methodologist.md#m-3 (measured with an independent reference implementation:
   // RK4 at DT = 1 s gives 3e-11 relative error, Euler at DT = 0.5 s gives 5.2e-3).
-  // SKIP-REASON: engine not merged yet (docs/DECISIONS.md#D-016)
-  it.skipIf(!engineReady)('tank-draining: RK4 matches the analytic solution within 1e-6 relative error', () => {
+  it('tank-draining: RK4 matches the analytic solution within 1e-6 relative error', () => {
     expect(tankError('rk4', 1)).toBeLessThan(1e-6);
   });
 
-  // SKIP-REASON: engine not merged yet (docs/DECISIONS.md#D-016)
-  it.skipIf(!engineReady)(
+  it(
     'tank-draining: Euler at the default DT is within 1 % and converges with order ≈ 1; RK4 with order ≈ 4',
     () => {
       const { dt } = byId('tank-draining').model.simSpec;
@@ -156,8 +153,7 @@ describe('example models (engine)', () => {
     },
   );
 
-  // SKIP-REASON: engine not merged yet (docs/DECISIONS.md#D-016)
-  it.skipIf(!engineReady)(
+  it(
     'epc-rework: conserves tasks, reports progress ahead of truth, and overruns the deadline',
     () => {
       const { model } = byId('epc-rework');
@@ -181,8 +177,7 @@ describe('example models (engine)', () => {
     },
   );
 
-  // SKIP-REASON: engine not merged yet (docs/DECISIONS.md#D-016)
-  it.skipIf(!engineReady)(
+  it(
     'epc-handoff: conserves spools, crews wait early, and procurement lead time is the lever',
     () => {
       const { model } = byId('epc-handoff');
@@ -208,8 +203,7 @@ describe('example models (engine)', () => {
     },
   );
 
-  // SKIP-REASON: engine not merged yet (docs/DECISIONS.md#D-016)
-  it.skipIf(!engineReady)('qc-ncr-backlog: backlog peaks at the end of the construction peak and outlives it', () => {
+  it('qc-ncr-backlog: backlog peaks at the end of the construction peak and outlives it', () => {
     const { model } = byId('qc-ncr-backlog');
     const r = simulate(model);
     const backlog = col(r, 'v_awaiting');
