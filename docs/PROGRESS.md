@@ -25,3 +25,11 @@ Each checkpoint: `✅ [phase] — [delivered] | [test command → passed/failed]
   - web bundle contains 0 occurrences of `ANTHROPIC_API_KEY` or `sk-ant-`
 
 ✅ Phase 1 — scaffold: workspaces, schema contract, model ops, module stubs, test harnesses | npm run build/typecheck/lint → passed; npm test → 39/39 passed; npm run e2e → 1/1 passed | commit 5d52df1
+
+## Phase 2 — Core build
+- Merged five agents: sd-engine (parser, units, Euler/RK4, Model Health), graph-analyst (loops, metrics, archetypes, polarity), copilot (tool loop, patch protocol, panel), methodologist (8 archetypes, 12 leverage points, 4 examples, USER_GUIDE), canvas-ui (shell, Frame/Map/Quantify/Test, persistence, workers).
+- Measured: RK4 max rel. error 3.3e-8; convergence order Euler 0.94–1.05, RK4 3.94–4.12; 500-var × 10k Euler steps 330–430 ms (Node); 150-var loop enumeration ≤19 ms.
+- SD review (methodologist): 0 blockers, 1 major (fixed: DT restored after DT/2 health run), 5 minors carried to Phase 3 owners (docs/decisions/methodologist.md).
+- Verified: npm run build/typecheck/lint → OK; npm test → 728/728, 0 skips; npm run e2e → 5/5.
+
+✅ Phase 2 — core engine, graph, copilot, content, canvas | npm test → 728/728 passed; npm run e2e → 5/5 passed | commit be9bf30
