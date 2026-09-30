@@ -4,7 +4,9 @@
  * different units get separate charts (never two y-scales on one axis).
  */
 import { lazy, Suspense, useMemo, useState } from 'react';
-import type { HealthItem, Id, Model, SimResult } from '@looplab/core';
+import { oatSensitivity, type HealthItem, type Id, type Model, type SimResult, type TornadoRow } from '@looplab/core';
+import { LeveragePareto } from '../analyze/AnalyzeStage.tsx';
+import { TornadoChart } from '../charts/TornadoChart.tsx';
 import type { ChartSeries } from '../charts/align.ts';
 import { NumberField, Unavailable } from '../components/fields.tsx';
 import { setSimSpec } from '../lib/edits.ts';
@@ -131,6 +133,7 @@ export function TestStage() {
           {notice?.kind === 'error' && <p className="error-text">Simulation failed: {notice.message}</p>}
           {notice?.kind === 'compile' && <CompileErrors errors={notice.errors} />}
           {runs.length === 0 && !notice && <p className="empty">Press Run to simulate the model over its horizon.</p>}
+          {latest && <Sensitivity model={model} runSeq={latest.seq} />}
           {runs.length > 0 && <Charts model={model} runs={runs.filter((r) => shown.includes(r.seq))} slots={slots} />}
         </div>
         <aside className="chart-side" aria-label="Series and runs">
@@ -139,6 +142,37 @@ export function TestStage() {
         </aside>
       </div>
     </>
+  );
+}
+
+/** OAT sensitivity of the first KPI over each constant's uncertainty range; recomputed for each new run. */
+function Sensitivity({ model, runSeq }: { model: Model; runSeq: number }) {
+  const out = useMemo(() => {
+    const kpi = model.frame.kpis.find((k) => k.varId !== null);
+    const params = model.variables.flatMap((v) =>
+      v.kind === 'constant' && v.uncertainty ? [{ varId: v.id, min: v.uncertainty.min, max: v.uncertainty.max }] : [],
+    );
+    if (!kpi?.varId || params.length === 0) return null;
+    try {
+      const rows: TornadoRow[] = oatSensitivity(model, params, { varId: kpi.varId, statistic: 'final' }).rows;
+      return { kpiName: kpi.name, rows, error: null };
+    } catch (e) {
+      return { kpiName: kpi.name, rows: [] as TornadoRow[], error: e instanceof Error ? e.message : String(e) };
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- recompute per run, not per keystroke
+  }, [runSeq]);
+  if (!out) return null;
+  if (out.error) return <p className="error-text">Sensitivity failed: {out.error}</p>;
+  const names = Object.fromEntries(model.variables.map((v) => [v.id, v.name]));
+  const total = out.rows.reduce((t, r) => t + r.swing, 0) || 1;
+  return (
+    <div className="card" style={{ marginBottom: 10 }}>
+      <h2>Sensitivity of {out.kpiName} (final value)</h2>
+      <TornadoChart rows={out.rows} names={names} kpiName={out.kpiName} />
+      <LeveragePareto
+        rows={out.rows.map((r) => ({ name: names[r.varId] ?? r.varId, score: r.swing / total, cumulativeShare: r.cumulativeShare }))}
+      />
+    </div>
   );
 }
 

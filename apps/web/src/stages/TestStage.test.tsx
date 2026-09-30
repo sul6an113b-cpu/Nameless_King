@@ -93,6 +93,21 @@ describe('Test stage (basic run)', () => {
     expect(screen.getByTestId('fake-chart').textContent).toBe('Backlog[0|7,4]');
   });
 
+  it('shows tornado and Pareto for the first KPI once the model has been run', async () => {
+    const m = model();
+    loadModel({
+      ...m,
+      variables: m.variables.map((v) => (v.id === 'v_p' ? { ...v, uncertainty: { min: 1, max: 5, distribution: 'uniform' as const } } : v)),
+      frame: { ...m.frame, kpis: [{ id: 'k_p', name: 'Staff KPI', varId: 'v_p', goal: 'maximize' as const }] },
+    });
+    const user = userEvent.setup();
+    render(<TestStage />);
+    expect(screen.queryByTestId('chart-tornado')).toBeNull();
+    await user.click(screen.getByTestId('btn-simulate'));
+    expect(await screen.findByTestId('chart-tornado')).toBeTruthy();
+    expect(screen.getByTestId('chart-pareto')).toBeTruthy();
+  });
+
   it('DT and method are under Settings and apply to the next run', async () => {
     const user = userEvent.setup();
     render(<TestStage />);

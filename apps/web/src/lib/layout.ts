@@ -24,7 +24,7 @@ export interface LayoutOptions {
 export type Positions = Record<string, { x: number; y: number }>;
 
 export function computeLayout(nodes: LayoutNode[], edges: LayoutEdge[], opts: LayoutOptions = {}): Positions {
-  const g = new dagre.graphlib.Graph({ multigraph: true });
+  const g = new dagre.graphlib.Graph();
   g.setGraph({
     rankdir: opts.rankdir ?? 'LR',
     nodesep: opts.nodesep ?? 50,
@@ -35,9 +35,15 @@ export function computeLayout(nodes: LayoutNode[], edges: LayoutEdge[], opts: La
   g.setDefaultEdgeLabel(() => ({}));
   const ids = new Set(nodes.map((n) => n.id));
   for (const n of nodes) g.setNode(n.id, { width: n.width, height: n.height });
-  edges.forEach((e, i) => {
-    if (ids.has(e.from) && ids.has(e.to)) g.setEdge(e.from, e.to, {}, `e${i}`);
-  });
+  // Layering only needs adjacency: parallel, opposite and self edges (a pipe plus a link, a two-node loop) make
+  // dagre throw "Not possible to find intersection", so each unordered pair is added once.
+  const seen = new Set<string>();
+  for (const e of edges) {
+    const key = e.from < e.to ? `${e.from}\u0000${e.to}` : `${e.to}\u0000${e.from}`;
+    if (e.from === e.to || !ids.has(e.from) || !ids.has(e.to) || seen.has(key)) continue;
+    seen.add(key);
+    g.setEdge(e.from, e.to);
+  }
   dagre.layout(g);
   const out: Positions = {};
   for (const n of nodes) {
