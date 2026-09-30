@@ -1,7 +1,10 @@
 /** Stage bodies. Each stage shows only its own tools (BRIEF: workflow rail). */
+import { AnalyzeStage } from '../analyze/AnalyzeStage.tsx';
 import { CldCanvas } from '../canvas/CldCanvas.tsx';
 import { SfdCanvas } from '../canvas/SfdCanvas.tsx';
 import { HealthPanel } from '../quantify/HealthPanel.tsx';
+
+export { AnalyzeStage };
 
 export function MapStage() {
   return (
@@ -35,20 +38,6 @@ function Upcoming({ items, note }: { items: string[]; note: string }) {
         </ul>
       </section>
     </div>
-  );
-}
-
-export function AnalyzeStage() {
-  return (
-    <Upcoming
-      note="Structural analysis of the causal map you build in Map."
-      items={[
-        'Every feedback loop, classified reinforcing (R) or balancing (B), named and highlightable',
-        'Loop participation and betweenness per variable',
-        'Archetype candidates to confirm or reject',
-        'Structural leverage map with a Pareto view',
-      ]}
-    />
   );
 }
 
