@@ -23,7 +23,7 @@ vi.mock('@looplab/core', async (importOriginal) => {
     previewPatch: (m: Model): PatchPreview => {
       let p = core.addVariable(m, { id: 'v_new', name: 'Fatigue', origin: 'ai-proposed' });
       p = core.addLink(p, { id: 'l_new', from: 'v_new', to: 'v_b', polarity: '+', origin: 'ai-proposed' });
-      return { added: { variables: ['v_new'], links: ['l_new'] }, changed: ['l_ab'], removed: ['v_a'], preview: p };
+      return { added: { variables: ['v_new'], links: ['l_new'] }, changed: ['l_ab'], removed: ['v_a'], preview: p, targets: {}, skipped: [] };
     },
   };
 });

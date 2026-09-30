@@ -68,13 +68,13 @@ export function runHealth(model: Model, opts: { runIntegrationTest?: boolean } =
       detail: { time: f.time },
     });
 
-  if (opts.runIntegrationTest ?? true) items.push(...integrationTest(model, compiled, base, name));
-
+  // Polarity first: it evaluates equations at the compiled DT (methodologist review, Phase 2).
   try {
     items.push(...checkPolarity(model, compiled, base));
   } catch (e) {
-    if (!(e instanceof NotImplementedError)) throw e; // graph-analyst's check not merged yet
+    if (!(e instanceof NotImplementedError)) throw e;
   }
+  if (opts.runIntegrationTest ?? true) items.push(...integrationTest(model, compiled, base, name));
   return report(items);
 }
 

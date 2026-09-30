@@ -29,6 +29,7 @@ export function Rail() {
 }
 
 export function Dock() {
+  const stage = useUiStore((s) => s.stage);
   const tab = useUiStore((s) => s.dockTab);
   const set = useUiStore((s) => s.setDockTab);
   return (
@@ -58,7 +59,7 @@ export function Dock() {
         </button>
       </div>
       <div className="dock-body" id="dock-panel" role="tabpanel" aria-labelledby={`tab-${tab}`}>
-        {tab === 'copilot' ? <CopilotPanel /> : <Inspector />}
+        {tab === 'copilot' ? <CopilotPanel stage={stage} /> : <Inspector />}
       </div>
     </aside>
   );

@@ -32,7 +32,17 @@ export function timeAxis(spec: SimSpec): { steps: number; every: number } {
   return { steps, every };
 }
 
+/** Run with `spec`, then restore the program's time settings so later `evalVar` calls see the compiled DT. */
 export function runProgram(p: Program, spec: SimSpec, opts: SimOptions = {}): SimResult {
+  const prev = { dt: p.env.dt, start: p.env.start, stop: p.env.stop };
+  try {
+    return runProgramAt(p, spec, opts);
+  } finally {
+    Object.assign(p.env, prev);
+  }
+}
+
+function runProgramAt(p: Program, spec: SimSpec, opts: SimOptions = {}): SimResult {
   const { steps, every } = timeAxis(spec);
   const { start, dt } = spec;
   p.env.dt = dt;

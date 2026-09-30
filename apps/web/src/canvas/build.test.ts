@@ -41,7 +41,7 @@ function fakePreview(m: Model): { status: 'ok'; value: PatchPreview } {
   p = addLink(p, { id: 'l_rs', from: 'v_r', to: 'v_s', polarity: '+', origin: 'ai-proposed' });
   return {
     status: 'ok',
-    value: { added: { variables: ['v_r'], links: ['l_rs'] }, changed: ['l_cf'], removed: ['v_q'], preview: p },
+    value: { added: { variables: ['v_r'], links: ['l_rs'] }, changed: ['l_cf'], removed: ['v_q'], preview: p, targets: {}, skipped: [] },
   };
 }
 

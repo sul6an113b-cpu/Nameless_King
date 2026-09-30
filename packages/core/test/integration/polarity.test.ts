@@ -45,3 +45,16 @@ describe('polarity consistency with the real compiler (AC6)', () => {
     expect(items.some((i) => i.elementIds.includes(outflowLink?.id ?? ''))).toBe(true);
   });
 });
+
+describe('simulate() leaves the compiled DT unchanged (methodologist review, Phase 2 major)', () => {
+  it('evalVar sees the compiled DT after a run at DT/2', async () => {
+    const { compileModel } = await import('../../src/index.ts');
+    let m = createEmptyModel('DT probe', { id: 'm_dt', now: '2026-09-29T00:00:00.000Z' });
+    m = addVariable(m, { id: 'v_p', name: 'Probe', kind: 'aux', equation: 'DT' });
+    const c = compileModel(m);
+    if (!c.ok) throw new Error('compile failed');
+    const before = c.compiled.evalVar('v_p', new Float64Array(c.compiled.size), 0);
+    c.compiled.simulate({ dt: m.simSpec.dt / 2 });
+    expect(c.compiled.evalVar('v_p', new Float64Array(c.compiled.size), 0)).toBe(before);
+  });
+});
