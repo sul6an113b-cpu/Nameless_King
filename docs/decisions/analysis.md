@@ -1,0 +1,15 @@
+# analysis decisions
+
+Scope: `packages/core/src/analysis` (Loops That Matter part), `SimOptions.saveState` in `sim/run.ts`, and the Test-stage loop-dominance chart. Method: SPEC §6.6, RESEARCH §LTM 1–5 and 8, D-008. Index entries for `docs/DECISIONS.md` are at the bottom.
+
+- **AN-01 — Time label and first step.** The score of the interval [t(k−1), t(k)] is labelled t(k) (RESEARCH §LTM 9.1 recommendation; Stella labels it t(k−1)). At the first saved time every score is 0 ("nothing has changed yet"). So "+1 at every step" means every step after the first. Pinned by `analysis/ltm.test.ts`.
+- **AN-02 — Links through SMOOTH/DELAY/PREVIOUS builtins score 0 (known limitation).** `evalVar` re-evaluates z with the previous full state, and a builtin's output reads only its hidden slot, so Δₓz = 0 for x inside the builtin's arguments; loops through such a link score 0. Equations that merely *contain* a builtin are scored correctly (hidden slots come from `saveState`). RESEARCH §7 recommends expanding the builtin into internal stocks (P4); that needs structure the compiler does not expose and is a follow-up. The Test stage tells the user ("not scored yet"). Pinned by a test.
+- **AN-03 — Cycle partition = strongly connected component of `model.links`**, computed from the whole causal graph, so a truncated loop set keeps its true partitions. Scores are relative only to the loops passed in; the UI warns when the loop search was truncated. Uses `graph/digraph.ts` directly.
+- **AN-04 — Non-finite link scores are stored as 0** (inactive). Products are kept as log-magnitude + sign and normalised against the largest term, so scores beyond 1e±308 neither overflow nor underflow.
+- **AN-05 — Tolerances.** Exponential: exactly 1 (measured error 0; test 1e-12). Logistic closed form: measured worst 1.9e-13 (Euler), 1.7e-13 (RK4) at dt = 1/64, so the test uses 1e-11. The error is round-off from differencing saved flows (≈ ε·P/ΔP); deep in the equilibrium tail it grows (1e-9 once ΔP ≈ 2e-6), which is LTM's equilibrium limitation, so the property test stops at 6/r. No noise floor is applied (SPEC: "0 if Δ = 0").
+- **AN-06 — `saveState`** returns a copy of the full value vector (user + hidden slots) per saved step, independent of `saveIds`/`saveEvery`: memory = rows × size × 8 B, opt-in only. The Test stage re-simulates on the main thread once per run (like the sensitivity panel) rather than shipping state through the worker.
+- **AN-07 — Chart.** One chart per partition; the 6 strongest loops (mean |score|) are drawn under handles R1/B2… (numbered by type in found order); colour slot follows the found order among drawn loops, never rank. Fixed axis [−1.05, 1.05]. The table (20 strongest) is the legend key and text twin. The dominance threshold rule (D-008) is not implemented in core yet: `LtmResult` has no field for it.
+
+## Index (for docs/DECISIONS.md)
+
+AN-01 label/first step · AN-02 builtin limitation · AN-03 SCC partitions · AN-04 non-finite and log products · AN-05 tolerances · AN-06 saveState · AN-07 chart.

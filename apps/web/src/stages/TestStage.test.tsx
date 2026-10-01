@@ -1,7 +1,15 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { addVariable, createEmptyModel, type CompileResult, type Model, type SimResult } from '@looplab/core';
+import {
+  addLink,
+  addVariable,
+  connectFlow,
+  createEmptyModel,
+  type CompileResult,
+  type Model,
+  type SimResult,
+} from '@looplab/core';
 import type { ChartSeries } from '../charts/align.ts';
 import { loadModel } from '../state/actions.ts';
 import { useRunsStore } from '../state/runs.ts';
@@ -15,6 +23,7 @@ vi.mock('@looplab/core', async (importOriginal) => {
   return {
     ...core,
     compileModel: (m: Model): CompileResult => {
+      if (engine.mode === 'real') return core.compileModel(m);
       if (engine.mode === 'unavailable') throw new core.NotImplementedError('sim.compileModel');
       if (engine.mode === 'compile-error')
         return {
@@ -106,6 +115,28 @@ describe('Test stage (basic run)', () => {
     await user.click(screen.getByTestId('btn-simulate'));
     expect(await screen.findByTestId('chart-tornado')).toBeTruthy();
     expect(screen.getByTestId('chart-pareto')).toBeTruthy();
+  });
+
+  it('shows loop dominance below the time series once a model with feedback has been run', async () => {
+    engine.mode = 'real';
+    let m = createEmptyModel('G', { id: 'm_g', now: '2026-01-01T00:00:00.000Z' });
+    m = addVariable(m, { id: 'v_p', name: 'Pop', kind: 'stock', equation: '10' });
+    m = addVariable(m, { id: 'v_b', name: 'Births', kind: 'flow', equation: 'Pop * 0.1', flow: { from: null, to: null } });
+    m = connectFlow(m, 'v_b', { to: 'v_p' });
+    loadModel(addLink(m, { id: 'l_pb', from: 'v_p', to: 'v_b', polarity: '+' }));
+    const user = userEvent.setup();
+    render(<TestStage />);
+    expect(screen.queryByTestId('chart-ltm')).toBeNull();
+    await user.click(screen.getByTestId('btn-simulate'));
+    expect(await screen.findByTestId('chart-ltm')).toBeTruthy();
+  });
+
+  it('shows no loop dominance for a model without feedback', async () => {
+    const user = userEvent.setup();
+    render(<TestStage />);
+    await user.click(screen.getByTestId('btn-simulate'));
+    await screen.findByTestId('run-1');
+    expect(screen.queryByTestId('chart-ltm')).toBeNull();
   });
 
   it('DT and method are under Settings and apply to the next run', async () => {

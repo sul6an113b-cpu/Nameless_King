@@ -17,6 +17,7 @@ import { dashOf, MAX_PLOTTED, useRunsStore, type Run } from '../state/runs.ts';
 import { useModelStore } from '../state/store.ts';
 import { useUiStore } from '../state/ui.ts';
 import { cancelSimulation, simulateInWorker } from '../workers/simClient.ts';
+import { LoopDominance } from './LoopDominance.tsx';
 
 // uPlot is loaded only when a chart is first shown (keeps it out of the main bundle).
 const TimeSeriesChart = lazy(() =>
@@ -135,6 +136,7 @@ export function TestStage() {
           {runs.length === 0 && !notice && <p className="empty">Press Run to simulate the model over its horizon.</p>}
           {latest && <Sensitivity model={model} runSeq={latest.seq} />}
           {runs.length > 0 && <Charts model={model} runs={runs.filter((r) => shown.includes(r.seq))} slots={slots} />}
+          {latest && <LoopDominance model={model} runSeq={latest.seq} />}
         </div>
         <aside className="chart-side" aria-label="Series and runs">
           <SeriesPicker model={model} runs={runs} slots={slots} />

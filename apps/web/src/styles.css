@@ -1406,6 +1406,33 @@ details.advanced[open] > summary {
   border-radius: 10px;
   padding: 8px 8px 4px;
 }
+.ltm-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+}
+.ltm-table th {
+  text-align: left;
+  color: var(--muted);
+  font-weight: 500;
+  padding: 2px 8px 2px 0;
+}
+.ltm-table td {
+  padding: 2px 8px 2px 0;
+}
+.ltm-table .num {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.ltm-loop {
+  display: flex;
+  gap: 6px;
+  align-items: baseline;
+}
+.ltm-loop .swatch {
+  flex: none;
+}
 .series-pick {
   display: flex;
   flex-direction: column;

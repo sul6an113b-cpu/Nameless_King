@@ -15,11 +15,15 @@ interface Props {
   yLabel?: string;
   height?: number;
   title?: string;
+  /** fixed y-axis range (default: fitted to the data) */
+  yRange?: [number, number];
 }
 
-export function TimeSeriesChart({ series, xLabel, yLabel, height = 280, title }: Props) {
+export function TimeSeriesChart({ series, xLabel, yLabel, height = 280, title, yRange }: Props) {
   const ref = useRef<HTMLDivElement>(null);
   const theme = useEffectiveTheme();
+  const yMin = yRange?.[0];
+  const yMax = yRange?.[1];
 
   useEffect(() => {
     const el = ref.current;
@@ -35,7 +39,7 @@ export function TimeSeriesChart({ series, xLabel, yLabel, height = 280, title }:
       title,
       width: Math.max(200, el.clientWidth),
       height,
-      scales: { x: { time: false } },
+      scales: { x: { time: false }, ...(yMin !== undefined && yMax !== undefined ? { y: { range: [yMin, yMax] as [number, number] } } : {}) },
       axes: [
         { ...axis, label: xLabel },
         { ...axis, label: yLabel, size: 60 },
@@ -60,7 +64,7 @@ export function TimeSeriesChart({ series, xLabel, yLabel, height = 280, title }:
       ro.disconnect();
       u.destroy();
     };
-  }, [series, xLabel, yLabel, height, title, theme]);
+  }, [series, xLabel, yLabel, height, title, yMin, yMax, theme]);
 
   return <div ref={ref} className="ts-chart" />;
 }

@@ -47,3 +47,4 @@ Format: `D-NNN — decision — rationale — date`. Agent-specific decisions an
 - `docs/decisions/copilot.md` — tool-loop design, strict tool schemas (`toToolSchema`), budget enforcement, patch apply/preview semantics, mocking strategy (Phase 2).
 - `docs/decisions/sd-engine.md` — SE-01…SE-18: time-unit convention (365-day year = 12 months = 4 quarters), builtin grid rules, non-negative limiting (iterated to a fixed point), DELAY τ read at t0, health checks, numeric test tolerances (Phase 2).
 - `docs/decisions/methodologist.md` — sourcing and verification status per claim, illustrative parameters, shape-classifier definitions, engine behaviours the bundled models rely on (Phase 2).
+- `docs/decisions/analysis.md` — AN-01…AN-07: LTM time label, builtin-link limitation, SCC partitions, log-magnitude products, tolerances, saveState, loop-dominance chart.

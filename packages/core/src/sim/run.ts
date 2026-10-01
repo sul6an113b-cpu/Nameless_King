@@ -128,12 +128,14 @@ function runProgramAt(p: Program, spec: SimSpec, opts: SimOptions = {}): SimResu
   const time = new Float64Array(rows);
   const cols = saveIds.map(() => new Float64Array(rows));
   const nCols = cols.length;
+  const states: Float64Array[] | undefined = opts.saveState ? [] : undefined;
   const assertions: SimResult['assertions'] = [];
   const pendingAssertions = [...p.assertions];
   let row = 0;
   const record = (t: number) => {
     time[row] = t;
     for (let c = 0; c < nCols; c++) cols[c][row] = v[saveSlots[c]];
+    states?.push(v.slice()); // full vector incl. hidden builtin slots, independent of `saveIds`
     row++;
     for (let i = pendingAssertions.length - 1; i >= 0; i--) {
       const a = pendingAssertions[i];
@@ -197,6 +199,7 @@ function runProgramAt(p: Program, spec: SimSpec, opts: SimOptions = {}): SimResu
     spec: { ...spec },
     assertions,
     warnings,
+    ...(states ? { state: states } : {}),
   };
   for (const f of firstNonFinite(result).slice(0, 10))
     warnings.push(`"${f.id}" becomes ${f.value} at time ${f.time} (check divisions, LN/SQRT domains, overflow)`);

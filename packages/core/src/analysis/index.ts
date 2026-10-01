@@ -1,16 +1,13 @@
 /** Behavioural analysis (SPEC §6.6) — owner: analysis (Phase 3). Phase-1 stub: signatures only. */
 import type {
   CalibrationResult,
-  CompiledModel,
   FitStats,
   KpiSpec,
   LeverageRankRow,
-  Loop,
   LtmResult,
   MonteCarloOptions,
   MonteCarloResult,
   ParamRange,
-  SimResult,
   StructuralLeverageRow,
   TornadoRow,
 } from '../contracts.ts';
@@ -87,9 +84,7 @@ export function fitStats(_simulated: number[], _observed: number[]): FitStats {
   return notImplemented('analysis.fitStats');
 }
 
-export function loopsThatMatter(_model: Model, _compiled: CompiledModel, _result: SimResult, _loops: Loop[]): LtmResult {
-  return notImplemented('analysis.loopsThatMatter');
-}
+export { loopsThatMatter } from './ltm.ts';
 
 export function rankLeverage(_input: {
   structural: StructuralLeverageRow[];
