@@ -2,14 +2,18 @@ import { describe, expect, it } from 'vitest';
 import { addVariable, createEmptyModel, ModelOpError, ModelSchema, removeVariable } from '@looplab/core';
 import {
   addExcluded,
+  addIntervention,
   addKpi,
   addReferenceMode,
   removeExcluded,
+  removeIntervention,
   removeKpi,
   removeReferenceMode,
+  setDecision,
   setFrameText,
   setModelName,
   setSimSpec,
+  updateIntervention,
   updateKpi,
   updateReferenceMode,
 } from './edits.ts';
@@ -79,5 +83,31 @@ describe('frame and horizon edits', () => {
     expect(m.frame.excluded).toEqual([{ id: 'b_1', name: 'Exchange rates', reason: 'held constant' }]);
     expect(removeExcluded(m, 'b_1').frame.excluded).toEqual([]);
     expect(() => addExcluded(m, { id: 'b_2', name: '' })).toThrow(ModelOpError);
+  });
+});
+
+describe('decision and interventions', () => {
+  it('sets the recommendation and summary immutably; an unchanged value returns the same model', () => {
+    const m = base();
+    const next = setDecision(m, { recommendation: 'Add reviews' });
+    expect(next.decision).toEqual({ recommendation: 'Add reviews', summary: '' });
+    expect(m.decision.recommendation).toBe('');
+    expect(setDecision(next, { recommendation: 'Add reviews' })).toBe(next);
+    expect(() => setDecision(m, { summary: 'x'.repeat(8001) })).toThrow(ModelOpError);
+    valid(next);
+  });
+
+  it('adds, edits and removes an intervention; the scenario link must exist (I6)', () => {
+    const withScenario = { ...base(), scenarios: [{ id: 's_1', name: 'More staff', note: '', overrides: [], origin: 'user' as const }] };
+    let m = addIntervention(withScenario, { id: 'i_1', name: 'Add staff', leverage: 12 });
+    expect(m.interventions[0]).toMatchObject({ id: 'i_1', leverage: 12, scenarioId: null, status: 'idea' });
+    m = updateIntervention(m, 'i_1', { scenarioId: 's_1', status: 'tested', leverage: 9 });
+    expect(m.interventions[0]).toMatchObject({ scenarioId: 's_1', status: 'tested', leverage: 9, name: 'Add staff' });
+    valid(m);
+    expect(() => updateIntervention(m, 'i_1', { scenarioId: 's_nope' })).toThrow(ModelOpError);
+    expect(() => updateIntervention(m, 'i_1', { leverage: 13 })).toThrow(ModelOpError);
+    expect(() => updateIntervention(m, 'i_x', { name: 'y' })).toThrow(ModelOpError);
+    expect(() => addIntervention(m, { id: 'i_1', name: 'dup', leverage: 3 })).toThrow(ModelOpError);
+    expect(removeIntervention(m, 'i_1').interventions).toEqual([]);
   });
 });

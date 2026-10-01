@@ -5,6 +5,8 @@
  */
 import {
   BoundaryItem,
+  Decision,
+  Intervention,
   Kpi,
   ModelOpError,
   ReferenceMode,
@@ -27,6 +29,8 @@ type KpiT = Model['frame']['kpis'][number];
 type RefModeT = Model['frame']['referenceModes'][number];
 type ExcludedT = Model['frame']['excluded'][number];
 type SimSpecT = Model['simSpec'];
+type InterventionT = Model['interventions'][number];
+type DecisionT = Model['decision'];
 
 /** Time units with fixed conversion factors in the engine (SPEC §5). */
 export const TIME_UNITS: readonly string[] = ['second', 'minute', 'hour', 'day', 'week', 'month', 'quarter', 'year'];
@@ -118,3 +122,26 @@ export function updateExcluded(m: Model, id: Id, changes: Partial<ExcludedT>): M
 
 export const removeExcluded = (m: Model, id: Id): Model =>
   withFrame(m, { excluded: m.frame.excluded.filter((b) => b.id !== id) });
+
+// ── decision and interventions (Decide stage) ─────────────────────────────
+
+export function setDecision(m: Model, changes: Partial<DecisionT>): Model {
+  const next = parse(Decision, { ...m.decision, ...changes }, 'decision');
+  return next.recommendation === m.decision.recommendation && next.summary === m.decision.summary
+    ? m
+    : { ...m, decision: next };
+}
+
+export function addIntervention(m: Model, input: Pick<InterventionT, 'id' | 'name' | 'leverage'> & Partial<InterventionT>): Model {
+  return checked({ ...m, interventions: [...m.interventions, parse(Intervention, input, 'intervention')] });
+}
+
+/** Edits one intervention; `scenarioId` must name an existing scenario (I6). */
+export function updateIntervention(m: Model, id: Id, changes: Partial<InterventionT>): Model {
+  if (!m.interventions.some((i) => i.id === id)) throw new ModelOpError('not-found', `No intervention "${id}"`);
+  const interventions = m.interventions.map((i) => (i.id === id ? parse(Intervention, { ...i, ...changes, id }, 'intervention') : i));
+  return checked({ ...m, interventions });
+}
+
+export const removeIntervention = (m: Model, id: Id): Model =>
+  checked({ ...m, interventions: m.interventions.filter((i) => i.id !== id) });

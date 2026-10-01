@@ -3,10 +3,18 @@ import { expect, type Page } from '@playwright/test';
 
 export const STAGES = ['frame', 'map', 'analyze', 'quantify', 'test', 'decide'] as const;
 
+/**
+ * Playwright's own injected scripts are refused by a script-less sandboxed frame, and Chromium logs that once per frame load
+ * (reproduced on a bare `<iframe sandbox srcdoc>` with no app code). The Decide stage's report preview is such a frame, on
+ * purpose: the app runs no script there. This one message is therefore not a problem of the app; everything else still is.
+ */
+export const SANDBOX_NOISE = /Blocked script execution in 'about:srcdoc' because the document's frame is sandboxed/;
+
 /** Collects console errors, page errors, and React Flow warnings (which signal broken edges/nodes). */
 export function trackConsole(page: Page): string[] {
   const problems: string[] = [];
   page.on('console', (msg) => {
+    if (SANDBOX_NOISE.test(msg.text())) return;
     if (msg.type() === 'error' || (msg.type() === 'warning' && msg.text().includes('[React Flow]')))
       problems.push(`${msg.type()}: ${msg.text()}`);
   });

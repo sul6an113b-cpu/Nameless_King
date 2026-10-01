@@ -1515,3 +1515,35 @@ details.advanced[open] > summary {
 .kpi-row .kpi-target {
   grid-column: 3;
 }
+
+.decide {
+  max-width: 980px;
+}
+.decide .card + .card {
+  margin-top: 10px;
+}
+.interventions {
+  list-style: none;
+  margin: 0 0 10px;
+  padding: 0;
+}
+.intervention {
+  padding: 10px 0;
+  border-top: 1px solid var(--border);
+}
+.intervention:first-child {
+  border-top: 0;
+}
+.verdict.better {
+  color: var(--ok, #1a7f4b);
+}
+.verdict.worse {
+  color: var(--danger, #b3261e);
+}
+.report-frame {
+  width: 100%;
+  height: 640px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: #fff;
+}
