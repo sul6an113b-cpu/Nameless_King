@@ -5,6 +5,7 @@ import {
   addIntervention,
   addKpi,
   addReferenceMode,
+  addScenario,
   removeExcluded,
   removeIntervention,
   removeKpi,
@@ -109,5 +110,28 @@ describe('decision and interventions', () => {
     expect(() => updateIntervention(m, 'i_x', { name: 'y' })).toThrow(ModelOpError);
     expect(() => addIntervention(m, { id: 'i_1', name: 'dup', leverage: 3 })).toThrow(ModelOpError);
     expect(removeIntervention(m, 'i_1').interventions).toEqual([]);
+  });
+});
+
+describe('scenario edit', () => {
+  const withConstant = () => addVariable(base(), { id: 'v_k', name: 'Staff', kind: 'constant', equation: '10' });
+
+  it('adds a one-override scenario for a constant, and an intervention can then link to it', () => {
+    let m = addScenario(withConstant(), { id: 's_1', name: '  More staff ', varId: 'v_k', value: 12.5 });
+    expect(m.scenarios).toHaveLength(1);
+    expect(m.scenarios[0]).toMatchObject({ id: 's_1', name: 'More staff', origin: 'user', overrides: [{ varId: 'v_k', equation: '12.5' }] });
+    m = updateIntervention(addIntervention(m, { id: 'i_1', name: 'Hire', leverage: 12 }), 'i_1', { scenarioId: 's_1' });
+    expect(m.interventions[0]?.scenarioId).toBe('s_1');
+    valid(m);
+  });
+
+  it('rejects an unknown variable, a non-constant, a bad value, an empty name and a duplicate id', () => {
+    const m = withConstant();
+    expect(() => addScenario(m, { id: 's_1', name: 'x', varId: 'v_nope', value: 1 })).toThrow(ModelOpError);
+    expect(() => addScenario(m, { id: 's_1', name: 'x', varId: 'v_a', value: 1 })).toThrow(/not a constant/);
+    expect(() => addScenario(m, { id: 's_1', name: 'x', varId: 'v_k', value: Number.NaN })).toThrow(ModelOpError);
+    expect(() => addScenario(m, { id: 's_1', name: '   ', varId: 'v_k', value: 1 })).toThrow(ModelOpError);
+    const once = addScenario(m, { id: 's_1', name: 'x', varId: 'v_k', value: 1 });
+    expect(() => addScenario(once, { id: 's_1', name: 'y', varId: 'v_k', value: 2 })).toThrow(ModelOpError);
   });
 });

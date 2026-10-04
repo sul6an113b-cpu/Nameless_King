@@ -186,7 +186,7 @@ Simulations run in a background worker, so the interface stays responsive.
 
 - **Interventions.** Record each intervention you consider. Each one carries:
   - its **Meadows leverage level** (12 = weakest … 1 = strongest);
-  - a scenario that tests it;
+  - a scenario that tests it (pick one from the list, or make one with **Add scenario**: a name, one constant and its new value);
   - a status: *idea → tested → recommended* (or *rejected*);
   - a rationale.
 - **Side-by-side comparison.** The KPIs of the tested scenarios against the base run.

@@ -48,3 +48,5 @@ Format: `D-NNN — decision — rationale — date`. Agent-specific decisions an
 - `docs/decisions/sd-engine.md` — SE-01…SE-18: time-unit convention (365-day year = 12 months = 4 quarters), builtin grid rules, non-negative limiting (iterated to a fixed point), DELAY τ read at t0, health checks, numeric test tolerances (Phase 2).
 - `docs/decisions/methodologist.md` — sourcing and verification status per claim, illustrative parameters, shape-classifier definitions, engine behaviours the bundled models rely on (Phase 2).
 - `docs/decisions/analysis.md` — AN-01…AN-07: LTM time label, builtin-link limitation, SCC partitions, log-magnitude products, tolerances, saveState, loop-dominance chart.
+- `docs/decisions/canvas-ui.md` — Decide stage: runs computed from the model, sandboxed report preview (no scripts), E2E console filter for the sandbox-frame message, the "Add scenario" control, link-status coupling, per-run CSV (Phase 3).
+- `docs/decisions/interop.md` — report builder: one block list with two renderers, SVG charts from core, model text escaped as data and a CSP on the HTML, `toCsv` formula-injection guard, `kpiComparison` (Phase 3).

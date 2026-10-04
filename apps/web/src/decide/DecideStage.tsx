@@ -8,7 +8,7 @@ import { useMemo, useRef, useState } from 'react';
 import { leveragePoints } from '@looplab/content';
 import { kpiComparison, newId, toCsv, type Intervention, type KpiComparison, type Model } from '@looplab/core';
 import { TextField } from '../components/fields.tsx';
-import { addIntervention, removeIntervention, setDecision, updateIntervention } from '../lib/edits.ts';
+import { addIntervention, addScenario, removeIntervention, setDecision, updateIntervention } from '../lib/edits.ts';
 import { computeDecideData, reportOf, type DecideData } from '../lib/decide.ts';
 import { download, fileStem } from '../lib/files.ts';
 import { act } from '../state/actions.ts';
@@ -73,7 +73,7 @@ function Interventions({ model }: { model: Model }) {
       </h2>
       {model.scenarios.length === 0 && (
         <p className="note" data-testid="no-scenarios">
-          No scenarios yet. Ask the copilot (Intervene mode) to propose and simulate one, or open an example, and link it here.
+          No scenarios yet. Add one below, ask the copilot (Intervene mode) to propose one, or open an example, and link it here.
         </p>
       )}
       {model.interventions.length === 0 && <p className="empty">No interventions yet.</p>}
@@ -90,7 +90,65 @@ function Interventions({ model }: { model: Model }) {
       >
         + Add intervention
       </button>
+      <AddScenario model={model} />
     </section>
+  );
+}
+
+/** One name, one constant, one value: the smallest scenario a user can make; richer ones come from examples or the copilot. */
+function AddScenario({ model }: { model: Model }) {
+  const constants = model.variables.filter((v) => v.kind === 'constant');
+  const [name, setName] = useState('');
+  const [varId, setVarId] = useState('');
+  const [value, setValue] = useState('');
+  const [error, setError] = useState('');
+  const chosen = constants.some((v) => v.id === varId) ? varId : (constants[0]?.id ?? '');
+  const add = () => {
+    const n = Number(value);
+    if (value.trim() === '' || !Number.isFinite(n)) return setError('Enter a number for the new value.');
+    if (name.trim() === '') return setError('Give the scenario a name.');
+    const r = act('Add scenario', (m) => addScenario(m, { id: newId('s'), name, varId: chosen, value: n }));
+    if (r === false) return;
+    setName('');
+    setValue('');
+    setError('');
+  };
+  return (
+    <fieldset className="add-scenario" data-testid="add-scenario">
+      <legend>Add scenario</legend>
+      {constants.length === 0 ? (
+        <p className="empty">No constants to override. Mark a variable as a constant in Quantify first.</p>
+      ) : (
+        <div className="row" style={{ alignItems: 'flex-end' }}>
+          <label className="field">
+            <span>Scenario name</span>
+            <input type="text" maxLength={80} value={name} data-testid="scenario-name" onChange={(e) => setName(e.target.value)} />
+          </label>
+          <label className="field">
+            <span>Constant to change</span>
+            <select value={chosen} data-testid="scenario-var" onChange={(e) => setVarId(e.target.value)}>
+              {constants.map((v) => (
+                <option key={v.id} value={v.id}>
+                  {v.name}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="field">
+            <span>New value</span>
+            <input type="text" inputMode="decimal" value={value} data-testid="scenario-value" onChange={(e) => setValue(e.target.value)} />
+          </label>
+          <button type="button" className="btn" data-testid="btn-add-scenario" style={{ marginBottom: 8 }} onClick={add}>
+            Add scenario
+          </button>
+        </div>
+      )}
+      {error && (
+        <p className="error-text" role="alert" data-testid="scenario-error">
+          {error}
+        </p>
+      )}
+    </fieldset>
   );
 }
 

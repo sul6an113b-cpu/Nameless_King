@@ -2,7 +2,7 @@
 
 A local workbench for rigorous systems thinking: frame a problem → map a causal loop diagram → find and classify every feedback loop and archetype → quantify as a stock-and-flow model → simulate and stress-test → rank leverage points → export a decision brief. A Claude copilot helps at every stage; it proposes, you decide.
 
-> Status: under construction (see `docs/PROGRESS.md`). Phase 1 scaffold is in place.
+> Status: see `docs/PROGRESS.md` for what is built and what is deferred (acceptance-criteria table at the end).
 
 ## Quick start
 

@@ -10,6 +10,7 @@ import {
   Kpi,
   ModelOpError,
   ReferenceMode,
+  Scenario,
   SimSpec,
   integrityIssues,
   type Frame,
@@ -30,6 +31,7 @@ type RefModeT = Model['frame']['referenceModes'][number];
 type ExcludedT = Model['frame']['excluded'][number];
 type SimSpecT = Model['simSpec'];
 type InterventionT = Model['interventions'][number];
+type ScenarioT = Model['scenarios'][number];
 type DecisionT = Model['decision'];
 
 /** Time units with fixed conversion factors in the engine (SPEC §5). */
@@ -145,3 +147,16 @@ export function updateIntervention(m: Model, id: Id, changes: Partial<Interventi
 
 export const removeIntervention = (m: Model, id: Id): Model =>
   checked({ ...m, interventions: m.interventions.filter((i) => i.id !== id) });
+
+/**
+ * Adds a scenario that sets one constant to a number (a one-override "what if"). The variable must be a constant and the
+ * value finite; the equation is stored as the number's plain text, which the engine reads as a literal.
+ */
+export function addScenario(m: Model, input: Pick<ScenarioT, 'id' | 'name'> & { varId: Id; value: number }): Model {
+  const v = m.variables.find((x) => x.id === input.varId);
+  if (!v) throw new ModelOpError('not-found', `No variable "${input.varId}"`);
+  if (v.kind !== 'constant') throw new ModelOpError('invalid', `"${v.name}" is not a constant; a scenario can only override constants here`);
+  if (!Number.isFinite(input.value)) throw new ModelOpError('invalid', 'The override value must be a finite number');
+  const scenario = parse(Scenario, { id: input.id, name: input.name.trim(), overrides: [{ varId: input.varId, equation: String(input.value) }] }, 'scenario');
+  return checked({ ...m, scenarios: [...m.scenarios, scenario] });
+}

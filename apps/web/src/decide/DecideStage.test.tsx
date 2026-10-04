@@ -75,6 +75,39 @@ describe('DecideStage', () => {
     expect(model().interventions[before]).toMatchObject({ scenarioId: null, status: 'idea' });
   });
 
+  it('adds a scenario (name + one constant override) and an intervention can link to it', async () => {
+    const user = userEvent.setup();
+    render(<DecideStage />);
+    const before = model().scenarios.length;
+    await user.type(screen.getByTestId('scenario-name'), 'Bigger team');
+    await user.selectOptions(screen.getByTestId('scenario-var'), 'v_staff');
+    await user.type(screen.getByTestId('scenario-value'), '14');
+    await user.click(screen.getByTestId('btn-add-scenario'));
+    expect(model().scenarios).toHaveLength(before + 1);
+    const added = model().scenarios[before];
+    expect(added).toMatchObject({ name: 'Bigger team', origin: 'user', overrides: [{ varId: 'v_staff', equation: '14' }] });
+    // the form clears, and the new scenario is offered to interventions and compared with the baseline
+    expect(valueOf(screen.getByTestId('scenario-name'))).toBe('');
+    await user.selectOptions(screen.getByTestId('intervention-scenario-i_honest_progress'), added?.id ?? '');
+    expect(model().interventions.find((i) => i.id === 'i_honest_progress')).toMatchObject({ scenarioId: added?.id, status: 'tested' });
+    expect(within(screen.getByTestId('kpi-comparison')).getByText('Bigger team')).toBeTruthy();
+  });
+
+  it('refuses a scenario without a name or a numeric value and changes nothing', async () => {
+    const user = userEvent.setup();
+    render(<DecideStage />);
+    const before = model().scenarios.length;
+    await user.type(screen.getByTestId('scenario-value'), '14');
+    await user.click(screen.getByTestId('btn-add-scenario'));
+    expect(screen.getByTestId('scenario-error').textContent).toMatch(/name/);
+    await user.type(screen.getByTestId('scenario-name'), 'X');
+    await user.clear(screen.getByTestId('scenario-value'));
+    await user.type(screen.getByTestId('scenario-value'), 'lots');
+    await user.click(screen.getByTestId('btn-add-scenario'));
+    expect(screen.getByTestId('scenario-error').textContent).toMatch(/number/);
+    expect(model().scenarios).toHaveLength(before);
+  });
+
   it('removes an intervention', async () => {
     const user = userEvent.setup();
     render(<DecideStage />);
