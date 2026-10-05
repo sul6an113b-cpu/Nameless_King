@@ -1,0 +1,2626 @@
+
+==============================================================================
+
+                              L O O P L A B
+
+               The Complete Plain-Language Guide (about 30 pages)
+
+          A systems-thinking workbench: from "why does this keep
+          happening?" to a tested, ranked, written recommendation.
+
+==============================================================================
+
+Version: October 2026
+Covers: the LoopLab app built in this project (branch
+claude/sweet-lamport-ja78y5)
+Your private online copy: https://claude.ai/artifact/3mPyMZySDKLEh5gyyQkxxm
+
+All numbers in the bundled examples are illustrative. They are realistic in
+shape but are not data from any real project.
+
+
+HOW TO READ THIS GUIDE
+----------------------
+
+You do not need to read this guide from start to finish. Pick the path that
+fits you:
+
+- "I only have 10 minutes." Read Part 1 (the big picture) and the one-page
+  cheat sheet at the very end (chapter 48).
+- "I want to understand the ideas." Read Part 1 and Part 2. Part 2 explains
+  every idea in plain words, with building-site and project examples, and
+  needs no software at all.
+- "I want to use the app." Read Part 3 (the app, screen by screen) and then
+  follow Part 4 (a full worked example, click by click).
+- "I want to use it on my own problem." Read chapter 41 (a 10-step recipe for
+  your own model) and chapter 42 (good habits and common mistakes).
+- "I need to know what it cannot do." Read chapters 43 and 44. They are honest
+  about the limits.
+
+Words in CAPITALS the first time they appear are explained in the glossary
+(chapter 47).
+
+
+CONTENTS
+--------
+
+PART 1 - THE BIG PICTURE
+   1. What LoopLab is, in one page
+   2. The one defining advantage
+   3. Who it is for, and when to use it (and when not to)
+   4. How it differs from the tools you already use
+
+PART 2 - THE IDEAS BEHIND IT, IN PLAIN WORDS
+   5. Systems thinking in five minutes
+   6. Variables: the things that go up and down
+   7. Causal links and their signs (+, -, ?)
+   8. Feedback loops: reinforcing (R) and balancing (B)
+   9. Delays: where the surprises come from
+  10. Stocks and flows: the bathtub
+  11. Behaviour over time: the shapes to recognise
+  12. Archetypes: the stories that repeat
+  13. Leverage points: where pushing works
+  14. Simulation, in plain words
+
+PART 3 - THE APP, SCREEN BY SCREEN
+  15. Opening the app
+  16. The screen layout
+  17. Stage 1 - Frame
+  18. Stage 2 - Map
+  19. Stage 3 - Analyze
+  20. Stage 4 - Quantify
+  21. Model Health: the built-in checker
+  22. Stage 5 - Test
+  23. Stage 6 - Decide
+  24. The report (decision brief)
+  25. Saving, undo and files
+
+PART 4 - FULL WORKED EXAMPLE: THE "90 % DONE FOR MONTHS" PROJECT
+  26. The story
+  27. Step 1 - Frame it
+  28. Step 2 - Map it
+  29. Step 3 - Analyze it
+  30. Step 4 - Quantify it
+  31. Step 5 - Test it
+  32. Step 6 - Decide
+  33. What the example teaches
+
+PART 5 - THE OTHER THREE EXAMPLES
+  34. Engineering -> procurement -> construction handoff
+  35. QC inspection and NCR backlog
+  36. Tank draining (an accuracy check)
+
+PART 6 - REFERENCE
+  37. The eight archetypes, one by one
+  38. Meadows' twelve leverage points, one by one
+  39. Reading the charts
+  40. The copilot (Claude inside the app)
+  41. Your own model from scratch: a 10-step recipe
+  42. Good habits and common mistakes
+  43. Honest limits and caveats
+  44. What is not built yet
+  45. Where everything lives
+  46. Frequently asked questions
+  47. Glossary
+  48. One-page cheat sheet
+  49. Further reading
+
+
+
+==============================================================================
+PART 1 - THE BIG PICTURE
+==============================================================================
+
+
+1. WHAT LOOPLAB IS, IN ONE PAGE
+-------------------------------
+
+LoopLab is a workbench for thinking clearly about problems that keep coming
+back.
+
+Some problems are simple: a pump breaks, you replace it, it is fixed. Others
+are stubborn: you add people to a late project and it gets later; you push for
+speed and quality drops; you clear a backlog and it returns three months
+later. Stubborn problems are almost never caused by one bad decision or one
+bad person. They are caused by the way things are connected: A pushes B, B
+pushes C, and C, some weeks later, pushes A again. These circles of cause and
+effect are called FEEDBACK LOOPS, and LoopLab is built to find them, measure
+them and test ways to break or use them.
+
+LoopLab walks you through six stages, always in the same order:
+
+   1. FRAME     - Say what the problem is, as a pattern over time.
+   2. MAP       - Draw what causes what (a "causal loop diagram").
+   3. ANALYZE   - Let the app find every loop and spot familiar patterns.
+   4. QUANTIFY  - Turn the drawing into numbers and equations.
+   5. TEST      - Run it forward in time, compare options, stress-test.
+   6. DECIDE    - Rank the fixes by how deep they reach; write the brief.
+
+At the end you have a decision brief: a short report that starts with the
+recommendation and then shows the evidence behind it, including the loops that
+explain the problem, the fixes that were tested and how they compared.
+
+There is also an optional AI assistant (the COPILOT, which is Claude) that can
+interview you, critique your diagram, explain loops in plain language and
+draft the report. It only ever proposes changes; nothing changes until you
+click accept.
+
+Everything runs on your own computer, in your browser. Your model is saved in
+the browser automatically. Nothing is sent anywhere unless you switch on the
+copilot, and even then the secret key stays on your machine.
+
+
+2. THE ONE DEFINING ADVANTAGE
+-----------------------------
+
+If you remember one sentence about LoopLab, remember this:
+
+   LoopLab lets you test a fix on the structure of the problem BEFORE you
+   spend real money, real people and real months on it.
+
+Most organisations test fixes the expensive way: they try them on the real
+project and wait to see. When the fix fails, months have passed, the budget is
+spent, and nobody can tell whether the fix was wrong or whether something else
+changed at the same time.
+
+LoopLab replaces that with a cheap, fast rehearsal. You describe how the
+problem works (what drives what), the app turns it into a small working model,
+and you can try "add two engineers", "review designs earlier" or "move the
+deadline" in seconds, side by side, on the same chart. Because the model is
+built from cause and effect rather than from a trend line, it can show you the
+side effects that a spreadsheet hides: the fix that works for six weeks and
+then makes things worse, or the cheap change to a delay that beats the
+expensive change to headcount.
+
+Everything else in the app (the loop finder, the archetypes, the leverage
+ranking, the report, the copilot) exists to make that rehearsal faster, more
+honest and easier to explain to other people.
+
+
+3. WHO IT IS FOR, AND WHEN TO USE IT (AND WHEN NOT TO)
+------------------------------------------------------
+
+Good fits:
+- Project and engineering managers facing recurring slippage, rework, backlogs
+  or "90 % done" syndrome.
+- Planners and project-controls staff who need to explain WHY a schedule keeps
+  slipping, not just THAT it slips.
+- Quality, operations and maintenance leads with queues that never seem to
+  clear.
+- Anyone preparing a recommendation who wants to show the reasoning, not just
+  the conclusion.
+- Teachers and students of systems thinking and system dynamics.
+
+Use LoopLab when:
+- The problem has come back after being "fixed" before.
+- People disagree about the cause, and each camp blames something different.
+- Obvious fixes have side effects that arrive later.
+- Delays are involved (procurement lead times, discovery of errors, hiring,
+  approval cycles).
+- You must justify a choice between several options to someone else.
+
+Do not use LoopLab when:
+- The problem is a one-off with a clear cause (a broken part, a missing
+  signature).
+- You need a precise day-by-day schedule. Use your scheduling tool for that.
+  LoopLab models aggregates ("1,000 tasks", "2,000 spools"), not individual
+  activities.
+- You need a precise cost estimate. LoopLab explains dynamics; it is not an
+  estimating tool.
+- Nobody has time to think. LoopLab rewards one or two focused hours; it does
+  not replace them.
+
+A good rule: if you can draw the problem as a circle ("this causes that, which
+causes more of this"), LoopLab will help. If you can only draw it as a
+straight line ("this broke"), it probably will not.
+
+
+4. HOW IT DIFFERS FROM THE TOOLS YOU ALREADY USE
+------------------------------------------------
+
+Spreadsheet.
+A spreadsheet is excellent at arithmetic and terrible at feedback. Each cell
+is computed once, from left to right. Real projects loop: pressure lowers
+quality, low quality creates rework, rework adds pressure. A spreadsheet
+cannot easily show that circle unfolding week by week. LoopLab is built around
+it.
+
+Scheduling tool (Primavera P6, MS Project and similar).
+A schedule says what should happen, in what order, by when. It assumes
+durations and productivity are fixed inputs. LoopLab asks what happens to
+those durations and that productivity when the project is under pressure, when
+errors are found late, when the supplier is slow. The two tools complement
+each other: the schedule is the plan; LoopLab is a flight simulator for the
+forces that bend the plan.
+
+Risk register.
+A risk register lists separate risks, each with a probability and an impact.
+It treats them as independent. LoopLab shows how they feed each other: a late
+delivery (risk A) raises pressure, which raises errors (risk B), which raises
+rework (risk C). Often the "vital few" risks are the ones sitting on many
+loops at once, and LoopLab ranks exactly that.
+
+Fishbone diagrams and "5 whys".
+These look for a ROOT cause, a starting point. They work well for
+straight-line problems. For stubborn problems, the honest answer is often
+"there is no single root; there is a loop". LoopLab is the next step after a
+fishbone when the bones start pointing back at each other.
+
+Lessons-learned reports.
+These describe what happened. LoopLab lets you replay it and ask "what if we
+had done X instead?", which turns a story into a testable explanation.
+
+
+
+==============================================================================
+PART 2 - THE IDEAS BEHIND IT, IN PLAIN WORDS
+==============================================================================
+
+You can read this part without ever opening the app. It is the thinking that
+the app supports. Every idea is explained with a familiar example.
+
+
+5. SYSTEMS THINKING IN FIVE MINUTES
+-----------------------------------
+
+A SYSTEM is a set of things connected so that together they produce a pattern
+of behaviour over time. A project, a factory, a supply chain, a team and a
+household budget are all systems.
+
+Three ideas carry most of systems thinking:
+
+Idea 1: Structure produces behaviour.
+The same people in a different structure behave differently. If every project
+in your company ends up "90 % complete" for months, the cause is unlikely to
+be the people on each project. It is far more likely to be something they all
+share: how progress is measured, how errors are discovered, how pressure is
+applied. Change the structure and the behaviour changes.
+
+Idea 2: Cause and effect go round in circles.
+In everyday thinking, causes come before effects in a line. In systems,
+effects come back to influence their causes. Overtime raises output (good),
+which tempts management to raise targets, which requires more overtime, which
+tires people, which lowers output. The circle matters more than any single
+link.
+
+Idea 3: Effects are delayed and far away.
+The consequence of a decision often appears weeks or months later, and in a
+different department. By the time it appears, nobody connects it to the
+decision. A design shortcut taken in engineering shows up as rework on site
+half a year later. Delays are why smart people repeat the same mistakes.
+
+The practical habit that follows:
+Before asking "who is to blame?" or "what is the fix?", ask "what is the
+pattern over time, and what structure would produce exactly that pattern?"
+LoopLab's six stages are this habit, turned into screens.
+
+
+6. VARIABLES: THE THINGS THAT GO UP AND DOWN
+--------------------------------------------
+
+A VARIABLE is anything that can increase or decrease over time. Examples:
+"Work to do", "Schedule pressure", "Quality", "Spools on site", "Open NCRs",
+"Staff".
+
+Good variable names are nouns or noun phrases that can be "more" or "less":
+- Good: "Schedule pressure" (can be higher or lower).
+- Bad: "Pressure increases" (that is an event, not a variable).
+- Good: "Quality of work".
+- Bad: "Bad quality" (that already contains a direction).
+- Good: "Engineers on the project".
+- Bad: "Hire engineers" (that is an action; the variable is the number of
+  engineers).
+
+A useful test: put "the level of ..." or "the amount of ..." in front of it.
+If the sentence still makes sense, it is a variable.
+
+Soft variables are allowed. "Morale", "Trust with the client" and "Perceived
+progress" are hard to measure but very real, and leaving them out because they
+are hard to measure is a common way to build a wrong model. LoopLab lets you
+draw them first and attach numbers later (or never, if you only need the
+qualitative picture).
+
+
+7. CAUSAL LINKS AND THEIR SIGNS (+, -, ?)
+-----------------------------------------
+
+A CAUSAL LINK is an arrow from one variable to another, meaning "a change in
+this causes a change in that".
+
+Each link has a sign, called its POLARITY:
+
+  + (same direction)
+    If the cause goes up, the effect goes up (compared with what it would
+    otherwise have been). If the cause goes down, the effect goes down.
+    Example: Work to do -> Schedule pressure is "+". More work left, more
+    pressure.
+
+  - (opposite direction)
+    If the cause goes up, the effect goes down. If the cause goes down, the
+    effect goes up.
+    Example: Schedule pressure -> Quality is "-". More pressure, lower
+    quality.
+
+  ? (unknown)
+    You believe there is a link but you do not know which way it goes, or it
+    depends. LoopLab lets you mark this honestly. Any loop through a "?" link
+    is marked "U" (unknown type) until you decide.
+
+Two important details:
+
+"All else being equal."
+A "+" link does not mean the effect always rises. It means that this cause, on
+its own, pushes the effect up. Other causes may push it down at the same time.
+
+Links can carry extra notes in LoopLab:
+- A DELAY MARK (two short lines across the arrow in classic diagrams): the
+  effect takes noticeably long to show.
+- A MECHANISM NOTE: WHY the link exists, in one sentence. ("Under pressure,
+  engineers skip self-checks.") This is the single most useful habit in causal
+  mapping; it lets other people challenge the link instead of the conclusion.
+- A CONFIDENCE level: low, medium or high.
+
+
+8. FEEDBACK LOOPS: REINFORCING (R) AND BALANCING (B)
+----------------------------------------------------
+
+When a chain of links comes back to where it started, you have a FEEDBACK
+LOOP. There are only two kinds.
+
+REINFORCING LOOP (R) - the snowball.
+A change goes round the loop and comes back bigger, in the same direction.
+Reinforcing loops create growth or collapse that accelerates.
+- Good example: a good reputation brings more clients, more clients bring more
+  experience, more experience improves the reputation.
+- Bad example (a vicious circle): rework raises pressure, pressure lowers
+  quality, lower quality creates more rework.
+
+BALANCING LOOP (B) - the thermostat.
+A change goes round the loop and comes back as a correction, in the opposite
+direction. Balancing loops pull things toward a goal or a limit.
+- Example: the more work is left, the higher the pressure; the higher the
+  pressure, the harder people work; the harder they work, the less work is
+  left.
+- Example: the fuller a warehouse, the fewer orders are placed, so it fills
+  more slowly.
+
+How to tell which is which (the counting rule):
+Count the "-" links around the loop.
+- An EVEN number of "-" links (0, 2, 4 ...) means REINFORCING (R).
+- An ODD number of "-" links (1, 3, 5 ...) means BALANCING (B).
+LoopLab does this counting for you, for every loop, automatically.
+
+Why it matters:
+Every pattern you see in a project is produced by loops taking turns to be in
+charge. Early in a project a reinforcing loop may dominate (momentum builds);
+later a balancing loop takes over (the remaining work runs out, or a limit is
+hit). Knowing which loop is in charge, and when that changes, tells you where
+to act. LoopLab measures this (see "Loop dominance" in chapters 22 and 39).
+
+
+9. DELAYS: WHERE THE SURPRISES COME FROM
+----------------------------------------
+
+A DELAY is a gap in time between a cause and its effect.
+
+Everyday delays:
+- The shower takes a few seconds to respond when you turn the tap. People who
+  do not wait turn it too far, get scalded, turn it back too far, and freeze.
+  That swinging back and forth is called OSCILLATION, and it is caused by
+  acting faster than the delay allows.
+- A procurement lead time: spools ordered today arrive in four months.
+- Discovery of errors: a design error made today may only be found at the next
+  review, or on site.
+- Hiring and training: a new engineer is not fully productive for months.
+- Perception: a manager sees last month's report, not today's reality.
+
+What delays do:
+- They make balancing loops overshoot and oscillate (the shower).
+- They hide the side effects of a decision until it is too late to connect
+  them.
+- They make good fixes look bad at first (and bad fixes look good at first).
+
+Two kinds of delay, which LoopLab treats differently:
+- MATERIAL DELAYS move real things through a pipeline: spools in transit, work
+  in review. Nothing is lost; it just arrives later.
+- INFORMATION DELAYS are slow perceptions: a smoothed average, a monthly
+  report. The "thing" is a belief, which gradually catches up with reality.
+
+A key lesson: shortening a delay is often far more powerful than adding
+resources. Finding errors in four weeks instead of eight can beat hiring more
+staff, because it changes WHEN the system learns, not just how much it can do.
+
+
+10. STOCKS AND FLOWS: THE BATHTUB
+---------------------------------
+
+Picture a bathtub. The water in the tub is a STOCK: an amount that has built
+up over time. The tap is an INFLOW and the drain is an OUTFLOW. Together they
+are FLOWS: rates that change the stock.
+
+Three facts about bathtubs explain a lot of project behaviour:
+
+1. A stock changes only through its flows.
+   You cannot change the amount of water directly; you can only change the tap
+   or the drain. Similarly, you cannot change "work done" directly; only the
+   rate of completing work changes it.
+
+2. A stock keeps rising as long as the inflow is bigger than the outflow, even
+   if the inflow is falling.
+   This is why a backlog keeps growing for a while after a peak has passed:
+   the peak has passed, the inflow is falling, but it is still above the rate
+   at which work is cleared.
+
+3. Stocks create delays and buffers.
+   A stock smooths out differences between inflow and outflow. That is useful
+   (a buffer of materials protects construction from a late delivery) and
+   dangerous (a hidden stock of undiscovered errors protects the reported
+   schedule, until it is discovered).
+
+Project stocks: work to do, work done, undiscovered rework, staff, spools on
+site, open NCRs, cash.
+Project flows: work completed per week, errors made per week, errors
+discovered per week, spools delivered per week, NCRs closed per week.
+
+A quick test to tell them apart: if you could freeze time and take a
+photograph, the things you could count in the photograph are stocks ("there
+are 340 open NCRs"). The things that need a stopwatch are flows ("we close 10
+NCRs per week").
+
+In LoopLab, the causal loop diagram (arrows and signs) and the stock-and-flow
+diagram (tubs, taps and arrows) are not two separate models. They are two
+views of ONE model. That is why LoopLab calls them two "lenses": change the
+model in one view and the other updates automatically, so they can never
+disagree.
+
+
+11. BEHAVIOUR OVER TIME: THE SHAPES TO RECOGNISE
+------------------------------------------------
+
+Before building a model, sketch the problem as a line on a chart: time across
+the bottom, the thing you care about up the side. This sketch is called a
+REFERENCE MODE. It is the behaviour you want the model to explain.
+
+A handful of shapes appear again and again. Each one points to a structure:
+
+Exponential growth (curving upward, faster and faster).
+   Structure: a reinforcing loop in charge.
+   Example: a backlog of rework that feeds itself.
+
+Goal seeking (rising or falling quickly at first, then levelling off at a
+target).
+   Structure: a balancing loop in charge.
+   Example: a team working down a fixed punch list.
+
+S-shaped growth (slow start, fast middle, slow finish).
+   Structure: a reinforcing loop that hands over to a balancing loop as it
+   reaches a limit.
+   Example: the classic project S-curve of cumulative progress.
+
+Oscillation (going up and down around a target).
+   Structure: a balancing loop with a significant delay.
+   Example: hiring and firing in waves; stock levels swinging.
+
+Overshoot and collapse (growing past a limit, then falling).
+   Structure: growth that erodes the very resource it depends on.
+   Example: overtime that burns out the team.
+
+"Better before worse" (an improvement that later turns into a deterioration).
+   Structure: a quick fix with a delayed side effect (see "Fixes that Fail").
+   Example: skipping checks to meet a milestone, then paying for it in rework.
+
+"The last 10 % takes forever" (reported progress racing ahead, then crawling).
+   Structure: hidden rework discovered late.
+   Example: the EPC rework example in Part 4.
+
+In LoopLab you can sketch a reference mode by hand on a sketch pad, label it
+historical, expected, feared or hoped, and see it drawn behind your simulation
+results. When the model's line matches the shape of your sketch, you have a
+structure that can explain the problem. When it does not, the model is missing
+something, which is just as useful to know.
+
+
+12. ARCHETYPES: THE STORIES THAT REPEAT
+---------------------------------------
+
+Over decades, systems thinkers noticed that a small number of loop structures
+cause a large share of real-world problems. These recurring structures are
+called SYSTEM ARCHETYPES. Each has a name, a typical story, a typical shape
+over time and known ways to respond.
+
+LoopLab includes eight:
+- Fixes that Fail
+- Shifting the Burden
+- Limits to Growth
+- Eroding Goals
+- Escalation
+- Success to the Successful
+- Tragedy of the Commons
+- Growth and Underinvestment
+
+When you analyse your diagram, LoopLab compares its loops with these eight and
+suggests the ones that might fit. A suggestion is only a hint. You confirm it
+if the story matches your experience, or reject it if it does not. A confirmed
+archetype brings its intervention advice into the Decide stage.
+
+Why archetypes help:
+They give a name to a pattern that people already feel but cannot describe.
+Saying "this is Shifting the Burden: we keep using overtime instead of fixing
+the staffing plan" is much more persuasive in a meeting than a long
+explanation. All eight are described in chapter 37, each with a project
+example.
+
+
+13. LEVERAGE POINTS: WHERE PUSHING WORKS
+----------------------------------------
+
+Not all fixes are equal. The systems scientist Donella Meadows listed twelve
+places to intervene in a system, from weakest to strongest. LoopLab uses her
+list to tag every intervention you consider.
+
+Shortened version (12 = weakest, 1 = strongest):
+  12  Numbers and parameters (headcount, budgets, deadlines, targets)
+  11  Sizes of buffers (stock levels, float, contingency)
+  10  Physical structure (layout, routes, the way material moves)
+   9  Lengths of delays (lead times, review cycles, reporting cycles)
+   8  Strength of balancing loops (how strongly corrections respond)
+   7  Strength of reinforcing loops (how fast vicious or virtuous circles
+   turn)
+   6  Information flows (who sees what, and when)
+   5  Rules (incentives, penalties, procedures, contracts)
+   4  The power to change structure (who can redesign the system)
+   3  Goals (what the system is actually trying to achieve)
+   2  Mindset or paradigm (the shared beliefs everything rests on)
+   1  The ability to step outside any one paradigm
+
+The uncomfortable truth:
+Most proposed fixes on projects sit at level 12: more people, a new date, a
+higher quota. They are easy to approve and easy to test, and they are often
+the least effective, because the loops that cause the problem are left
+untouched. Before recommending a level-12 fix, check whether a shorter delay
+(9), better information (6) or a different rule (5) acts on the same loop more
+durably. LoopLab puts the level next to every option so this question is
+always visible. Each level is explained with a project example in chapter 38.
+
+
+14. SIMULATION, IN PLAIN WORDS
+------------------------------
+
+To SIMULATE means to let the model run forward in time, step by step, and
+record what happens.
+
+How it works, without maths:
+1. The app starts at time zero with each stock at its starting value.
+2. It works out every flow from the current situation ("with this much
+   pressure, quality is this, so this many flawed tasks are made per week").
+3. It moves time forward one small step and updates each stock by its flows
+   ("one quarter-week passed, so this many tasks moved from 'to do' to
+   'done'").
+4. It repeats until the end of the time horizon.
+
+The step size is called DT ("delta time"). LoopLab's default is a quarter of a
+time unit (for example a quarter of a week). Smaller steps are more accurate
+and slower; for models of this size, both are fast (a large model with 500
+variables runs 10,000 steps in under a third of a second).
+
+There are two ways of taking each step:
+- EULER (the default): simple and robust. Good for almost everything,
+  especially models with sudden switches (a step change on a given date, a
+  pulse).
+- RK4 (Runge-Kutta 4): looks ahead within each step, so it is more accurate
+  for smooth models. It loses that advantage when the model has sudden
+  switches, and the app warns you when that combination occurs.
+
+LoopLab checks itself: the Model Health panel re-runs your model with half the
+step size and warns you if any stock moves by more than 1 %, which tells you
+to choose a smaller DT.
+
+What a simulation is NOT:
+It is not a forecast. A model is a simplified, explicit statement of how you
+believe the problem works. Its value is in comparing options ("A finishes
+earlier than B, and here is why") and in exposing wrong beliefs ("if our
+explanation were right, the backlog would have peaked in March; it peaked in
+June, so something is missing"). Treat the absolute numbers with caution and
+the comparisons with interest.
+
+
+
+==============================================================================
+PART 3 - THE APP, SCREEN BY SCREEN
+==============================================================================
+
+
+15. OPENING THE APP
+-------------------
+
+There are two ways to open LoopLab.
+
+Way 1 - The online copy (no installation).
+- Open this link in Chrome, Edge or Firefox on a computer:
+     https://claude.ai/artifact/3mPyMZySDKLEh5gyyQkxxm
+- The link is private to your Claude account. You may need to sign in to
+  claude.ai first.
+- Use a laptop or desktop screen. The app is designed for a screen of about
+  1280 x 800 pixels or larger; on a phone it will be cramped.
+- The copilot (the AI panel) does not work in the online copy, because it
+  needs a small local server holding a secret key. Everything else is intended
+  to work. Because the online copy runs inside a protected frame, some browser
+  features (background calculation, saving in the browser) may be restricted.
+  If running or saving fails there, the local version below is the reference.
+
+Way 2 - The local version (full features, needs a technical helper once).
+Someone comfortable with a terminal can install it in five commands (they are
+in the project's README file):
+     git clone <the repository address>
+     cd Nameless_King
+     npm install
+     cp .env.example .env
+     npm run dev
+Then open http://127.0.0.1:5173 in a browser. To switch on the copilot, the
+helper puts an Anthropic API key into the ".env" file on your computer. The
+key never leaves the local server; it is never sent to the browser.
+
+The first thing to do in either version:
+Open an example. Click the examples button in the top bar (its tooltip says
+"Open an example model") and pick "EPC project rework cycle". Every example is
+complete and ready to run, so you can see every stage working before you build
+anything yourself.
+
+
+16. THE SCREEN LAYOUT
+---------------------
+
+The screen has four areas:
+
+TOP BAR (across the top)
+- The model's name.
+- The save status (for example "Saved").
+- Undo and redo buttons.
+- A light/dark theme switch.
+- The file menu (new, open, save, export) and the examples button.
+
+LEFT RAIL (down the left side)
+- The six stages: Frame, Map, Analyze, Quantify, Test, Decide.
+- Click any stage at any time. The order is a guide, not a gate: you can jump
+  back to Map from Test to fix a link, then return.
+- Each stage shows only its own tools, so the screen never shows everything at
+  once.
+
+MAIN AREA (the middle)
+- The canvas (the diagram) or the work area of the current stage: forms in
+  Frame, the diagram in Map and Quantify, lists in Analyze, charts in Test,
+  the comparison and report in Decide.
+
+RIGHT DOCK (down the right side)
+- Two tabs:
+   - INSPECTOR: the details of whatever you have selected (a variable, a link,
+     a loop). This is where you rename things, set a sign, write a mechanism
+     note, type an equation or set a range.
+   - COPILOT: the Claude panel (local version with a key only).
+- The dock can be collapsed to give the canvas more room.
+
+General behaviour:
+- Common actions never open a pop-up window that blocks the screen. You rename
+  things in place, edit in the Inspector, and messages appear briefly in a
+  corner ("toasts") and fade away.
+- Every change is saved automatically in the browser shortly after you make
+  it.
+- Undo goes back up to 200 steps.
+
+
+17. STAGE 1 - FRAME
+-------------------
+
+Purpose: say clearly what you are trying to understand, before drawing
+anything.
+
+What is on the screen, and what to type:
+
+Problem statement.
+   One or two sentences describing a BEHAVIOUR OVER TIME, not a missing
+   solution.
+   - Good: "Reported progress reaches 90 % close to the deadline and then
+     crawls, while the real finish slips by months."
+   - Bad: "We need more engineers." (That is a solution in disguise.)
+
+Purpose.
+   What the model is for: "Explain the late finish and compare three
+   responses."
+
+Time horizon.
+   Start, stop and time unit: for example 0 to 120 weeks. Make it long enough
+   for delayed effects to show. A rule of thumb: several times the longest
+   delay in the problem. If errors take 8 weeks to discover, 20 weeks is far
+   too short.
+   Advanced options (collapsed): the step size DT and the method (Euler or
+   RK4). Leave the defaults unless Model Health tells you otherwise.
+
+KPIs (key performance indicators).
+   The few variables you will judge success by. For each, choose:
+   - minimize (less is better, e.g. "Undiscovered rework"),
+   - maximize (more is better), or
+   - target, with a value (e.g. "True progress" with target 1, meaning 100 %).
+   Keep it to two to four. The Test and Decide stages compare scenarios on
+   these.
+
+Reference modes.
+   The pattern over time you want to explain (see chapter 11). Two ways to add
+   one:
+   - Sketch it with the mouse on the sketch pad, give it a name, and label it
+     historical, expected, feared or hoped.
+   - Import it from a CSV file with a time column and a value column (for real
+     data).
+   Reference modes are drawn faintly behind simulation results in Test, so you
+   can see at a glance whether the model reproduces the pattern.
+
+Boundary chart.
+   Three lists that say what is inside and outside the model:
+   - Endogenous (filled in by the app): variables that sit on feedback loops,
+     i.e. explained by the model itself.
+   - Exogenous (filled in by the app): inputs that come from outside and are
+     not affected by the model.
+   - Excluded (filled in by you): things you deliberately left out, each with
+     a one-line reason.
+   The excluded list is one of the cheapest ways to catch a wrong model. If a
+   colleague reads it and says "but client changes are the whole problem!",
+   you have learned something important in thirty seconds.
+
+When Frame is done:
+You can state the problem in one sentence, point at a sketch of its shape,
+name the two to four KPIs, and say what you left out.
+
+
+18. STAGE 2 - MAP
+-----------------
+
+Purpose: draw the CAUSAL LOOP DIAGRAM (CLD) - what causes what.
+
+How to draw:
+1. Press A (or use the add button) to add a variable. Type its name. Remember:
+   a noun that can go up or down.
+2. Press L to enter link mode. Click the cause, then the effect. An arrow
+   appears, with "+" by default.
+3. Select the arrow and press P to flip its sign between + and -. (Use the
+   Inspector to set "?".)
+4. Press D to toggle a delay mark on the selected arrow when the effect is
+   slow.
+5. In the Inspector, write a one-sentence mechanism note for each important
+   link, and set your confidence (low, medium or high).
+6. Press Shift+L to auto-arrange the diagram neatly. Anything you drag by hand
+   stays where you put it.
+7. Press F to fit the whole diagram on the screen.
+
+All keyboard shortcuts:
+   A               add a variable
+   L               link mode
+   P               flip the sign of the selected link
+   D               toggle the delay mark
+   Del/Backspace   delete what is selected
+   Ctrl+Z          undo (Cmd+Z on a Mac)
+   Ctrl+Y          redo (Shift+Cmd+Z on a Mac)
+   Shift+L         auto-layout
+   F               fit to screen
+   ?               show the shortcut sheet
+
+Naming rules the app enforces:
+- Names are not case-sensitive ("Work Rate" and "work rate" are the same).
+- Spaces and underscores count as the same character ("Work to do" =
+  "Work_to_do").
+- Built-in function names such as TIME or MIN cannot be used as variable
+  names.
+
+Tips:
+- Close every loop you believe exists. A chain that does not come back to its
+  start explains nothing dynamic.
+- Start small: five to eight variables that capture the core story. You can
+  always add more.
+- Read each loop aloud as a story: "More pressure means lower quality, which
+  means more flawed work, which later means more rework, which means more work
+  to do and more pressure." If the story sounds wrong, a link is wrong.
+- Mark delays generously. They are where most surprises come from.
+
+
+19. STAGE 3 - ANALYZE
+---------------------
+
+Purpose: let the app study the structure you drew. You do not have to do
+anything except read and decide.
+
+What appears:
+
+Loop list.
+- Every feedback loop in the diagram, found automatically, with its type: R
+  (reinforcing), B (balancing) or U (unknown, because it passes through a "?"
+  link).
+- Click a loop to highlight it on the diagram. Give it a name ("Rework cycle",
+  "Haste makes waste").
+- Self-loops (a variable that affects itself directly, like a tank draining
+  itself) are included.
+- Safety cap: in a very large, tangled diagram the number of loops can
+  explode. The search stops at 1,000 loops by default and shows a warning, so
+  the app never freezes. (The cap can be changed in the model settings.)
+
+Loop participation and betweenness (for each variable).
+- Participation: how many loops pass through it.
+- Betweenness: how often it lies on the shortest paths between other
+  variables.
+- Variables high on both are the HUBS of your structure: the places where many
+  loops meet. They are usually where interventions have the most effect, and
+  where measurement matters most.
+
+Archetype candidates.
+- The app compares your loops with the eight archetypes and lists possible
+  matches, each with the loops that match and a role mapping (for example:
+  "problem symptom" = Schedule pressure; "fix" = Work harder).
+- Click Confirm if the story fits your experience, or Reject if it does not.
+  Only you can judge the story.
+- A confirmed archetype carries its advice (with Meadows levels) into Decide.
+
+Structural leverage map.
+- Variables ranked by a structural score that combines loop participation,
+  betweenness and whether they are stocks or delays.
+- A Pareto line shows how few variables carry most of the structure. Usually
+  two or three stand out.
+
+Polarity consistency (once equations exist).
+- When a variable has an equation, the app works out the sign the equation
+  implies and compares it with the sign you drew. A mismatch is flagged. For
+  example, if you drew "Quality -> Flawed work" as "+" but the equation is
+  Work_rate * (1 - Quality), the app tells you the drawn sign is wrong.
+
+When Analyze is done:
+You know how many loops there are, which ones you believe matter, which
+variables are hubs, and whether a known archetype fits.
+
+
+20. STAGE 4 - QUANTIFY
+----------------------
+
+Purpose: turn the drawing into a working model by giving each variable a KIND
+and an EQUATION. It stays the same model, now viewed through the
+stock-and-flow lens.
+
+The five kinds:
+
+   KIND       MEANING                               ITS EQUATION HOLDS
+   Stock      an accumulation (backlog, work done)  its starting value
+   Flow       a rate into or out of stocks          the rate
+   Auxiliary  an intermediate calculation           an expression
+   Constant   a fixed number                        a number, plus an
+                                                    optional min-max range
+   Lookup     a graphical function (a table/curve)  a table, edited in the
+                                                    lookup editor
+
+Notes:
+- A variable you have not yet quantified keeps the kind "variable". It is
+  shown dashed and blocks simulation until you give it a kind and an equation.
+- Draw a flow between a stock and another stock, or between a stock and a
+  "cloud" (the edge of the model, where things come from or go to). Connecting
+  a flow to a stock automatically creates the matching causal link: "+" into
+  the stock it fills, "-" into the stock it drains.
+- Give every uncertain constant a RANGE (lowest and highest believable value).
+  The sensitivity tool in Test uses these ranges.
+- Lookups describe effects that are not straight lines, for example "pressure
+  raises productivity a little at first, then not at all". You draw the curve
+  as a small table.
+
+The equation language (quick reference):
+
+Names.
+   Write spaces as underscores, e.g. Work_to_do / Time_remaining, or put the
+   name in double quotes: "Work to do". Not case-sensitive. The editor
+   autocompletes names and functions as you type.
+
+Arithmetic and logic (strongest first):
+   ^                         power
+   -x, NOT                   negative, logical not
+   *  /  MOD                 multiply, divide, remainder
+   +  -                      add, subtract
+   <  <=  >  >=              comparisons
+   =  <>                     equal, not equal
+   AND, then OR
+   IF condition THEN a ELSE b
+
+Test inputs (to create a change on purpose):
+   STEP(height, time)                a jump of "height" at "time"
+   PULSE(volume, first[, interval])  a one-off (or repeating) burst
+   RAMP(slope, start[, end])         a steady climb from "start"
+
+Delays and smoothing:
+   SMTH1 (also SMOOTH), SMTH3 (also SMOOTH3), SMTHN
+      Information delays: slow perceptions that catch up gradually.
+   DELAY1, DELAY3, DELAYN
+      Material delays: things in a pipeline; nothing is lost.
+   DELAY(input, time)
+      A fixed pipeline delay: exactly "time" later.
+   PREVIOUS, INIT
+      The value one step ago; the value at the start.
+
+Maths:
+   MIN(a, b), MAX(a, b), ABS, EXP, LN, LOG10, SQRT, INT,
+   SIN, COS, TAN and their inverses, PI,
+   SAFEDIV(a, b[, x])   divide, but give x (default 0) instead of
+                        an error when b is zero
+
+Time:
+   TIME (the current time), DT, STARTTIME, STOPTIME
+
+There are no random-number functions, on purpose. Every run of the same model
+gives exactly the same result, which makes comparisons trustworthy.
+Uncertainty is explored in the Test stage instead.
+
+Units.
+- Give every variable a unit: tasks, tasks/week, people, tasks/(people*week),
+  1/month, meter^2, or dmnl (dimensionless, for fractions and ratios).
+- Time units: second, minute, hour, day, week, month, quarter, year.
+- Declare your own base units (tasks, spools, people, USD ...) in the model's
+  unit list.
+- The golden rule: a stock's unit must equal its flows' unit multiplied by
+  time. "Tasks" is filled by "tasks/week". The app checks this.
+
+
+21. MODEL HEALTH: THE BUILT-IN CHECKER
+--------------------------------------
+
+The Model Health panel watches the model continuously and points at the
+elements involved, with a "Show" button that jumps to them. It checks:
+
+- Unit consistency. You cannot add tasks to people, compare weeks with tasks,
+  or fill a stock of tasks with a flow of people.
+- Undefined or unused variables. An equation names something that does not
+  exist, or a variable is never used.
+- Links that do not match equations. Every variable should have an arrow from
+  exactly the variables its equation uses. If the equation uses Staff but
+  there is no arrow from Staff, the diagram is lying, and the app says so.
+- Algebraic loops. A circle of calculations with no stock or delay in it (A
+  needs B, B needs A, at the same instant). The circle is named so you can
+  break it.
+- Integration error. The model is re-run with half the step size. If any stock
+  moves by more than 1 % (adjustable), it warns you. The fix: lower DT to a
+  quarter or an eighth of the shortest time constant in the model.
+- Your own assertions. You can write rules that must always hold, such as
+  Work_to_do >= 0. They are checked at every saved step and the first
+  violation is reported.
+- Polarity consistency. Drawn signs against the signs the equations imply (see
+  chapter 19).
+- Numeric problems. Division by zero, or values that become infinite or "not a
+  number".
+
+Severity labels tell you what to fix first. A clean Model Health panel does
+not prove the model is right, but a model with health problems is certainly
+not ready to be trusted.
+
+
+22. STAGE 5 - TEST
+------------------
+
+Purpose: run the model, compare options and find out which uncertainties
+matter.
+
+The run bar (top of the Test screen):
+- "Run" (shown as a play symbol). While it runs, the label shows "Running..."
+  and a Cancel button appears.
+- Next to it, a summary: the method (Euler or RK4), the DT, the time horizon,
+  and how long the last run took.
+- "Export CSV": saves the latest run's numbers as a spreadsheet file.
+- You can change the method (Euler or Runge-Kutta 4), the DT and the horizon
+  here.
+
+Charts and runs:
+- The main chart shows the selected variables over time. A side panel ("Series
+  and runs") lets you choose which variables to show and lists your kept runs.
+- "Runs (compare)": keep several runs and show them on the same chart. Each
+  run can be shown, hidden or removed.
+- Reference modes from Frame appear faintly behind the lines.
+- Simulation runs in the background, so the screen stays responsive.
+
+Scenarios:
+- A scenario is a named set of changes to the base model: a different value
+  for a constant, a different equation, and optionally different simulation
+  settings.
+- Examples: "Add two engineers" (Staff = 12 instead of 10), "Earlier design
+  reviews" (Time to discover rework = 4 instead of 8).
+- Run each scenario and keep it to compare against the base run.
+
+One-at-a-time sensitivity (the tornado):
+- For every constant that has a range, the app runs the model twice: once with
+  the constant at its lowest value and once at its highest, everything else at
+  its base value.
+- It measures how much the KPI swings between the two runs.
+- Result: a TORNADO chart, with the biggest swing at the top, plus a PARETO
+  line showing the cumulative share. Typically two or three parameters account
+  for most of the uncertainty. Those are the numbers worth measuring properly;
+  the rest can stay rough.
+- Current limitation: the tornado uses the first KPI, at the end of the run.
+
+Loop dominance (Loops That Matter):
+- For every moment in the run, the app calculates each loop's share of what is
+  driving the change in the model.
+- A loop is DOMINANT when its share reaches 50 %. If no single loop reaches 50
+  %, the smallest group of loops that together reach 50 % is shown.
+- The chart shows how control passes from one loop to another over time. For
+  example, a growth loop in charge early on hands over to a limiting loop
+  later. That handover moment is often the best time to act.
+- This uses a published method ("Loops That Matter", 2023 revision).
+- Current limitation: loops whose links pass through a smoothing or delay
+  function (SMTH, DELAY) score zero, so they may be under-reported.
+
+Not yet available in the app (see chapter 44): Monte Carlo (thousands of
+random combinations of the ranges) and automatic calibration to real data.
+
+
+23. STAGE 6 - DECIDE
+--------------------
+
+Purpose: turn what you learned into a choice, and write it down.
+
+Interventions.
+For each option you are considering, record:
+- A name ("Hold design reviews earlier").
+- Its Meadows leverage level (12 = weakest ... 1 = strongest; see chapter 38).
+- The scenario that tests it. Choose an existing scenario from the list, or
+  click "Add scenario" and give a name, one constant and its new value.
+- A status: idea -> tested -> recommended (or rejected).
+- A rationale: one or two sentences explaining why.
+
+Side-by-side comparison.
+A table of the KPIs for each tested scenario against the base run, so you can
+see at a glance which option moves which KPI, and by how much.
+
+Report export.
+Produces the decision brief (chapter 24) as Markdown, which can be printed to
+PDF from the browser.
+
+A healthy habit in Decide:
+For each level-12 option (more people, new dates), ask whether a level 9, 6 or
+5 option acts on the same loop. Write down the answer in the rationale, even
+if you still choose the level-12 option. That one sentence is often what
+convinces a sceptical reader.
+
+
+24. THE REPORT (DECISION BRIEF)
+-------------------------------
+
+The report is written in "pyramid order": the answer first, the evidence
+after. Busy readers can stop after the first section.
+
+Its sections, in order:
+1. Recommendation: what to do, in a few lines.
+2. The loops that explain the problem, named and described.
+3. The leverage ranking: the options considered, with their Meadows levels.
+4. The evidence: model health, sensitivity (tornado), loop dominance.
+5. Simulation charts comparing the scenarios.
+6. Appendix: the full model listing (every variable, equation and unit),
+   assumptions, the boundary chart and sources.
+
+Two safety features:
+- Model text (names, notes) is treated strictly as data in the report, so
+  nothing written in a model can run as code when the report is opened.
+- The CSV export guards against "formula injection": a cell that starts with
+  "=", "+", "-" or "@" cannot run as a formula when opened in a spreadsheet.
+
+How to use it:
+Send the recommendation section as the body of an email and attach the full
+report. The appendix lets a technical reviewer check every assumption, which
+is what makes a model-based recommendation credible.
+
+
+25. SAVING, UNDO AND FILES
+--------------------------
+
+   WHAT              HOW
+   Autosave          The model is saved in the browser shortly after every
+                     change. The top bar shows the save status.
+   Undo / redo       Up to 200 steps (Ctrl+Z, Ctrl+Y; Cmd+Z, Shift+Cmd+Z).
+   Save / open file  A versioned JSON model file. Older files are upgraded
+                     automatically when opened. Files from a newer version,
+                     or damaged files, are refused with a clear message, and
+                     nothing in your current model changes.
+   Diagram export    PNG or SVG picture of the current canvas (from Map or
+                     Quantify).
+   Results export    CSV of the simulated series (Test: "Export CSV").
+   Report export     Markdown, then print-to-PDF from the browser.
+
+Important: browser saving belongs to that browser on that computer. If you
+clear your browser data or switch computers, the model is not there. Save a
+model file regularly for anything you care about.
+
+
+
+==============================================================================
+PART 4 - FULL WORKED EXAMPLE: THE "90 % DONE FOR MONTHS" PROJECT
+==============================================================================
+
+This part walks through the bundled example "EPC project rework cycle" from
+start to finish, click by click. Open it now if you can (examples button in
+the top bar -> "EPC project rework cycle") and follow along. Every name below
+is the exact name you will see on screen.
+
+A note on numbers: the results quoted here (week 53, week 76 and so on) come
+from the example's documentation. If the screen shows slightly different
+values, trust the screen; the shape of the story is what matters.
+
+
+26. THE STORY
+-------------
+
+An EPC (engineering, procurement, construction) contractor has an engineering
+package of 1,000 deliverables (drawings, datasheets, calculations), 10
+engineers and a 52-week deadline.
+
+What everyone sees:
+- Progress reports look healthy for most of the year: 40 %, 60 %, 75 %, 85 %.
+- Near the deadline, reported progress reaches about 90 %, and then it crawls.
+  Week after week, it says 91 %, 92 %, 93 %.
+- The real finish slips by months. The planned year becomes well over a year.
+- Management responds with pressure: overtime, daily progress meetings, "just
+  get it out the door".
+
+What nobody sees:
+Some deliverables marked "done" contain errors. Nobody knows yet. They are
+found weeks later, in a review, by another discipline, or by the client, and
+they come back as rework. Meanwhile the progress report counted them as
+complete. And because the report looks better than reality, the pressure is
+aimed at the wrong time: too little early, too much late, when haste creates
+even more errors.
+
+This pattern is so common in project management that it has a name: the "90 %
+syndrome". The rework cycle that causes it is one of the best-documented
+structures in the project-dynamics research (Lyneis and Ford, 2007).
+
+Our questions:
+1. Can a simple structure reproduce the pattern?
+2. Of three responses (add engineers, review designs earlier, set a realistic
+   deadline), which helps most, and why?
+
+
+27. STEP 1 - FRAME IT
+---------------------
+
+Click "Frame" in the left rail. You will see what the example's author filled
+in:
+
+Problem statement:
+   "Engineering packages report ~90 % complete for months while the true end
+   date keeps slipping; the planned 52 weeks become well over a year."
+   Notice: it describes a behaviour over time, not a solution.
+
+Purpose:
+   "Explain the overrun through the rework cycle and schedule pressure, and
+   compare policies: more staff, earlier discovery of rework, honest progress
+   reporting."
+
+Time horizon:
+   0 to 120 weeks, with DT = 0.25 week and Euler integration. Why 120 when the
+   deadline is 52? Because the interesting part happens AFTER the deadline. A
+   52-week horizon would cut off the very behaviour we want to see.
+
+KPIs (three):
+   - True progress: target 1 (that is, 100 % genuinely complete).
+   - Undiscovered rework: minimize (hidden errors are the enemy).
+   - Schedule pressure: target 1 (1 means "the normal pace is just enough";
+     above 1 means the team must work faster than normal to make the date).
+
+Reference mode:
+   "Reported progress stalls near 90 %", labelled FEARED. It is a hand sketch
+   through these points: 0 % at week 0, 40 % at week 20, 75 % at week 40, 88 %
+   at week 52, 93 % at week 65, 97 % at week 80 and 100 % at week 95.
+
+Excluded (the boundary chart), each with a reason:
+   - Hiring, training and experience dilution. (Staff is treated as a simple
+     lever; the effect of new people slowing down experienced ones is left out
+     for simplicity.)
+   - Client scope changes. (Scope is fixed, to isolate the rework dynamics.)
+   - Fatigue from sustained overtime. (Folded into the effect of pressure on
+     quality.)
+   - Knock-on effects on procurement and construction. (Covered by the
+     separate handoff example.)
+
+Pause and read the excluded list. It tells you what this model CANNOT answer.
+For example, it cannot tell you whether hiring would be slowed down by
+training time, because training is outside the model. If that is your real
+question, the model needs to be extended first.
+
+
+28. STEP 2 - MAP IT
+-------------------
+
+Click "Map". You see the causal loop diagram. Three loops tell the story:
+
+Loop 1: The rework cycle (R, reinforcing).
+   Work rate -> Flawed work -> Undiscovered rework -> Rework discovery -> Work
+   to do -> Work rate.
+   In words: the more work is done, the more flawed work is produced; flawed
+   work sits undiscovered; after a delay it is discovered and returns to the
+   pile of work to do; which keeps the work rate going. Every flawed task
+   comes back later.
+
+Loop 2: Work harder (B, balancing).
+   Work to do -> Schedule pressure -> Productivity -> Work rate -> less Work
+   to do.
+   In words: more work left means more pressure; pressure makes people work
+   faster; faster work reduces the work left. This is the "good" correcting
+   loop that management relies on.
+
+Loop 3: Haste makes waste (R, reinforcing).
+   Schedule pressure -> lower Quality -> more Flawed work -> more Undiscovered
+   rework -> (later) more Work to do -> more Schedule pressure.
+   In words: pressure lowers quality; low quality creates hidden errors; the
+   errors return as rework; rework raises pressure. A vicious circle, with a
+   delay inside it.
+
+Click "Schedule pressure" and read its note in the Inspector:
+   "Work rate needed to finish by the deadline relative to normal capacity.
+   Only visible work counts: undiscovered rework is invisible."
+This one sentence is the heart of the problem. The pressure signal is computed
+from the work people can SEE. Hidden errors do not create pressure until they
+are discovered, which is exactly when it is too late to absorb them calmly.
+
+Try it: select the link "Quality -> Flawed work" and look at its sign. It is
+"-" (lower quality means more flawed work), with the note "Lower quality ->
+more flawed work." Press P to flip it to "+" and watch the loop types in
+Analyze change, then press Ctrl+Z to undo. This shows how one sign can turn a
+vicious circle into a harmless one, which is why each sign deserves a moment's
+thought.
+
+
+29. STEP 3 - ANALYZE IT
+-----------------------
+
+Click "Analyze".
+
+Loop list:
+   The app finds 10 loops: 4 reinforcing and 6 balancing. The rework cycle and
+   haste-makes-waste loops are among the reinforcing ones. Click each loop to
+   see it highlighted. Name the important ones ("Rework cycle", "Work harder",
+   "Haste makes waste") so they appear by name in the report.
+
+Hubs:
+   "Work to do" lies on 9 of the 10 loops. "Work rate", "Schedule pressure"
+   and "Flawed work" each lie on 6. These are the hubs: the places where many
+   loops meet. Notice that "Schedule pressure" is a hub. That is a strong hint
+   that how pressure is calculated (and what it can see) matters a great deal.
+
+Archetype candidates:
+   The matcher may suggest FIXES THAT FAIL: the "fix" is pressure-driven haste
+   (work harder, faster), and the "unintended consequence" is the delayed
+   rework that haste creates. Read the role mapping. If it matches your
+   experience of projects, click Confirm. Its advice ("look for the delayed
+   side effect; weaken it, or find a fix without one") will appear in Decide.
+
+Structural leverage map:
+   Look at the Pareto line. A handful of variables (the hubs above, plus the
+   delay "Time to discover rework") carry most of the structure.
+
+What we have learned without a single number:
+The problem is not "engineers are slow". It is a loop of hidden errors and
+misdirected pressure, and it runs through a delay (the time it takes to
+discover rework) and a blind spot (pressure ignores undiscovered rework).
+
+
+30. STEP 4 - QUANTIFY IT
+------------------------
+
+Click "Quantify". The same model now appears as stocks and flows.
+
+Three stocks (the tubs):
+   - Work to do (tasks). Starts at Project_scope (1,000). Cannot go below
+     zero. Its note: "Tasks not yet attempted, plus discovered rework."
+   - Work done (tasks). Starts at 0. "Tasks done correctly."
+   - Undiscovered rework (tasks). Starts at 0. "Tasks believed done that
+     contain errors nobody has found yet."
+
+Three flows (the taps):
+   - Correct work = Work_rate * Quality
+        from Work to do into Work done.
+   - Flawed work = Work_rate * (1 - Quality)
+        from Work to do into Undiscovered rework.
+   - Rework discovery = Undiscovered_rework / Time_to_discover_rework
+        from Undiscovered rework back into Work to do.
+        (On average, a hidden error is found after Time_to_discover_rework
+        weeks.)
+
+The auxiliaries (the calculations):
+   - Work rate = MIN(Staff * Productivity, Work_to_do / Minimum_task_duration)
+        The team's capacity, but it slows down as the pile runs out (you
+        cannot work faster than the remaining work allows).
+   - Time remaining = MAX(Deadline - TIME, Minimum_time_remaining)
+        Weeks left until the deadline, but never less than 4. After the
+        deadline passes, people plan on "about four more weeks", again and
+        again.
+   - Schedule pressure = Work_to_do / (Time_remaining * Staff *
+     Normal_productivity)
+        The pace needed, divided by the normal pace. Note: it uses Work_to_do
+        only, not Undiscovered_rework.
+   - Effect of pressure on productivity: a lookup (curve). At pressure 1 or
+     below, no effect. At 1.5, +10 %; at 2, +20 %; at 3, +25 %. Overtime
+     helps, but with diminishing returns.
+   - Effect of pressure on quality: a lookup. At pressure 1 or below, no
+     effect. At 1.5, quality is 90 % of normal; at 2, 80 %; at 3, 70 %.
+   - Productivity = Normal_productivity * Effect_of_pressure_on_productivity
+   - Quality = Normal_quality * Effect_of_pressure_on_quality ("Fraction of
+     work done without errors.")
+   - True progress = Work_done / Project_scope
+   - Perceived progress = (Work_done + Undiscovered_rework) / Project_scope
+        "What progress reports show: flawed work counts as done until
+        discovered." This is the variable that produces the 90 % syndrome.
+
+Constants, each with an uncertainty range [low, high]:
+   Project scope ........... 1000 tasks          [900, 1100]
+   Staff ................... 10 people           [8, 12]
+   Normal productivity ..... 2 tasks/person/week [1.6, 2.4]
+   Normal quality .......... 0.8 (80 % right)    [0.7, 0.9]
+   Time to discover rework . 8 weeks             [4, 16]
+   Deadline ................ 52 weeks            [44, 60]
+   Minimum time remaining .. 4 weeks             [2, 8]
+   Minimum task duration ... 1 week              [0.5, 2]
+
+A quick sanity check you can do in your head:
+   10 engineers x 2 tasks per week = 20 tasks per week. 1,000 tasks / 20 = 50
+   weeks, just inside the 52-week deadline. But only 80 % of the work is right
+   first time, so roughly 200 tasks will need doing again, and some of those
+   will be flawed too. The plan had no room for rework at all. The model makes
+   this visible.
+
+Model Health:
+   The panel should be clean: units consistent, every link matching its
+   equation, no algebraic loops. Two assertions are written and hold:
+   Work_to_do >= 0 ("Backlog cannot be negative.") and Undiscovered_rework >=
+   0.
+
+
+31. STEP 5 - TEST IT
+--------------------
+
+Click "Test" and press Run.
+
+Base run - what you should see:
+   - Perceived progress (what the reports show) climbs steadily and passes 90
+     % around week 53, right at the deadline. Then it crawls.
+   - True progress lags behind it all year. It reaches 99 % only around week
+     76: an overrun of about six months.
+   - The faint reference sketch ("feared") sits close to the
+     perceived-progress line. The structure reproduces the problem.
+   - Schedule pressure stays near 1 for months, then climbs steeply as the
+     deadline approaches, because the visible pile is not shrinking fast
+     enough.
+   - Quality falls as pressure rises (haste makes waste).
+   - Undiscovered rework builds up and peaks near the deadline: a hidden pile
+     of "done" work that is not done.
+
+Why the last 10 % takes so long:
+   When reported progress is 90 %, some of that 90 % is undiscovered rework.
+   As it is discovered, it moves back into Work to do, so the team keeps
+   finishing work while the pile refuses to shrink. Meanwhile pressure is
+   high, quality is low, and part of the rework is itself done wrong. The
+   loops explain the crawl without anyone being lazy or incompetent.
+
+Comparing scenarios:
+   Run each scenario and keep the runs, so they appear together on one chart:
+   - "Add two engineers" (Staff = 12 instead of 10): finishes around week 65.
+   - "Earlier design reviews" (Time to discover rework = 4 weeks instead of 8,
+     "rework found in about half the time"): finishes around week 66. The peak
+     of undiscovered rework drops by about 40 %, because errors surface while
+     there is still time to absorb them calmly.
+   - "Plan for rework" (Deadline = 64 weeks instead of 52, "deadline set with
+     expected rework included"): finishes only slightly earlier than the base
+     run.
+
+   The surprise is the third one. A realistic deadline removes the pressure
+   but not the rework, so on its own it barely helps. The first two are close
+   on finish date, but they work very differently: one buys capacity (it costs
+   salaries every week), the other changes when the system learns about its
+   own errors (it costs a change in review practice).
+
+Sensitivity (the tornado):
+   Run sensitivity. Each of the eight constants is pushed to the low and high
+   ends of its range, one at a time. The tornado ranks them by how much they
+   swing the first KPI (True progress, at the end of the run). The Pareto line
+   shows how few parameters carry most of the uncertainty. Whatever comes out
+   on top is the number most worth measuring properly on a real project. (On
+   the original example, read the order from the screen.)
+
+Loop dominance:
+   Open "Loop dominance". Watch which loops are in charge over time: the
+   work-harder loop early on, and the rework and haste loops taking a larger
+   share as the deadline approaches. The moment the reinforcing loops take
+   over is the moment the project becomes hard to steer, which tells you WHEN
+   an intervention has to be in place: before that handover, not after.
+
+
+32. STEP 6 - DECIDE
+-------------------
+
+Click "Decide". The example ships three interventions:
+
+   INTERVENTION                         LEVEL  TESTED BY        RESULT
+   Add two engineers                    12     Add two          about week 65
+                                               engineers
+   Hold design reviews earlier          9      Earlier design   about week 66,
+                                               reviews          peak hidden
+                                                                rework -40 %
+   Report progress on verified          6      (needs a         not simulated
+   work only                                   structural       in the bundled
+                                               change)          model
+
+Reading the table with leverage in mind:
+- "Add two engineers" is level 12, a parameter. It works, but it costs money
+  every week, and it does not touch the loops: hidden errors are still found
+  late and pressure is still blind.
+- "Hold design reviews earlier" is level 9, a delay. It gets almost the same
+  finish date and also halves the delay before errors are found, which shrinks
+  the hidden pile. It is usually much cheaper than two extra engineers for a
+  year.
+- "Report progress on verified work only" is level 6, an information flow. It
+  fixes the blind spot itself: pressure would respond to the real situation,
+  early, when it is cheap to respond. Testing it needs a structural change
+  (let Schedule pressure see an estimate of Undiscovered rework). You can make
+  that change yourself in Quantify, or, in the local version with a key, ask
+  the copilot in Intervene mode to propose it as a patch and simulate it.
+
+Writing the recommendation (an example):
+   "Hold design reviews early and report progress on verified work only; add
+   staff only if the finish date still misses. Early reviews achieve nearly
+   the same finish as two extra engineers by halving the time hidden errors
+   stay hidden. A deadline extension alone does not help, because it removes
+   pressure but not rework."
+
+Set the statuses (recommended, tested, idea), write a one-line rationale for
+each, and export the report. It opens with the recommendation, then the loops,
+the leverage ranking and the evidence.
+
+
+33. WHAT THE EXAMPLE TEACHES
+----------------------------
+
+1. The problem was in the structure, not the people. Nobody in the model is
+   lazy. The 90 % syndrome is produced by hidden rework, a discovery delay and
+   pressure that cannot see the hidden pile.
+
+2. The obvious fix (more people) works, but at the shallowest level and the
+   highest running cost.
+
+3. A cheaper change to a delay (earlier reviews) gives a similar result, and
+   it reduces the hidden risk instead of outrunning it.
+
+4. The "realistic" fix (a later deadline) barely helps on its own. This is a
+   common and costly surprise in real projects.
+
+5. The deepest fix (honest progress information) targets the blind spot
+   directly. The model also tells you exactly what you would need to change to
+   test it.
+
+6. Without the model, these five points are opinions. With it, they are a
+   reproducible argument that a colleague can check, challenge and re-run.
+
+
+
+==============================================================================
+PART 5 - THE OTHER THREE EXAMPLES
+==============================================================================
+
+
+34. ENGINEERING -> PROCUREMENT -> CONSTRUCTION HANDOFF
+------------------------------------------------------
+
+The story:
+   "Piping crews were mobilised on the planned date but sat partly idle for
+   months waiting for spools, and mechanical completion still slipped."
+
+What it models:
+   2,000 piping spools pass through three stages:
+   - Engineering issues isometric drawings (80 spools per week, starting in
+     week 4, once basic design is frozen).
+   - Procurement buys, fabricates and ships each spool. The average lead time
+     is 16 weeks, modelled as a third-order material delay (DELAY3), so
+     deliveries spread out realistically instead of arriving all at once.
+   - Construction installs delivered spools (crew capacity 60 spools per
+     week), with crews mobilised in week 12.
+
+   The catch: the mobilisation date was "planned on an assumed 8-week
+   procurement lead time". The real lead time is 16 weeks.
+
+Stocks: Spools to engineer, Spools in procurement, Spools on site, Spools
+installed.
+Flows: Isometric issue, Spool delivery (the DELAY3), Installation.
+Key auxiliary: Idle crew capacity = Construction capacity - Installation:
+"installation capacity paid for but not used because spools are missing".
+
+KPIs: Installed fraction (target 1) and Idle crew capacity (minimize).
+Reference mode: "Installation S-curve lags the plan" (historical).
+Excluded: engineering rework and design changes (see the rework example);
+area-by-area prioritisation (one aggregate commodity keeps it simple); other
+commodities such as steel, equipment, E&I (same structure).
+
+Simulation: 0 to 80 weeks, DT = 1/16 week.
+
+Scenarios and interventions:
+   - "Mobilise crews later" (mobilisation at week 22 instead of 12): "Mobilise
+     when spools are actually on site." Intervention level 12: "Changes a date
+     (a parameter) to cut idle capacity."
+   - "Shorter procurement lead time" (10 weeks instead of 16): "Frame
+     agreements with the spool fabricator." Intervention level 9: "Shortens
+     the longest delay in the chain."
+   - "Start isometrics earlier" (week 2 instead of week 4).
+
+What to look for when you run it:
+   - In the base run, crews arrive in week 12 but spools trickle in, so Idle
+     crew capacity is high for weeks: you are paying for crews with nothing to
+     install.
+   - Mobilising later cuts the idle cost but does not move the installation
+     curve much: the spools still arrive when they arrive.
+   - Shortening the lead time moves the whole installation S-curve to the
+     left. It attacks the delay that actually governs the finish.
+   - Starting engineering two weeks earlier helps a little, because the lead
+     time, not engineering, is the bottleneck.
+
+The lesson:
+   In a chain of stages, the longest delay usually sets the pace. Adjusting
+   dates around a delay (level 12) saves cost; shortening the delay itself
+   (level 9) saves time.
+
+
+35. QC INSPECTION AND NCR BACKLOG
+---------------------------------
+
+The story:
+   "During the construction peak the QC inspection backlog exploded; months
+   after the peak, crews still wait weeks for hold-point releases."
+
+What it models:
+   Inspection requests (for example welds and test packs) wait for QC.
+   Inspected items pass or are rejected. Rejected items become NCRs
+   (non-conformance reports), are repaired, and come BACK to the inspection
+   queue to be re-inspected.
+
+Stocks: Awaiting inspection, Open NCRs, Accepted.
+Flows: Submissions, Items passed, Items rejected, NCRs closed (repaired items
+return for re-inspection).
+Key auxiliary: Inspection waiting time = Awaiting_inspection /
+Inspection_capacity ("approximate wait for a new request when QC works at
+capacity").
+
+Numbers (illustrative):
+   Normal submissions 35 per week; an extra 30 per week during the
+   construction peak, from week 10 to week 30; inspection capacity 50 per
+   week; 10 % rejected; repair capacity 10 per week.
+
+KPIs: Awaiting inspection (minimize), Inspection waiting time (target 1 week),
+Open NCRs (minimize).
+Reference mode: "Backlog outlives the peak" (historical).
+Excluded: defects missed by inspection (detection assumed perfect); inspectors
+rushing under backlog pressure (a possible extension); crews proceeding past
+hold points at risk.
+
+Simulation: 0 to 78 weeks, DT = 1/8 week.
+
+The arithmetic behind the pattern (a rough check you can do by hand):
+   - During the peak, about 65 new requests per week arrive, plus about 5
+     re-inspections of repaired items: about 70 per week, against a capacity
+     of 50. The queue grows by about 20 per week for 20 weeks: roughly 400
+     items, and a wait of roughly 8 weeks.
+   - After the peak, about 40 per week arrive against a capacity of 50. The
+     queue shrinks by only about 10 per week, so 400 items take roughly 40
+     weeks to clear.
+   - That is the whole story: a backlog drains only at the SPARE capacity, not
+     at the full capacity. A 20-week peak leaves a 40-week hangover.
+   (These are back-of-the-envelope figures; read the exact values on screen.)
+
+Scenarios and interventions:
+   - "Add inspection capacity" (60 instead of 50). Intervention "Add
+     inspectors for the peak", level 12: "A capacity parameter."
+   - "Improve first-time quality" (rejection 5 % instead of 10 %): "E.g.
+     welder qualification and pre-inspection by the contractor." Intervention
+     level 12: "Fewer rejections means less re-inspection load (a parameter in
+     this model)."
+   - Intervention "Publish the live inspection backlog and waiting time to
+     site", level 6: "Lets supervisors level submissions ahead of the peak;
+     needs a structural change to test."
+
+What to look for:
+   - Compare the two scenarios on the backlog chart. With these numbers, extra
+     capacity has a bigger effect on the hangover because it doubles the spare
+     capacity after the peak; better first-time quality helps steadily and
+     also reduces repair work. Check this on screen; then try both together
+     with a scenario of your own.
+   - Think about the level-6 option: if site supervisors could see the queue,
+     they could bring inspections forward before the peak and flatten it. That
+     attacks the cause (the peak itself) rather than the symptom (the queue).
+
+
+36. TANK DRAINING (AN ACCURACY CHECK)
+-------------------------------------
+
+What it is:
+   Not a business problem but a physics check. Water drains from a tank
+   through a hole in the bottom. The outflow speed follows Torricelli's law: v
+   = square root of (2 x g x height). As the water level falls, the flow slows
+   down.
+
+Why it is included:
+   This problem has an exact mathematical answer, so you can see how close the
+   simulation gets to the truth, and how the step size and the method affect
+   accuracy. It is LoopLab's way of letting you check the engine yourself.
+
+Numbers (illustrative):
+   Starting height 1 m; tank area 0.5 square metres (about 0.8 m diameter);
+   outlet 0.0005 square metres (about a 25 mm hole); discharge coefficient
+   0.6; gravity 9.81 m/s2.
+
+Simulation: 0 to 600 seconds, DT = 0.5 second.
+KPI: Water height (minimize).
+Reference mode: "Analytic solution" (expected): the exact curve.
+
+What you should see:
+   With these values the exact answer is about 4 cm of water left after 600
+   seconds (10 minutes); the tank would be empty after about 12.5 minutes. The
+   Euler line should sit very close to the exact curve.
+
+Things to try:
+   - Run the scenario "RK4 integration" (same model, Runge-Kutta 4). The line
+     becomes even closer to the exact answer.
+   - Halve DT and run again with Euler. The error roughly halves (Euler is
+     "first order").
+   - Run "Larger outlet" (outlet doubled to 0.001). The tank empties about
+     twice as fast.
+
+The lesson:
+   The engine is trustworthy when used sensibly, and Model Health's DT/2 check
+   uses exactly this idea to warn you when your step size is too big. (The
+   project's automated tests check the engine against exact solutions to
+   within one part in a million with RK4.)
+
+
+
+==============================================================================
+PART 6 - REFERENCE
+==============================================================================
+
+
+37. THE EIGHT ARCHETYPES, ONE BY ONE
+------------------------------------
+
+Each archetype below has the same layout:
+- THE STORY: the pattern in everyday words.
+- STRUCTURE: the loops involved.
+- SIGNATURE: what the key indicator does over time (LoopLab's runnable version
+  of each archetype is tested to produce exactly this shape).
+- EPC ILLUSTRATION: the project example shipped in the app.
+- WHAT TO DO: the app's intervention guidance, with the Meadows level of each
+  piece of advice in brackets.
+- WARNING SIGNS: what to listen for in meetings.
+
+Sources: Senge (1990), Kim (1992), Meadows (2008), Sterman (2000).
+
+
+37.1 FIXES THAT FAIL
+
+THE STORY: A problem appears. A quick fix makes it go away. Some time later,
+the fix produces a side effect that brings the problem back, often worse,
+which invites more of the same fix.
+
+STRUCTURE: A balancing loop (the fix reduces the symptom) plus a reinforcing
+loop with a delay (the fix's side effect feeds the symptom).
+
+SIGNATURE: Better before worse. After the fix starts, the symptom drops
+quickly, then climbs back past its starting level.
+
+EPC ILLUSTRATION: "Chasing late vendor data by issuing 'preliminary' drawings
+for construction: the field starts sooner, but revisions arrive weeks later
+and generate more rework than the time saved."
+
+WHAT TO DO:
+- Before adopting a fix, map its likely side effects and their delays; watch
+  the symptom over a horizon longer than the delay. [6]
+- Choose or redesign a fix with fewer side effects. [12]
+- Use the fix only to buy time while working on the underlying cause; stop it
+  once the cause is addressed. [5]
+
+WARNING SIGNS: "It worked last time." "We just need to do more of it." The
+same fix appears in every monthly report.
+
+
+37.2 SHIFTING THE BURDEN
+
+THE STORY: A problem can be solved two ways: a quick symptomatic solution, or
+a slower fundamental one. The quick one is used because it works fast. Over
+time, relying on it erodes the ability to use the fundamental one, so
+dependence grows. (A special case: "Shifting the burden to the intervenor",
+where an outside helper takes over and the system forgets how to help itself.)
+
+STRUCTURE: Two balancing loops (symptomatic and fundamental, the fundamental
+one delayed) and a reinforcing loop through which the symptomatic solution
+weakens the fundamental one.
+
+SIGNATURE: The fundamental capability decays, settling toward a low level.
+
+EPC ILLUSTRATION: "Outsourcing every stress-analysis peak to an external
+consultant: the in-house piping stress team shrinks and loses experience, so
+the next peak must be outsourced too."
+
+WHAT TO DO:
+- Use the symptomatic solution only alongside the fundamental one, with a date
+  to wean off it. [5]
+- Make the erosion of fundamental capability visible (track skills, root-cause
+  closure rate), not only the symptom. [6]
+- Strengthen the fundamental solution so it responds faster (shorter delay).
+  [9]
+- Build the system's own capacity to solve the problem (the intervenor helps
+  the system help itself). [4]
+
+WARNING SIGNS: "We have no choice but to outsource it again." "Nobody here
+knows how to do that any more." Overtime that has become permanent.
+
+
+37.3 LIMITS TO GROWTH
+
+THE STORY: Something grows because success breeds success. Then it hits a
+limit it did not see coming, and growth slows or stops however hard people
+push.
+
+STRUCTURE: A reinforcing growth engine (R) meets a balancing loop (B) that
+gets stronger as a limit approaches.
+
+SIGNATURE: S-shaped growth.
+
+EPC ILLUSTRATION: "A contractor wins ever more work on its reputation until
+the pool of experienced project engineers it can hire runs dry; further bids
+stretch the same people and delivery quality starts to limit new awards."
+
+WHAT TO DO:
+- Do not push harder on the growth engine; find and relieve the limiting
+  condition instead. [8]
+- Anticipate the limit: monitor the slowing action before growth stalls. [6]
+- Raise the limit (new capacity, a new market segment). [12]
+
+WARNING SIGNS: "We're doing everything we did before, but it isn't working any
+more." More effort brings smaller results.
+
+Caution in LoopLab: the archetype matcher can wrongly suggest Limits to Growth
+for simple population-style models (births and deaths). Always check the story
+before confirming.
+
+
+37.4 ERODING GOALS
+
+THE STORY: There is a gap between where we are and where we want to be.
+Closing it by improving performance is slow and hard. Closing it by lowering
+the goal is quick and easy. Gradually the goal drifts down.
+
+STRUCTURE: Two balancing loops that both close the gap: corrective action
+(slow) and lowering the goal (fast).
+
+SIGNATURE: The goal drifts down and does not level off.
+
+EPC ILLUSTRATION: "Weld-repair-rate targets on a piping package are relaxed
+after a bad month, then again the next quarter, until a repair rate that once
+triggered a stop-work is treated as normal."
+
+WHAT TO DO:
+- Anchor goals to external benchmarks or customer requirements rather than to
+  past performance. [3]
+- Make any change to a goal an explicit, recorded decision with a reason. [5]
+- Shorten the time corrective action takes to show results. [9]
+
+WARNING SIGNS: "That's just how it is on this kind of job." "Let's be
+realistic." Targets reset each period to last period's actual.
+
+
+37.5 ESCALATION
+
+THE STORY: Two parties each see the other as a threat. Each responds to the
+other's position by trying to get ahead. Each response provokes a bigger
+response.
+
+STRUCTURE: Two balancing loops (each side responding to the other's lead) that
+together form a reinforcing figure of eight.
+
+SIGNATURE: Escalation: ever faster growth on both sides.
+
+EPC ILLUSTRATION: "Contractor claims and client back-charges: each new claim
+triggers counter-claims, and both sides add commercial staff and legal support
+until the dispute costs more than the original variation."
+
+WHAT TO DO:
+- Find a way for both sides to meet their real goal without being ahead (e.g.
+  agree on parity). [3]
+- Unilateral, visible de-escalation to reverse the reinforcing loop. [7]
+- Agree rules that cap the contest (e.g. price floors, claim protocols). [5]
+
+WARNING SIGNS: "If they do that, we'll have to respond." Each side's actions
+are justified only by reference to the other's.
+
+
+37.6 SUCCESS TO THE SUCCESSFUL
+
+THE STORY: Two activities compete for the same limited resource. The one that
+starts slightly ahead gets more of the resource, which makes it succeed more,
+which earns it even more of the resource. The other is starved and declines.
+
+STRUCTURE: Two reinforcing loops coupled through a single allocation.
+
+SIGNATURE: Divergence from a near-balance: one rises, the other falls.
+
+EPC ILLUSTRATION: "The strongest project in the portfolio keeps receiving the
+most experienced piping and stress engineers; the weaker project slips, is
+labelled 'troubled', and loses even more senior staff."
+
+WHAT TO DO:
+- Decouple the allocation from past success (allocate by need, strategy or
+  fixed proportion). [5]
+- Review the goal that the allocation serves; balanced capability may matter
+  more than short-term returns. [3]
+- Make the long-term cost of starving the other activity visible to whoever
+  allocates. [6]
+
+WARNING SIGNS: "Put the best people where they'll make the most difference."
+"That project is a lost cause."
+
+
+37.7 TRAGEDY OF THE COMMONS
+
+THE STORY: Several parties each benefit from using a shared resource. Each
+one, acting sensibly for itself, uses more. Together they overload the
+resource, and everyone loses.
+
+STRUCTURE: Individual growth loops (R) that share one limited resource (B).
+
+SIGNATURE: Overshoot and collapse of the total gain.
+
+EPC ILLUSTRATION: "Several subcontractors share the site's heavy-lift cranes
+and lay-down area; each books more slots to protect its own schedule until the
+shared plan is gridlocked and every crew waits."
+
+WHAT TO DO:
+- Agree a governance rule for the shared resource (quotas, booking,
+  allocation) that all parties follow. [5]
+- Give every user timely feedback on the state of the shared resource and
+  their share of its use. [6]
+- Change the goal from maximising individual gain to sustaining the commons.
+  [3]
+
+WARNING SIGNS: "If we don't book it, someone else will." Everyone
+over-reserves "just in case".
+
+
+37.8 GROWTH AND UNDERINVESTMENT
+
+THE STORY: Demand grows. Capacity does not keep up, because investment is
+decided by looking at today's performance. As performance slips, the standard
+is quietly lowered, so the need to invest looks smaller, so investment stays
+low, and demand eventually goes elsewhere.
+
+STRUCTURE: A growth loop (R) limited by capacity, with investment tied to a
+performance standard that erodes (an Eroding Goals inside a Limits to Growth).
+
+SIGNATURE: Growth, then stagnation.
+
+EPC ILLUSTRATION: "A fabrication yard wins spool orders faster than it adds
+welders and QC staff; delivery performance slips, the 'acceptable' lead time
+is quietly extended, and clients start placing orders elsewhere."
+
+WHAT TO DO:
+- Hold the performance standard; derive it from customer needs, not from
+  recent performance. [3]
+- Invest ahead of demand, sized to the growth you intend, not to today's
+  shortfall. [5]
+- Shorten the capacity acquisition delay (pre-qualified vendors, modular
+  capacity). [9]
+
+WARNING SIGNS: "Let's wait until demand is proven before we invest." "Clients
+understand lead times are longer now."
+
+
+38. MEADOWS' TWELVE LEVERAGE POINTS, ONE BY ONE
+-----------------------------------------------
+
+Donella Meadows (1999) listed twelve places to intervene in a system. Level 12
+is the weakest (easiest, least effective); level 1 is the strongest (hardest,
+most transforming). LoopLab tags every intervention with one of these levels
+so the depth of each option is always visible.
+
+For each level: what it means, a project example, and a practical note.
+
+LEVEL 12 - Constants, parameters, numbers.
+   Meaning: changing a number while the structure stays the same: headcount,
+   budget, deadline, target, rate.
+   Example: "Add two engineers." "Move the deadline to week 64."
+   Note: the most common fix and usually the weakest, because the loops that
+   cause the problem are left as they were. Sometimes still the right
+   short-term move; rarely the whole answer.
+
+LEVEL 11 - The sizes of buffers and stabilising stocks, relative to their
+  flows.
+   Meaning: how big the cushion is: inventory, float, contingency, spare
+   capacity.
+   Example: holding a buffer of critical spools on site; carrying schedule
+   float on the critical path.
+   Note: buffers absorb shocks but cost money and can hide problems.
+
+LEVEL 10 - The structure of material stocks and flows.
+   Meaning: the physical layout: routes, plants, sequences, the way material
+   moves.
+   Example: changing the construction sequence; adding a second fabrication
+   yard; modularisation.
+   Note: powerful but slow and expensive to change once built. Best decided
+   early.
+
+LEVEL 9 - The lengths of delays, relative to the rate of system change.
+   Meaning: how long it takes for causes to produce effects, or for
+   information to arrive.
+   Example: earlier design reviews; frame agreements that shorten procurement
+   lead times; faster NCR close-out.
+   Note: one of the most underused levers in projects. Shortening a delay
+   changes WHEN the system learns, often at low cost. Both bundled EPC
+   examples show a level-9 option matching or beating a level-12 one.
+
+LEVEL 8 - The strength of balancing (negative) feedback loops, relative to the
+  impacts they are trying to correct.
+   Meaning: how strongly the system's corrections respond to problems.
+   Example: a stop-work authority that actually triggers; a quality gate that
+   cannot be bypassed.
+   Note: weak correcting loops let problems grow before anyone acts.
+
+LEVEL 7 - The gain around driving reinforcing (positive) feedback loops.
+   Meaning: how fast a vicious or virtuous circle turns.
+   Example: slowing the rework spiral by protecting quality under pressure;
+   de-escalating a claims dispute.
+   Note: slowing a vicious circle is often more effective than speeding up the
+   corrective loop that fights it.
+
+LEVEL 6 - The structure of information flows.
+   Meaning: who has access to what information, and when.
+   Example: reporting progress on verified work only; publishing the live
+   inspection backlog to site; sharing crane-booking status with all
+   subcontractors.
+   Note: very often cheap and surprisingly powerful. A missing feedback loop
+   (people not seeing the consequences of their actions) is one of the most
+   common causes of bad behaviour in systems.
+
+LEVEL 5 - The rules of the system.
+   Meaning: incentives, punishments, constraints, procedures, contract terms.
+   Example: allocating senior engineers by need instead of by past success; a
+   claims protocol; a rule that goals can only change with a recorded reason.
+   Note: rules shape what everyone else does automatically. Ask "who writes
+   the rules, and what do they reward?"
+
+LEVEL 4 - The power to add, change, evolve or self-organise system structure.
+   Meaning: the system's ability to change itself.
+   Example: building an in-house capability instead of permanently outsourcing
+   it; empowering teams to redesign their own workflow.
+   Note: organisations that can learn and reorganise outlast those that
+   cannot.
+
+LEVEL 3 - The goals of the system.
+   Meaning: what the whole system is actually trying to achieve, which may
+   differ from what it says.
+   Example: shifting from "maximise reported progress" to "finish right first
+   time"; deriving the lead-time standard from customer needs.
+   Note: change the goal and every lower level reorganises around it.
+
+LEVEL 2 - The mindset or paradigm out of which the system arises.
+   Meaning: the shared, unspoken beliefs that the goals, rules and structure
+   all rest on.
+   Example: "Schedule pressure makes people productive." "Errors are
+   individual failures." Replacing them with "pressure creates rework" or
+   "errors are system signals".
+   Note: hard to change, but a changed paradigm changes everything downstream.
+
+LEVEL 1 - The power to transcend paradigms.
+   Meaning: holding any paradigm lightly; recognising that no single worldview
+   is the whole truth.
+   Example: a leadership culture that routinely asks "what if our core
+   assumption is wrong?"
+   Note: rarely the topic of a project decision, but it is the attitude that
+   makes systems thinking possible at all.
+
+How to use the levels in practice:
+1. For every option on your list, write its level.
+2. If all options are level 12 (very common), stop and look for a 9, 6 or 5
+   that acts on the same loop.
+3. Test both in the model. The deeper option does not always win on the
+   numbers, but when it does, it usually wins for longer.
+4. In the report, explain your choice of level in one sentence.
+
+
+39. READING THE CHARTS
+----------------------
+
+Time-series chart (Test).
+   - Time runs left to right; each line is a variable.
+   - Kept runs (scenarios) appear as separate lines, so you can compare them
+     directly. Toggle each run on or off in the side panel.
+   - The faint line behind is the reference mode from Frame. Compare SHAPES
+     first (does it rise, peak, stall at the same point?), then timing, then
+     levels.
+   - Look for the moment lines separate: that is when an intervention starts
+     to make a difference.
+
+Tornado chart (Test, sensitivity).
+   - One horizontal bar per uncertain constant, the widest at the top.
+   - Each bar runs from the KPI value with the constant at its LOW end to the
+     value with it at its HIGH end, with the base run in the middle.
+   - Wide bar: the outcome is sensitive to this number, so measure it
+     carefully or manage it actively.
+   - Narrow bar: this number hardly matters, so a rough estimate is fine.
+   - Remember: it tests one constant at a time. Two constants that matter only
+     together will not show up.
+
+Pareto line (Test and Analyze).
+   - The cumulative share of the total, added up from the top of the ranking.
+   - Read it like this: "the first three items account for 80 %". That is your
+     vital few. Everything after the line flattens out is the trivial many.
+
+Loop dominance chart (Test).
+   - For each moment in time, which loop (or smallest group of loops) accounts
+     for at least half of what drives the change in the model.
+   - Read it as a story: "the growth loop was in charge until week 20, then
+     the limit took over".
+   - Handovers are important moments. Interventions that act before a handover
+     are usually far more effective than those that act after it.
+
+KPI comparison table (Decide).
+   - One row per KPI, one column per scenario, with the base run for
+     reference.
+   - Read it against the KPI's goal: minimize (smaller is better), maximize
+     (bigger is better), or target (closer to the target is better).
+
+Structural leverage ranking (Analyze, report).
+   - Variables ranked by how central they are to the loop structure.
+   - It is a structural score, not a measured effect. A high-ranked variable
+     is a good place to LOOK for an intervention; the simulation tells you
+     whether acting there actually helps.
+
+
+40. THE COPILOT (CLAUDE INSIDE THE APP)
+---------------------------------------
+
+What it is:
+   A Claude panel in the right dock, available in every stage. It reads your
+   current model through a small set of safe tools and can suggest changes. It
+   needs the local version and an Anthropic API key on your computer. Without
+   a key (and in the online copy), the panel simply says it is not configured;
+   everything else works.
+
+The five modes:
+   INTERVIEW   Asks you questions, one at a time, to draw out your explanation
+   of the problem, then proposes a causal loop diagram.
+   CRITIQUE    Checks your model for convention and logic errors. Each finding
+   names the exact elements concerned.
+   EXPLAIN     Writes a plain-language story for each loop.
+   INTERVENE   Proposes interventions with their Meadows level. It must
+   simulate each one before proposing it.
+   REPORT      Drafts the decision brief.
+
+How it stays honest:
+   - Tools. It can call at most 8 read-only tools per request: model summary,
+     loop list, health, simulate a scenario. The tool trace is shown, so you
+     can see where every number came from.
+   - Numbers. It may only quote numbers returned by those tools, and it must
+     label hypotheses as hypotheses.
+   - You decide. Every proposed change arrives as a "patch", shown as a
+     highlighted difference on the canvas. You accept or reject each change
+     separately, or all at once. Nothing changes until you accept.
+   - Tagging. Accepted elements stay tagged "AI-proposed" until you mark them
+     confirmed, so you always know what came from the AI.
+   - Bad output changes nothing. If its answer is malformed, it retries once;
+     if it fails again, you see an error and your model is untouched.
+   - Untrusted text. Text inside your model and imported files is treated as
+     data, never as instructions to the AI.
+   - Your key. It stays in the local server's ".env" file. It is never sent to
+     the browser, never logged and never saved in the project.
+
+Good ways to use it:
+   - Stuck on a blank canvas: Interview mode.
+   - Before showing a model to anyone: Critique mode.
+   - Before a meeting: Explain mode, to get one-paragraph loop stories.
+   - When you have run out of ideas: Intervene mode, then check its simulated
+     results yourself.
+
+Status: the copilot panel, its tool loop and the accept/reject patch review
+are built and tested against a simulated AI. Intervene and Report work in
+those server-side tests, but their in-app flows have not been fully signed
+off, and no live test with a real key has been run in this project (see
+chapter 44).
+
+
+41. YOUR OWN MODEL FROM SCRATCH: A 10-STEP RECIPE
+-------------------------------------------------
+
+This recipe takes one to two focused hours for a first model. It is shown with
+a new example that is not bundled in the app: a team that uses overtime to
+clear a backlog.
+
+The example problem:
+   "We put the team on overtime to clear the backlog. Output went up for a
+   month or two, then fell below where it started, while overtime stayed
+   high."
+
+STEP 1 - Write the problem as a pattern over time (Frame).
+   Choose "New model" from the file menu in the top bar. In Frame, write:
+   Problem: "Output rose with overtime, then fell below normal within three
+   months, while the backlog kept growing."
+   Purpose: "Explain the fall in output and compare overtime limits, recovery
+   time and extra staff."
+   Time horizon: 0 to 52 weeks.
+
+STEP 2 - Sketch the reference mode.
+   On the sketch pad, draw "Completion rate": flat, up for 6-8 weeks, then
+   down below the start. Label it "historical".
+
+STEP 3 - Choose two or three KPIs.
+   Backlog (minimize) and Completion (maximize).
+
+STEP 4 - List what you will leave out (boundary chart).
+   "Staff turnover - kept simple for a first model." "Quality of work - see
+   the rework example." "Weekends and holidays - averaged out."
+
+STEP 5 - Draw the variables (Map).
+   Press A for each: Backlog, New work, Completion, Overtime, Fatigue,
+   Capacity.
+
+STEP 6 - Draw the links, with signs, and close the loops.
+   Press L for each link and P to flip signs where needed:
+   - New work -> Backlog (+)
+   - Completion -> Backlog (-)
+   - Backlog -> Overtime (+)  "Managers add overtime when the backlog is
+     high."
+   - Overtime -> Capacity (+)
+   - Overtime -> Fatigue (+, with a delay mark: press D)  "Long weeks tire
+     people gradually."
+   - Fatigue -> Capacity (-)  "Tired people work slower and make mistakes."
+   - Capacity -> Completion (+)
+   Read the loops aloud:
+   - "Work harder" (B): Backlog -> Overtime -> Capacity -> Completion -> less
+     Backlog. One "-" link: balancing.
+   - "Burnout" (R): Backlog -> Overtime -> Fatigue -> less Capacity -> less
+     Completion -> more Backlog. Two "-" links: reinforcing.
+
+STEP 7 - Analyze.
+   The app finds both loops. The archetype matcher may suggest Fixes that Fail
+   (the fix is overtime; the delayed side effect is fatigue). If the story
+   fits, confirm it.
+
+STEP 8 - Quantify (one possible set of equations; all numbers illustrative).
+   Stocks:
+   - Backlog [tasks] = 400 (starting value)
+   - Fatigue [dmnl] = 0 (starting value; 0 = rested, 1 = exhausted)
+   Flows:
+   - New work [tasks/week] = New_work_rate          (into Backlog, from a
+     cloud)
+   - Completion [tasks/week] = MIN(Capacity, Backlog /
+     Minimum_completion_time)   (out of Backlog, to a cloud)
+   - Tiring [1/week] = Overtime / Time_to_tire      (into Fatigue)
+   - Recovery [1/week] = Fatigue / Time_to_recover  (out of Fatigue)
+   Auxiliaries:
+   - Overtime [dmnl] = MIN(Maximum_overtime, MAX(0, Backlog /
+     (Target_clearance_time * Normal_capacity) - 1))
+        (the extra fraction of hours: 0.2 means 20 % more hours)
+   - Capacity [tasks/week] = Normal_capacity * (1 + Overtime) * (1 -
+     Fatigue_effect * Fatigue)
+   Constants (with ranges):
+   - Normal_capacity = 100 tasks/week [90, 110]
+   - New_work_rate = 105 tasks/week [95, 115]
+   - Maximum_overtime = 0.5 [0.2, 0.5]
+   - Target_clearance_time = 4 weeks [2, 8]
+   - Time_to_tire = 4 weeks [2, 8]
+   - Time_to_recover = 8 weeks [4, 12]
+   - Fatigue_effect = 0.6 [0.3, 0.8]
+   - Minimum_completion_time = 1 week [0.5, 2]
+   Add an assertion: Backlog >= 0.
+   Check Model Health until it is clean (units, links matching equations).
+
+STEP 9 - Test.
+   Run the base case. Does Completion rise and then fall below 100, like your
+   sketch? If not, ask what is missing, rather than tuning numbers until it
+   fits.
+   Then create scenarios:
+   - "Cap overtime at 10 %" (Maximum_overtime = 0.1)
+   - "Faster recovery" (Time_to_recover = 4, e.g. guaranteed rest days)
+   - "Hire" (Normal_capacity = 110)
+   Run sensitivity to see which constants matter most.
+
+STEP 10 - Decide and report.
+   Record each option with its level: the overtime cap is a rule (5); faster
+   recovery shortens a delay (9); hiring is a parameter (12). Compare the KPIs
+   side by side, write a one-line rationale for each, choose, and export the
+   report.
+
+The general recipe, in one line per step:
+   1 problem as a pattern  2 sketch it  3 pick KPIs  4 list exclusions
+   5 variables  6 signed links, closed loops  7 analyze  8 equations + health
+   9 run, compare, sensitivity  10 decide by leverage, export the report
+
+
+42. GOOD HABITS AND COMMON MISTAKES
+-----------------------------------
+
+Good habits:
+1. Start from the behaviour, not the structure. Sketch the pattern first; then
+   ask what structure would produce it.
+2. Keep the first model small: five to eight variables and two or three loops.
+   A small model you understand beats a big one you do not.
+3. Write a mechanism note on every important link. It turns arguments about
+   conclusions into discussions about specific links.
+4. Give every constant a believable range. It costs a minute and makes the
+   sensitivity analysis meaningful.
+5. Name your loops. "Haste makes waste" travels further in a meeting than
+   "loop 7".
+6. Read the excluded list aloud to someone who knows the problem.
+7. Compare shapes before numbers. A model that gets the right shape with
+   slightly wrong numbers is useful; one that matches the numbers with the
+   wrong shape is misleading.
+8. Change one thing at a time when testing, then combine.
+9. Keep the base run on the chart when comparing scenarios.
+10. Save a model file at the end of every session.
+
+Common mistakes:
+1. Verbs as variables ("increase hiring"). Use quantities ("Hiring rate").
+2. Signs on autopilot. Ask for every link: "if the cause goes UP, does the
+   effect go up or down, all else equal?"
+3. Open chains. If nothing comes back round, there is no feedback and the
+   model cannot explain a recurring problem.
+4. Forgetting delays. Without them, models look tidy and behave nothing like
+   reality.
+5. Mixing stocks and flows ("backlog per week" added to "backlog"). Model
+   Health's unit check will catch most of these.
+6. Too short a time horizon. If the delay is 8 weeks, a 12-week run shows
+   almost nothing.
+7. Tuning constants until the line fits the sketch. If you need extreme values
+   to fit, the structure is probably wrong.
+8. Treating the result as a forecast. Use it to compare options and test
+   explanations.
+9. Leaving soft variables out because they are hard to measure. Morale, trust
+   and perceived progress often drive the whole problem.
+10. Recommending only level-12 fixes without asking whether a delay,
+    information flow or rule acts on the same loop.
+
+
+43. HONEST LIMITS AND CAVEATS
+-----------------------------
+
+About modelling in general:
+- A model is a simplification. It is only as good as the structure you give
+  it. LoopLab checks consistency (units, links, signs), not truth.
+- Results are for comparing options and testing explanations, not for
+  forecasting exact dates or costs.
+- All numbers in the bundled examples are illustrative, chosen to show
+  realistic patterns; they are not data from real projects.
+- LoopLab models aggregates (a pile of 1,000 tasks), not individual activities
+  with dates. It complements your schedule; it does not replace it.
+
+About specific features:
+- Loop dominance: loops whose links pass through a smoothing or delay function
+  (SMTH, DELAY) are scored as zero, so their influence can be under-reported.
+- Tornado: uses the first KPI, at its final value. To study a different KPI,
+  put it first in the KPI list.
+- One-at-a-time sensitivity cannot reveal effects that only appear when two
+  uncertain values move together.
+- Archetype matcher: suggestions are hints based on loop shapes. It can be
+  wrong; for example, it can suggest Limits to Growth for a simple
+  births-and-deaths model. Always check the story.
+- Loop search: stops at 1,000 loops by default (with a warning) in very
+  tangled diagrams.
+- Decide's "Add scenario" changes one constant per scenario. Scenarios with
+  several changes come from the examples or the copilot.
+- There are no random functions inside equations, on purpose: every run is
+  reproducible.
+
+About the online copy:
+- The copilot does not work there (it needs the local server and a key).
+- It runs inside a protected frame, which may restrict background calculation
+  and browser storage. It has not been checked by clicking through every
+  stage. If something fails there, use the local version.
+- Browser storage belongs to one browser on one computer. Save model files.
+
+About testing (what has and has not been checked by the project's automated
+tests):
+- Checked: 839 unit tests and 9 end-to-end browser tests pass; the build, type
+  checks and code-style checks are clean. The simulation engine matches exact
+  mathematical solutions to within one part in a million (RK4). Loop finding,
+  sign checks, loop dominance and all eight archetype behaviours have their
+  own tests.
+- Not checked end to end: building a six-variable diagram from scratch in the
+  browser, and save -> reload in the browser (both are tested at a lower level
+  only). There is no automated check yet that the secret key can never appear
+  in the web app's files (a manual check found none). The speed of the
+  background workers has not been timed separately. No live copilot call with
+  a real key has been made.
+
+
+44. WHAT IS NOT BUILT YET
+-------------------------
+
+The project's own user guide (docs/USER_GUIDE.md) describes the full design,
+including some features that are not built yet. Here is exactly what is
+missing:
+
+1. Monte Carlo analysis (Latin hypercube sampling).
+   Would run hundreds or thousands of simulations with all uncertain constants
+   varied together, and show 5-95 % bands and which parameters matter most.
+   Not built; the one-at-a-time tornado is available instead.
+
+2. Calibration and fit statistics.
+   Would fit constants to real data from a CSV file and report R-squared, MAPE
+   and the Theil statistics. Not built. You can still import real data as a
+   reference mode and compare by eye.
+
+3. XMILE import and export.
+   XMILE is the standard file format of other system-dynamics tools such as
+   Stella. Not built, so LoopLab cannot yet exchange models with them.
+   LoopLab's own JSON model files work. The planned check against the
+   community test-model suite (SDXorg) is also deferred.
+
+4. Combined leverage ranking.
+   The design combines the structural score, the sensitivity results and loop
+   dominance into one ranking. Not built; the report uses the structural
+   ranking.
+
+5. Copilot Intervene and Report modes in the app.
+   They work in server-side tests with a simulated AI, but the in-app flows
+   are not signed off and no live test has been run.
+
+These were cut deliberately to keep the project within budget. Everything else
+in this guide is built and tested.
+
+
+45. WHERE EVERYTHING LIVES
+--------------------------
+
+The app online (private to your Claude account):
+   https://claude.ai/artifact/3mPyMZySDKLEh5gyyQkxxm
+
+The source code:
+   GitHub repository: sul6an113b-cpu/Nameless_King
+   Branch: claude/sweet-lamport-ja78y5
+
+Useful documents inside the project (all plain text, readable on GitHub):
+   README.md            - how to install and run it (five commands)
+   docs/USER_GUIDE.md   - the in-depth user guide (written for the full
+   design)
+   docs/BRIEF.md        - the original brief: what LoopLab was meant to be
+   docs/SPEC.md         - the technical specification
+   docs/PROGRESS.md     - what was built, the test results, the acceptance
+   table
+   docs/DECISIONS.md    - the design decisions and why they were made
+   docs/RESEARCH.md     - the research behind the methods
+   LoopLab_Guide.txt    - this guide
+
+How the app is built (for a technical helper):
+   packages/core     - the engine: model rules, equation reader, simulator,
+   loop finder, analyses, report builder
+   packages/content  - the eight archetypes, the twelve leverage points, the
+   four examples
+   apps/web          - the screens (React)
+   apps/server       - the small local server for the copilot (keeps the key
+   safe)
+
+
+46. FREQUENTLY ASKED QUESTIONS
+------------------------------
+
+Q: Do I need to know mathematics?
+A: No for Frame, Map and Analyze, which are pure thinking and drawing, and
+   already deliver most of the insight. For Quantify, you need simple
+   arithmetic (multiply, divide) and the patience to write short formulas. The
+   bundled examples show the patterns to copy.
+
+Q: Do I need to be online?
+A: The local version runs entirely on your computer; only the optional copilot
+   talks to the internet. The online copy needs a connection to open.
+
+Q: Is my data sent anywhere?
+A: No, unless you use the copilot, which sends your model to Anthropic's API
+   to answer. The online copy runs in your browser.
+
+Q: How long does a first model take?
+A: One to two focused hours for a small model. Most of the value often arrives
+   in the first 30 minutes, in Frame and Map.
+
+Q: How big can a model be?
+A: The engine handles hundreds of variables quickly (500 variables, 10,000
+   steps in about a third of a second). But a model you can explain on one
+   screen is usually more useful than a big one.
+
+Q: The model does not match my reference mode. Is it broken?
+A: Not necessarily. A mismatch means the structure is missing something: a
+   delay, a loop, a limit. That is a finding. Ask "what would have to be true
+   for the real pattern to happen?" and add it.
+
+Q: Which method should I use, Euler or RK4?
+A: Euler, unless you have a smooth physical model and want extra accuracy. If
+   Model Health warns about integration error, reduce DT first.
+
+Q: What does "dmnl" mean?
+A: Dimensionless: a pure number or fraction with no unit, such as quality
+   (0.8) or schedule pressure (1.2).
+
+Q: Can I use real project data?
+A: Yes, as a reference mode imported from CSV (time and value columns), to
+   compare against the simulation by eye. Automatic fitting (calibration) is
+   not built yet.
+
+Q: Can I share a model with a colleague?
+A: Save it as a model file (JSON) from the file menu and send the file. They
+   open it from the file menu.
+
+Q: Can I open models from Stella, Vensim or other tools?
+A: Not yet. XMILE import is not built.
+
+Q: Why are there no random functions?
+A: So that every run of the same model gives exactly the same result.
+   Uncertainty is explored by the sensitivity analysis instead.
+
+Q: The copilot panel says "not configured". What do I do?
+A: Nothing is wrong. It needs the local version with an Anthropic API key in
+   the ".env" file. Everything else works without it.
+
+Q: What if I make a mistake?
+A: Ctrl+Z undoes up to 200 steps. Model files from older versions open
+   automatically; damaged files are refused without touching your current
+   model.
+
+Q: Is LoopLab a replacement for my schedule or cost estimate?
+A: No. It explains and tests the dynamics that bend schedules and budgets. Use
+   it alongside them.
+
+Q: Who should I show the report to?
+A: Anyone who must approve or challenge the decision. Its first section is
+   short enough for a busy reader; the appendix lets a specialist check every
+   assumption.
+
+
+47. GLOSSARY
+------------
+
+Archetype - A recurring loop structure with a typical story, shape and remedy
+  (eight are included).
+Assertion - A rule you write that must always hold (e.g. Backlog >= 0);
+  checked at every saved step.
+Auxiliary - A variable calculated from others at each moment; not a stock.
+Balancing loop (B) - A loop that counteracts change and seeks a goal or limit.
+  Odd number of "-" links.
+Betweenness - How often a variable lies on the shortest paths between other
+  variables.
+Boundary chart - The lists of what is inside (endogenous), outside (exogenous)
+  and deliberately left out (excluded).
+Calibration - Fitting constants to real data (not built yet).
+Causal link - An arrow meaning "a change here causes a change there".
+CLD (causal loop diagram) - The qualitative map of variables and signed links.
+Cloud - The edge of a stock-and-flow diagram, where flows come from or go to
+  outside the model.
+Constant - A fixed number, optionally with an uncertainty range.
+Copilot - The optional Claude assistant in the right dock.
+CSV - A simple spreadsheet file format (comma-separated values).
+Delay - A time gap between cause and effect. Material delays move things;
+  information delays move beliefs.
+Delay mark - The marking on a link that shows a significant delay.
+dmnl - Dimensionless (no unit).
+DT - The simulation step size.
+Endogenous - Explained by the model's own loops.
+Euler - The default, simple step-by-step simulation method.
+Exogenous - Coming from outside the model, not affected by it.
+Feedback loop - A closed chain of causal links.
+Flow - A rate that fills or drains a stock.
+Hub - A variable that many loops pass through.
+Inspector - The right-dock panel showing the details of what is selected.
+Intervention - An option you consider, with a leverage level, a scenario, a
+  status and a rationale.
+KPI - Key performance indicator: the few variables you judge success by.
+Leverage point - A place to intervene in a system; Meadows ranked twelve.
+Lookup - A graphical function: a small table that describes a curved effect.
+Loop dominance - Which loop is in charge of the model's behaviour at each
+  moment.
+Loops That Matter (LTM) - The published method LoopLab uses to measure loop
+  dominance.
+Model Health - The built-in checker for units, links, signs, loops and numeric
+  problems.
+Monte Carlo - Many runs with all uncertain values varied together (not built
+  yet).
+Mechanism note - A one-sentence explanation of why a link exists.
+NCR - Non-conformance report: a recorded quality defect that must be repaired.
+Oscillation - Repeated swinging above and below a target.
+Pareto line - The cumulative share of a ranked list; shows the "vital few".
+Patch - A set of changes proposed by the copilot, accepted or rejected one by
+  one.
+Polarity - The sign of a link: + (same direction), - (opposite), ? (unknown).
+Reference mode - A sketch or data series of the behaviour you want to explain.
+Reinforcing loop (R) - A loop that amplifies change. Even number of "-" links.
+RK4 - Runge-Kutta 4, a more accurate simulation method for smooth models.
+Scenario - A named set of changes to the base model, for comparison.
+SFD (stock-and-flow diagram) - The quantitative view of the same model.
+Simulation - Running the model forward in time, step by step.
+Stock - An accumulation (backlog, inventory, staff); changes only through its
+  flows.
+System - Connected parts that together produce a pattern over time.
+Tornado chart - A ranking of how much each uncertain constant swings a KPI.
+U loop - A loop of unknown type, because it passes through a "?" link.
+Unit - What a quantity is measured in (tasks, weeks, tasks/week).
+Variable - Anything that can go up or down over time.
+XMILE - The standard file format for system-dynamics models (import/export not
+  built yet).
+
+
+48. ONE-PAGE CHEAT SHEET
+------------------------
+
+THE IDEA
+   Test a fix on the structure of the problem before spending real money and
+   months on it.
+
+THE SIX STAGES
+   1 FRAME     problem as a pattern over time; horizon; 2-4 KPIs; sketch;
+   exclusions
+   2 MAP       variables (nouns) + signed links; close the loops; note delays
+   3 ANALYZE   read the loops (R/B), hubs, archetype hints; confirm or reject
+   4 QUANTIFY  stocks, flows, equations, units, ranges; keep Model Health
+   clean
+   5 TEST      run; scenarios side by side; tornado; loop dominance
+   6 DECIDE    interventions with Meadows levels; compare KPIs; export report
+
+KEYS (Map)
+   A add   L link   P flip sign   D delay   Del delete   Shift+L layout
+   F fit   Ctrl+Z undo   Ctrl+Y redo   ? shortcut sheet
+
+LOOP RULE
+   Count the "-" links: even = Reinforcing (snowball), odd = Balancing
+   (thermostat).
+
+STOCK OR FLOW?
+   Countable in a photograph = stock. Needs a stopwatch = flow.
+   Stock units = flow units x time.
+
+SHAPES -> STRUCTURES
+   exponential = R in charge        goal seeking = B in charge
+   S-curve = R hands over to B      oscillation = B with a delay
+   better-before-worse = Fixes that Fail
+   last 10 % takes forever = hidden rework found late
+
+LEVERAGE (12 weakest -> 1 strongest)
+   12 numbers  11 buffers  10 physical structure  9 delays
+   8 balancing strength  7 reinforcing gain  6 information
+   5 rules  4 self-organisation  3 goals  2 paradigm  1 transcending
+   If every option is a 12, look for a 9, 6 or 5 on the same loop.
+
+THE EPC LESSON IN ONE LINE
+   Earlier reviews (a delay, level 9) nearly match two extra engineers (level
+   12); a later deadline alone barely helps; honest progress reporting (level
+   6) fixes the blind spot.
+
+BEFORE YOU TRUST A RESULT
+   Model Health clean?  Shape matches the reference mode?  Ranges sensible?
+   Excluded list read by someone else?  Compared against the base run?
+
+LINK
+   https://claude.ai/artifact/3mPyMZySDKLEh5gyyQkxxm
+
+
+49. FURTHER READING
+-------------------
+
+Start here (readable, non-technical):
+- Meadows, D. H. (2008). Thinking in Systems: A Primer. Chelsea Green. The
+  best first book; short and clear.
+- Meadows, D. H. (1999). Leverage Points: Places to Intervene in a System. The
+  Sustainability Institute. A short essay; free online.
+- Senge, P. M. (1990). The Fifth Discipline. Doubleday/Currency. Introduced
+  the archetypes to managers.
+
+Going deeper:
+- Kim, D. H. (1992). Systems Archetypes I. Pegasus Communications. The
+  archetype templates used in LoopLab.
+- Sterman, J. D. (2000). Business Dynamics: Systems Thinking and Modeling for
+  a Complex World. Irwin/McGraw-Hill. The standard textbook, with many
+  business and project examples.
+- Lyneis, J. M., & Ford, D. N. (2007). System dynamics applied to project
+  management: a survey, assessment, and directions for future research. System
+  Dynamics Review, 23(2-3), 157-189. The research behind the rework cycle.
+- Schoenberg, W., Hayward, J., & Eberlein, R. (2023). Improving Loops That
+  Matter. System Dynamics Review, 39(2). The method behind LoopLab's
+  loop-dominance chart.
+
+
+==============================================================================
+                               END OF GUIDE
+==============================================================================
+
