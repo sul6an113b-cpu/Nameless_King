@@ -18,7 +18,7 @@ def kept(cid):
 B3354 = 'ASME B31.3 para 335.2.4 Gaskets'
 B3353 = 'ASME B31.3 para 335.2.3 Bolt Length – acceptance wording changed between editions'
 CITED = {
-  ('piping_line', 'leak_test_record'): ('B31.1 para 137 Pressure Tests, or B31.3 para 345 Testing (345.3.1 joints exposed during the leak test; exceptions differ by edition) – per project line class. The signed record is a project requirement, not from these clauses', ['b311_137', 'b313_345']),
+  ('piping_line', 'leak_test_record'): ('B31.1 para 137 Pressure Tests, or B31.3 para 345 Testing (345.3.1 joints exposed during the leak test; exceptions differ by edition) – per project line class. Test record requirement: verify clause/edition', ['b311_137', 'b313_345']),
   ('piping_line', 'weld_nde_record'): ('B31.1 para 136 Inspection and Examination, or B31.3 para 341 Examination – per project line class. NDE methods ASME Sec V, qualifications ASME Sec IX: verify clause/edition', ['b311_136', 'b313_341']),
   ('flanged_joint', 'single_gasket'): (f'{B3354}. B31.1: verify clause/edition', ['b313_33524']),
   ('flanged_joint', 'thread_engagement'): (f'{B3353}. B31.1: verify clause/edition', ['b313_33523_number_title']),
@@ -49,21 +49,60 @@ def downgrade(ref):
 LABELS = [('piping_line', 'Piping line'), ('flanged_joint', 'Flanged joint'), ('valve', 'Valve'), ('pipe_support', 'Supports & pipe rack'), ('rotating', 'Pump / rotating equip.'), ('tank_vessel', 'Tank / vessel'), ('instrument_hookup', 'Instrument & cable hookup'), ('general_area', 'General area / handover')]
 fams = {f['key']: f['final'] for f in d['families'] if f and f.get('final')}
 report = []
-# Corrections after the clause check: B31.3 335.2.3 dropped the "one thread short"
-# allowance in 2016, so no text may present that allowance as current.
+# Corrections after the clause checks and the second review:
+# - B31.3 335.2.3 dropped the "one thread short" allowance in 2016; no text may present it as current.
+# - 335.2.4 allows one gasket per pair of contact faces: spectacle / spacer joints correctly have two.
+# - 341.3.3 requires re-examination of a repair; the report itself is a records (project) matter.
+# - Matching a datasheet set pressure is a project-document check, not a code requirement.
+# - Whether gaskets / bolts must be renewed when a joint is broken is a project rule.
 FIXES = {
   ('tank_vessel', 'nozzle_bolting'): {
     'defects': {'Bolt >1 thread short of nut': 'Bolt short of full nut engagement'},
     'ask': 'Is the connecting piping B31.1 or B31.3, which edition applies, and is any thread short of full nut engagement acceptable under the project spec?',
   },
+  ('flanged_joint', 'single_gasket'): {
+    'text': 'One gasket per pair of contact faces (no stacking)',
+    'defects': {'Double gasket fitted': 'Stacked gaskets fitted', 'Wide gap - suspect 2nd gasket': 'Wide gap – suspect stacked gasket (not at spectacle/spacer)'},
+  },
+  ('tank_vessel', 'relief_valve'): {
+    'text': 'PSV fitted, gag / shipping plug removed',
+    'basis': 'practice', 'codeRef': '', 'refConfidence': 'none',
+    'defects_list': ['PSV missing (per P&ID)', 'Shipping plug/gag left in', 'Isolation valve not open/sealed', 'Discharge not routed safe', 'PSV not vertical'],
+    'ask': 'Must PSV isolation valves be car-sealed or locked open at handover?',
+    'insert_after': [{
+      'id': 'relief_setnote', 'group': 'Roof & relief', 'text': 'PSV set pressure on plate noted (observe only)', 'basis': 'project',
+      'codeRef': '', 'refConfidence': 'none', 'defects': ['Set illegible', 'Set not shown on plate', 'Set differs from datasheet (note)'],
+      'unknownQuestion': 'Is a PSV set-test certificate required at handover, how recent must it be, and which datasheet set pressure applies?',
+    }],
+  },
+  ('punch_closure', 'joint_remade'): {
+    'text': 'Re-made joint: one gasket per face pair, bolts engaged',
+    'insert_after': [{
+      'id': 'joint_parts_project', 'group': 'At the item', 'text': 'Gasket / bolts renewed where the project requires', 'basis': 'project',
+      'codeRef': '', 'refConfidence': 'none', 'defects': [],
+      'unknownQuestion': 'Does the project require new gaskets (and bolts) whenever a flanged joint is broken?',
+    }],
+  },
+  ('punch_closure', 'weld_repair_nde'): {'text': 'Weld repair re-examined (same method / criteria)'},
 }
+
+def expand(key, checks):
+    out = []
+    for c in checks:
+        fx = FIXES.get((key, c['id']))
+        out.append(c)
+        if fx:
+            out.extend(fx.get('insert_after', []))
+    return out
 
 def conv(key, c):
     fx = FIXES.get((key, c['id']))
     if fx:
         c = dict(c)
-        c['defects'] = [fx.get('defects', {}).get(x, x) for x in c.get('defects', [])]
+        c['defects'] = fx.get('defects_list') or [fx.get('defects', {}).get(x, x) for x in c.get('defects', [])]
         if 'ask' in fx: c['unknownQuestion'] = fx['ask']
+        for k in ('text', 'basis', 'codeRef', 'refConfidence'):
+            if k in fx: c[k] = fx[k]
     ref = c.get('codeRef') or ''
     if c.get('refConfidence') == 'sure':
         cit = CITED.get((key, c['id']))
@@ -81,7 +120,7 @@ def conv(key, c):
 types, siteq = [], {}
 for key, label in LABELS:
     fin = fams[key]
-    types.append({'key': key, 'label': label, 'checks': [conv(key, c) for c in fin['checks']]})
+    types.append({'key': key, 'label': label, 'checks': [conv(key, c) for c in expand(key, fin['checks'])]})
     siteq[key] = fin.get('siteQuestions', [])
 types.append({'key': 'free', 'label': 'Other (free check)', 'checks': []})
 
@@ -89,7 +128,7 @@ CORE = ['safe_access', 'item_located', 'defect_cleared', 'permanent_fix', 'no_ne
 REQUIRED = {'item_located', 'defect_cleared', 'no_new_damage'}
 pc = fams['punch_closure']
 closure = []
-for c in pc['checks']:
+for c in expand('punch_closure', pc['checks']):
     x = conv('punch_closure', c)
     closure.append({'id': x['id'], 'text': x['text'], 'basis': x['basis'], 'codeRef': x['codeRef'], 'core': x['id'] in CORE, 'required': x['id'] in REQUIRED})
 closure.sort(key=lambda c: (not c['core'], CORE.index(c['id']) if c['core'] else 0))

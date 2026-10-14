@@ -442,11 +442,13 @@ export async function restore(file, mode = 'merge') {
   const report = { items: 0, punches: 0, questions: 0, photos: 0, skipped: 0, missingPhotos: missing.length, renumbered: [], settings: 'kept' };
   const emptyPhone = S.items.size + S.punches.size + S.questions.size === 0;
 
-  if (mode === 'replace') {
-    await db.clearAll();
-    await db.setMeta('restoreIncomplete', { at: new Date().toISOString(), file: file.name });
-  }
+  let wiped = false;
   try {
+    if (mode === 'replace') {
+      // Wipe and the "restore not finished" marker commit together.
+      await db.clearAll({ key: 'restoreIncomplete', value: { at: new Date().toISOString(), file: file.name } });
+      wiped = true;
+    }
     const existing = {
       items: mode === 'replace' ? new Map() : new Map(S.items),
       punches: mode === 'replace' ? new Map() : new Map(S.punches),
@@ -475,8 +477,18 @@ export async function restore(file, mode = 'merge') {
           report.skipped++;
           continue;
         }
+        // A record this phone renumbered earlier keeps its number here, even when
+        // a newer copy of it arrives with the original number.
+        if (mode === 'merge' && local && local.no !== rec.no) {
+          rec = { ...rec, no: local.no, formerNo: local.formerNo || rec.no };
+          if (store === 'punches') {
+            const seen = new Set((rec.history || []).map((h) => `${h.action}|${h.note}`));
+            const extra = (local.history || []).filter((h) => h.action === 'renumbered' && !seen.has(`${h.action}|${h.note}`));
+            rec.history = [...(rec.history || []), ...extra].sort((x, y) => (x.at < y.at ? -1 : x.at > y.at ? 1 : 0));
+          }
+        }
         const clash = used.get(rec.no);
-        if (mode === 'merge' && !local && clash && clash !== rec.id) {
+        if (mode === 'merge' && clash && clash !== rec.id) {
           const n = await db.nextSeq(KIND[store]);
           const no = `${rec.no.replace(/\d+\s*$/, '')}${String(n).padStart(PAD[store], '0')}`;
           report.renumbered.push(`${rec.no} → ${no}`);
@@ -492,6 +504,8 @@ export async function restore(file, mode = 'merge') {
     await flush();
 
     for (const ph of photos) {
+      // Drafts are one phone's unsaved work: only a full Replace brings them back.
+      if (mode === 'merge' && ph.ownerType === 'draft') continue;
       const local = existingPhotos.get(ph.id);
       if (!zip.has(bn(ph.id)) || !photoNewer(ph, local)) continue;
       const own = async (sfx) => (zip.has(bn(ph.id, sfx)) ? (await zip.read(bn(ph.id, sfx))).slice().buffer : undefined);
@@ -510,8 +524,8 @@ export async function restore(file, mode = 'merge') {
       report.photos++;
     }
 
-    for (const [k, v] of Object.entries(data.drafts || {})) {
-      if (k.startsWith('draft:') && (mode === 'replace' || !S.drafts.has(k))) await db.setMeta(k, v);
+    if (mode === 'replace') {
+      for (const [k, v] of Object.entries(data.drafts || {})) if (k.startsWith('draft:')) await db.setMeta(k, v);
     }
 
     if (mode === 'replace' || emptyPhone) {
@@ -539,7 +553,7 @@ export async function restore(file, mode = 'merge') {
     if (mode === 'replace') await db.del('meta', 'restoreIncomplete');
   } catch (e) {
     await load().catch(() => {});
-    if (mode === 'replace') {
+    if (wiped) {
       const err = new Error(`Restore stopped part-way (${e.message || e}). This phone now holds only part of the backup. Run Restore → Replace again with the same file.`);
       err.partial = true;
       throw err;

@@ -501,6 +501,178 @@ console.log('Device check and reopening the last screen');
   await ctx.close();
 }
 
+console.log('R2 – second review fixes');
+{
+  // R2-C2: a just-saved comment never comes back as an "unsaved" draft (slow storage).
+  const { ctx, page } = await fresh();
+  await newItem(page);
+  await page.evaluate(() => {
+    const desc = Object.getOwnPropertyDescriptor(IDBTransaction.prototype, 'oncomplete');
+    Object.defineProperty(IDBTransaction.prototype, 'oncomplete', {
+      configurable: true,
+      get() {
+        return desc.get.call(this);
+      },
+      set(fn) {
+        const tx = this;
+        const slow = [...tx.objectStoreNames].includes('punches') && tx.mode === 'readwrite';
+        desc.set.call(this, slow && fn ? (ev) => setTimeout(() => fn.call(tx, ev), 60) : fn);
+      },
+    });
+  });
+  for (let i = 0, gap = 330; gap <= 400; gap += 14, i++) {
+    await page.locator('.chk').nth(i).locator('[data-v="defect"]').click();
+    await page.waitForSelector('.backdrop textarea[name=text]');
+    await page.fill('.backdrop textarea[name=text]', `Gasket leaking ${gap}`);
+    await page.evaluate(
+      (gap) =>
+        new Promise((r) => {
+          document.querySelector('.backdrop .cats button[data-v="C"]').click();
+          setTimeout(() => {
+            document.querySelector('.backdrop [data-s="save"]').click();
+            r();
+          }, gap);
+        }),
+      gap,
+    );
+    await page.waitForSelector('.backdrop', { state: 'detached' });
+    await wait(page, 700);
+  }
+  const meta = await page.evaluate(
+    () =>
+      new Promise((res) => {
+        const r = indexedDB.open('bopqc');
+        r.onsuccess = () => {
+          const q = r.result.transaction('meta').objectStore('meta').getAllKeys();
+          q.onsuccess = () => res(q.result.filter((k) => String(k).startsWith('draft:')));
+        };
+      }),
+  );
+  ok(meta.length === 0, `no ghost drafts after quick saves on slow storage (${meta.length})`);
+
+  // R2-C7: a double tap records once.
+  await page.locator('.chk-links a').first().click();
+  await page.waitForSelector('#view [data-a="p-ready"]');
+  await page.locator('#view [data-a="p-ready"]').dblclick();
+  await wait(page, 600);
+  const pid = new URL(page.url()).hash.split('/')[2];
+  const punch = (await idb(page, 'punches')).find((p) => p.id === decodeURIComponent(pid));
+  ok(punch.history.filter((h) => h.action === 'ready').length === 1, 'double tap on "Construction reports closed" records once');
+
+  // L3: the selected "No" answer is visibly selected.
+  await tap(page, '#bar [data-a="p-verify"]');
+  await page.waitForSelector('.backdrop #vrows');
+  const row = page.locator('.backdrop #vrows > .chk').nth(1);
+  const before = await row.locator('[data-v="no"]').evaluate((b) => getComputedStyle(b).backgroundColor);
+  await row.locator('[data-v="no"]').click();
+  await wait(page, 200);
+  const after = await page.locator('.backdrop #vrows > .chk').nth(1).locator('[data-v="no"]').evaluate((b) => getComputedStyle(b).backgroundColor);
+  ok(before !== after, `"No" shows as selected (${before} → ${after})`);
+  ok((await page.locator('.backdrop .sheet-msg.on').innerText()).includes('failed'), 'verdict shown above the buttons');
+  await ctx.close();
+}
+{
+  // L4: selected answers readable in dark mode.
+  const ctx = await browser.newContext({ ...devices['iPhone 13'], colorScheme: 'dark' });
+  const page = await ctx.newPage();
+  await page.goto(BASE);
+  await page.waitForSelector('[data-a="new-item"]');
+  await newItem(page);
+  await page.locator('.chk').nth(0).locator('[data-v="ok"]').click();
+  await wait(page, 300);
+  const ratio = await page.locator('.chk').nth(0).locator('[data-v="ok"]').evaluate((b) => {
+    const rgb = (c) => c.match(/\d+/g).slice(0, 3).map(Number);
+    const lum = ([r, g, bl]) => {
+      const f = (v) => ((v /= 255) <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4);
+      return 0.2126 * f(r) + 0.7152 * f(g) + 0.0722 * f(bl);
+    };
+    const cs = getComputedStyle(b);
+    const a = lum(rgb(cs.color));
+    const c = lum(rgb(cs.backgroundColor));
+    return (Math.max(a, c) + 0.05) / (Math.min(a, c) + 0.05);
+  });
+  ok(ratio >= 4.5, `dark mode: selected OK text contrast ${ratio.toFixed(1)}:1`);
+  await ctx.close();
+}
+{
+  // R2-C3: reopened on a detail screen, Back never leaves the app.
+  const { ctx, page } = await fresh();
+  await newItem(page, { tag: 'FIRST' });
+  await defect(page, 0);
+  const itemHash = new URL(page.url()).hash;
+  await page.goto(BASE + itemHash); // app (re)starts directly on the item
+  await page.waitForSelector('.item-head');
+  await page.locator('.chk-links a').first().click();
+  await page.waitForSelector('#view [data-a="p-ready"]');
+  await page.goBack();
+  await page.waitForSelector('.item-head');
+  await tap(page, '#bar [data-a="back"]');
+  await wait(page, 500);
+  ok(page.url().startsWith(BASE), `Back from the first screen stays in the app (${page.url()})`);
+  await ctx.close();
+}
+{
+  // R2-C9: a draft on a removed checkpoint can still be resumed.
+  const { ctx, page } = await fresh();
+  await newItem(page);
+  await tap(page, '[data-a="chk-add"]');
+  await page.fill('.backdrop input[name=text]', 'Temporary check');
+  await tap(page, '.backdrop [data-s="save"]');
+  await wait(page, 400);
+  const n = await page.locator('.chk').count();
+  await page.locator('.chk').nth(n - 1).locator('[data-v="defect"]').click();
+  await page.fill('.backdrop textarea[name=text]', 'Draft on custom check');
+  await wait(page, 700);
+  await page.reload();
+  await page.waitForSelector('[data-a="draft-resume"]');
+  await page.locator('.chk').nth(n - 1).locator('[data-a="chk-info"]').click();
+  await tap(page, '.backdrop [data-s="remove"]');
+  await wait(page, 300);
+  await tap(page, '.backdrop [data-s="yes"]');
+  await wait(page, 500);
+  await tap(page, '[data-a="draft-resume"]');
+  await page.waitForSelector('.backdrop textarea[name=text]');
+  ok((await page.inputValue('.backdrop textarea[name=text]')).includes('Draft on custom check'), 'draft moved to the item comment and resumes');
+  await ctx.close();
+}
+{
+  // R2-C1: a record renumbered on an earlier merge keeps its number on the next merge.
+  const A = await fresh();
+  await newItem(A.page, { tag: 'A-LINE' });
+  await defect(A.page, 0, { text: 'A defect' });
+  const backup1 = await exportFile(A.page, 'backup');
+  const B = await fresh();
+  await newItem(B.page, { tag: 'B-LINE' });
+  await defect(B.page, 0, { text: 'B defect' });
+  const restoreInto = async (page, file) => {
+    await page.goto(BASE + '#/export');
+    await page.waitForSelector('[data-a="restore"]');
+    const [fc] = await Promise.all([page.waitForEvent('filechooser'), tap(page, '[data-a="restore"]')]);
+    await fc.setFiles(file);
+    await page.waitForSelector('.backdrop [data-s="go"]');
+    await tap(page, '.backdrop [data-s="go"]');
+    await page.waitForSelector('.backdrop .sheet[aria-label="Restore done"]', { timeout: 15000 });
+    await page.evaluate(() => document.querySelectorAll('.backdrop').forEach((b) => b.remove()));
+  };
+  await restoreInto(B.page, backup1);
+  // A works on its punch, then B merges A's newer backup.
+  await A.page.goto(BASE + '#/punch');
+  await A.page.waitForSelector('#list .card');
+  await A.page.locator('#list .card').first().click();
+  await A.page.waitForSelector('#view [data-a="p-ready"]');
+  await tap(A.page, '#view [data-a="p-ready"]');
+  await wait(A.page, 400);
+  const backup2 = await exportFile(A.page, 'backup');
+  await restoreInto(B.page, backup2);
+  const ps = await idb(B.page, 'punches');
+  const nos = ps.map((p) => p.no);
+  const aP = ps.find((p) => p.text === 'A defect');
+  ok(new Set(nos).size === nos.length, `punch numbers stay unique after a second merge (${nos.join(', ')})`);
+  ok(aP.status === 'ready' && aP.formerNo && aP.history.some((h) => h.action === 'renumbered'), 'renumbered punch keeps its new number, former number and history, with the newer status');
+  await A.ctx.close();
+  await B.ctx.close();
+}
+
 console.log('DS-7 – backup counts only when confirmed');
 {
   const { ctx, page } = await fresh();

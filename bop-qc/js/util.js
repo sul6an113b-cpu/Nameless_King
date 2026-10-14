@@ -80,6 +80,7 @@ export function debounce(fn, ms = 400) {
     clearTimeout(t);
     fn(...a);
   };
+  d.cancel = () => clearTimeout(t);
   return d;
 }
 

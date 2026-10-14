@@ -126,15 +126,39 @@ function syncHistory() {
   }
 }
 
-// hash: '#/…' route, or 'back' for one history step back.
+// hash: '#/…' route, 'back' for one history step back, or 'leave:#/…' = go to that
+// screen, stepping back if it is the entry below this one (no duplicate entries)
+// and replacing this entry otherwise. Decided when it runs, after pending pops.
 function nav(hash, replace = false) {
   if (pendingBacks) {
     queuedNav = { hash, replace };
     return;
   }
   if (hash === 'back') history.back();
-  else if (replace) location.replace(hash);
+  else if (hash.startsWith('leave:')) {
+    const target = hash.slice(6);
+    const st = history.state;
+    if (st && st.inApp && st.below === norm(target)) history.back();
+    else replaceRoute(target);
+  } else if (replace) replaceRoute(hash);
   else location.hash = hash;
+}
+
+// Swap the current screen for another while keeping this history entry's state
+// (a replaced first screen must stay "not in-app", or Back could leave the app).
+function replaceRoute(hash) {
+  try {
+    history.replaceState(history.state || { inApp: false }, '', hash);
+  } catch {
+    location.replace(hash);
+    return;
+  }
+  prevHash = curHash;
+  curHash = location.hash;
+  rememberRoute();
+  closeAllLayers();
+  render();
+  window.scrollTo(0, 0);
 }
 
 const KEEP_MSG = 'Not saved yet – tap Cancel to discard';
@@ -190,16 +214,18 @@ function layer({ el, onClose, isDirty }) {
 }
 const closeAllLayers = () => [...layers].reverse().forEach((l) => l.close('nav'));
 
-// A failed handler re-enables the sheet's buttons so the user can retry.
-function sheetError(e, api) {
+// A failed handler re-enables the button that was tapped (so the user can retry)
+// and lets the sheet recompute any gated buttons (onError).
+function sheetError(e, api, b, onError) {
   fail(e);
-  $$('button[disabled]', api.root).forEach((x) => (x.disabled = false));
+  if (b) b.disabled = false;
+  if (onError) onError(api);
 }
 
 // pre: content pinned above the footer (always visible, e.g. a required picker).
 // isDirty: function, or 'form' = any typed field differs from when the sheet opened.
 // api.msg(text) shows a message just above the buttons (never under the keyboard).
-function sheet({ title, sub = '', body, pre = '', foot, onClick, onClose, cls = '', isDirty }) {
+function sheet({ title, sub = '', body, pre = '', foot, onClick, onClose, onError, cls = '', isDirty }) {
   const bd = document.createElement('div');
   bd.className = 'backdrop';
   bd.innerHTML = `<div class="sheet ${cls}" role="dialog" aria-modal="true" aria-label="${esc(title)}">
@@ -217,10 +243,11 @@ function sheet({ title, sub = '', body, pre = '', foot, onClick, onClose, cls = 
     body: bd.querySelector('.sheet-b'),
     pre: bd.querySelector('.sheet-pre'),
     foot: bd.querySelector('.sheet-f'),
-    msg(text) {
+    // tone: 'bad' (default) | 'ok' | 'info'
+    msg(text, tone = 'bad') {
       const m = bd.querySelector('.sheet-msg');
       m.textContent = text || '';
-      m.classList.toggle('on', !!text);
+      m.className = `sheet-msg ${tone}${text ? ' on' : ''}`;
     },
   });
   if (isDirty === 'form') initial = JSON.stringify(formData(api.body));
@@ -234,14 +261,22 @@ function sheet({ title, sub = '', body, pre = '', foot, onClick, onClose, cls = 
     if (b && onClick) {
       ev.preventDefault();
       ev.stopPropagation();
+      // A second tap while the first is still saving is ignored (no double records).
+      if (b.dataset.busy) return;
+      b.dataset.busy = '1';
+      const free = () => delete b.dataset.busy;
       // Called synchronously: photo pickers and share need the tap's user gesture.
       let r;
       try {
         r = onClick(b.dataset.s, b, api, ev);
       } catch (e) {
-        return sheetError(e, api);
+        free();
+        return sheetError(e, api, b, onError);
       }
-      Promise.resolve(r).catch((e) => sheetError(e, api));
+      Promise.resolve(r).then(free, (e) => {
+        free();
+        sheetError(e, api, b, onError);
+      });
     }
   });
   hydrate(bd);
@@ -494,6 +529,7 @@ function refresh() {
   window.scrollTo(0, y);
 }
 
+const norm = (h) => (!h || h === '#' || h === '#/' ? '#/items' : h);
 // prevHash: the screen before this one inside the app (null on the first screen).
 let prevHash = null;
 let curHash = location.hash;
@@ -518,9 +554,11 @@ window.addEventListener('hashchange', () => {
   curHash = location.hash;
   rememberRoute();
   closeAllLayers();
-  // Mark entries created inside the app so Back can use history safely.
+  // Mark only entries the app has just created (they have no state yet), and
+  // remember which screen is below them. Revisited entries keep their own state,
+  // so the first entry of the app is never mistaken for an in-app one.
   try {
-    if (!(history.state && history.state.inApp)) history.replaceState({ inApp: true }, '');
+    if (history.state == null) history.replaceState({ inApp: true, below: norm(prevHash) }, '');
   } catch {}
   render();
   window.scrollTo(0, 0);
@@ -542,7 +580,19 @@ document.addEventListener('click', (ev) => {
   const fn = A[el.dataset.a];
   if (fn) {
     ev.preventDefault();
-    Promise.resolve(fn(el, ev)).catch(fail);
+    // Ignore a second tap while the first one is still being saved.
+    if (el.dataset.busy) return;
+    el.dataset.busy = '1';
+    let r;
+    try {
+      r = fn(el, ev);
+    } catch (e) {
+      delete el.dataset.busy;
+      return fail(e);
+    }
+    Promise.resolve(r)
+      .catch(fail)
+      .finally(() => delete el.dataset.busy);
   }
 });
 
@@ -793,7 +843,7 @@ function scrItem(id) {
       const cid = k.split(':')[2];
       const c = it.checks.find((x) => x.id === cid);
       const n = store.photosOf(k).length;
-      return `<div class="banner"><div class="grow small"><b>Unsaved comment</b>${c ? ` on “${esc(c.text)}”` : ''}${n ? ` · ${n} photo${n === 1 ? '' : 's'}` : ''}</div><button class="btn small" data-a="draft-resume" data-cid="${esc(cid)}">Resume</button></div>`;
+      return `<div class="banner"><div class="grow small"><b>Unsaved comment</b>${c ? ` on “${esc(c.text)}”` : ''}${n ? ` · ${n} photo${n === 1 ? '' : 's'}` : ''}</div><button class="btn small" data-a="draft-resume" data-cid="${esc(c ? cid : 'free')}">Resume</button></div>`;
     })
     .join('');
 
@@ -984,9 +1034,7 @@ A['item-del'] = async () => {
   const nph = store.photosOf(it.id).length;
   if (!(await confirmSheet(`Delete <b>${esc(it.no)}</b> (${esc(it.tag || 'no tag')})?<br>This also deletes ${np} comment(s), ${nq} question(s) and their photos (${nph} item photo(s)). This cannot be undone.`, { ok: 'Delete', danger: true }))) return;
   await store.deleteItem(it.id);
-  // Came from the list: step back to it; otherwise replace this screen.
-  if (prevHash !== null && (prevHash === '' || prevHash.startsWith('#/items'))) nav('back');
-  else nav('#/items', true);
+  nav('leave:#/items');
   toast('Item deleted');
 };
 
@@ -1077,6 +1125,7 @@ function commentSheet({ item, check }, { onCancel } = {}) {
   const draft = S.drafts.get(key) || {};
   let cat = draft.cat || '';
   let done = false; // saved or discarded
+  let saving = false; // Save in progress: no draft writes may follow it
   const picks = check && check.defects && check.defects.length ? check.defects : GENERAL_DEFECTS;
   const restored = !!(draft.text || store.photosOf(key).length);
   const photosHTML = () =>
@@ -1090,7 +1139,7 @@ function commentSheet({ item, check }, { onCancel } = {}) {
     return { text: d.text, cat, subcontractor: d.subcontractor, projectNo: d.projectNo };
   };
   const keepDraft = debounce(() => {
-    if (!done) store.saveDraft(key, values()).catch(fail);
+    if (!done && !saving) store.saveDraft(key, values()).catch(fail);
   }, 400);
   const isDirty = () => !done && (!!formData(sh.body).text || !!cat || store.photosOf(key).length > 0);
   const discard = async () => {
@@ -1113,7 +1162,7 @@ function commentSheet({ item, check }, { onCancel } = {}) {
     isDirty,
     onClose(reason) {
       // Leaving the screen keeps the draft; it is offered again on the item.
-      if (!done && reason === 'nav') keepDraft.flush();
+      if (!done && !saving && reason === 'nav') keepDraft.flush();
       else if (!done && reason !== 'nav') discard().catch(fail);
       if (reason !== 'saved' && onCancel) onCancel(reason);
     },
@@ -1174,10 +1223,18 @@ function commentSheet({ item, check }, { onCancel } = {}) {
         }
         if (!cat) return api.msg('Pick a category (A / B+ / B / C / D).');
         b.disabled = true;
-        const p = await store.createPunch(
-          { itemId: item.id, checkId: check ? check.id : null, checkText: check ? check.text : '', category: cat, text: d.text, subcontractor: d.subcontractor, projectNo: d.projectNo },
-          { draftKey: key },
-        );
+        saving = true;
+        keepDraft.cancel();
+        let p;
+        try {
+          p = await store.createPunch(
+            { itemId: item.id, checkId: check ? check.id : null, checkText: check ? check.text : '', category: cat, text: d.text, subcontractor: d.subcontractor, projectNo: d.projectNo },
+            { draftKey: key },
+          );
+        } catch (e) {
+          saving = false;
+          throw e;
+        }
         done = true;
         api.close('saved');
         refresh();
@@ -1534,10 +1591,7 @@ A['p-del'] = async () => {
   const p = curPunch;
   if (!(await confirmSheet(`Delete ${esc(p.no)} and its photos? This cannot be undone.`, { ok: 'Delete', danger: true }))) return;
   await store.deletePunch(p.id);
-  // Step back to where the punch was opened from; otherwise replace this screen.
-  const from = p.itemId ? `#/item/${encodeURIComponent(p.itemId)}` : '#/punch';
-  if (prevHash !== null && (prevHash === from || (!p.itemId && prevHash.startsWith('#/punch')))) nav('back');
-  else nav(from, true);
+  nav(`leave:${p.itemId ? `#/item/${encodeURIComponent(p.itemId)}` : '#/punch'}`);
   toast('Deleted');
 };
 
@@ -1567,7 +1621,7 @@ A['p-verify'] = () => {
   };
   const paintFoot = (api) => {
     const [k, msg] = verdict();
-    $('#vmsg', api.body).innerHTML = `<div class="warnbox ${k === 'no' ? 'bad' : ''}" style="${k === 'ok' ? 'border-color:var(--ok);background:var(--ok-bg)' : ''}">${msg}</div>`;
+    api.msg(msg, k === 'no' ? 'bad' : k === 'ok' ? 'ok' : 'info');
     $('[data-s="closed"]', api.root).disabled = k !== 'ok';
   };
   let sh;
@@ -1578,10 +1632,10 @@ A['p-verify'] = () => {
       <div id="vrows">${rows()}</div>
       <div class="sec-h">Closure photo</div>
       <div class="row wrap"><button class="btn" data-s="photo">📷 Take closure photo</button><span class="small muted" id="vph">${store.photosOf(p.id, 'closure').length} closure photo(s)</span></div>
-      ${field('Note', '<textarea name="note" placeholder="What you saw"></textarea>')}
-      <div id="vmsg"></div>`,
+      ${field('Note', '<textarea name="note" placeholder="What you saw"></textarea>')}`,
     foot: `<button class="btn" data-s="cancel">Cancel</button><button class="btn danger" data-s="notclosed">Not closed</button><button class="btn primary" data-s="closed" disabled>Verified</button>`,
     isDirty: () => Object.values(st).some(Boolean) || !!formData(sh.body).note,
+    onError: (api) => paintFoot(api),
     async onClick(s, b, api) {
       if (s === 'cancel') return api.close('cancel');
       if (s === 'vc') {
@@ -1609,7 +1663,7 @@ A['p-verify'] = () => {
         toast(`${p.no} verified closed`);
       } else if (s === 'notclosed') {
         if (!note) {
-          api.msg('Write why it is not closed (Note).');
+          api.msg('Write why it is not closed (Note).', 'bad');
           $('textarea', api.body).focus();
           return;
         }
@@ -1755,7 +1809,9 @@ function fileSheet(file, { isBackup = false, isReport = false } = {}) {
         } else if (s === 'save') {
           await afterSave(await saveFile(file));
         } else if (s === 'open') {
-          await openReport(file);
+          // Hide this sheet while the report is shown; bring it back after.
+          api.el.style.display = 'none';
+          await openReport(file, { onClose: () => !api.closed && (api.el.style.display = '') });
         }
       } catch (e) {
         if (s === 'share' && e && e.name !== 'NotAllowedError') {
@@ -1940,9 +1996,9 @@ async function scrMore() {
       <div>App</div><div>${isStandalone() ? 'Installed (home-screen icon)' : EMBEDDED ? 'Preview inside claude.ai' : 'Browser tab – install for site use'}</div>
       <div>Used</div><div>${e.usage != null ? bytes(e.usage) : 'unknown'}${e.quota ? ` of ~${bytes(e.quota)}` : ''}</div>
       <div>Records</div><div>${S.items.size} items · ${S.punches.size} punch · ${S.questions.size} questions · ${nPhotos} photos</div>
-      <div>Protected</div><div>${e.persisted === true ? 'Yes – iOS will not clear it automatically' : e.persisted === false ? 'Not confirmed' : 'Unknown on this browser'}</div></div>
+      <div>Protected</div><div>${e.persisted === true ? 'Persistent storage granted (not a backup – iOS may still clear data)' : e.persisted === false ? 'Not granted' : 'Unknown on this browser'}</div></div>
     ${e.persisted === true ? '' : '<button class="btn small" style="margin-top:8px" data-a="persist">Ask the phone to keep data</button>'}
-    <div class="tiny muted" style="margin-top:6px">Deleting the home-screen icon deletes the data. Back up regularly.</div>`;
+    <div class="tiny muted" style="margin-top:6px">Assume deleting the home-screen icon deletes the data (not confirmed). Back up regularly.</div>`;
 }
 
 // Checks the cache this copy of the app would use offline.
@@ -2072,7 +2128,7 @@ async function runAutoChecks() {
   const off = await offlineStatus();
   r.offline = { ok: off.startsWith('Ready'), detail: off.replace(/<[^>]+>/g, '') };
   const e = await db.estimate();
-  r.persist = { ok: e.persisted === true ? true : e.persisted === false ? false : null, detail: e.persisted === true ? 'Granted' : e.persisted === false ? 'Not granted – back up often' : 'Unknown on this browser' };
+  r.persist = { ok: e.persisted === true ? true : e.persisted === false ? false : null, detail: e.persisted === true ? 'Granted (still not a backup)' : e.persisted === false ? 'Not granted – back up often' : 'Unknown on this browser' };
   r.space = { ok: e.quota ? e.usage < e.quota * 0.8 : null, detail: e.usage != null ? `${bytes(e.usage)} used${e.quota ? ` of ~${bytes(e.quota)}` : ''}` : 'Unknown' };
   try {
     const key = `selftest:${Date.now()}`;
@@ -2108,7 +2164,7 @@ async function saveCheck(results) {
 
 async function scrDeviceCheck() {
   head('Device check', 'Run once on this iPhone');
-  setBar(`<button class="btn" data-a="back" data-fallback="#/more">‹ Back</button><button class="btn primary" data-a="dc-run">Run automatic checks</button>`);
+  setBar(`<button class="btn" data-a="back" data-fallback="#/more">‹ Back</button><button class="btn primary" data-a="dc-run">Run checks</button>`);
   const res = (S.deviceCheck && S.deviceCheck.results) || {};
   const badge = (r) => (!r ? '<span class="badge r-none">Not run</span>' : r.ok === true ? '<span class="badge r-ok">Pass</span>' : r.ok === false ? '<span class="badge r-rej">Fail</span>' : '<span class="badge r-okc">Unknown</span>');
   const manualBtn = {
@@ -2166,11 +2222,15 @@ A['dc-camera'] = () => {
     const b = busy('Processing…');
     try {
       const p = await processImage(files[0], { maxPx: S.settings.photoMaxPx, quality: S.settings.photoQuality });
-      await saveCheck({ camera: { ok: p.data.byteLength > 0, detail: `${p.w}×${p.h}, ${bytes(p.data.byteLength)}` } });
+      b.done();
+      const url = URL.createObjectURL(new Blob([p.thumb], { type: 'image/jpeg' }));
+      const upright = await confirmSheet(`<img src="${url}" alt="" style="max-width:100%;max-height:40vh;display:block;margin:0 auto 8px">Is this photo the right way up (not sideways or upside down)?`, { ok: 'Yes, upright', title: 'Camera check' });
+      URL.revokeObjectURL(url);
+      await saveCheck({ camera: { ok: upright, detail: `${p.w}×${p.h}, ${bytes(p.data.byteLength)}${upright ? '' : ' – photo not upright: report it'}` } });
     } catch (e) {
+      b.done();
       await saveCheck({ camera: { ok: false, detail: e.message || String(e) } });
     } finally {
-      b.done();
       refresh();
     }
   });
@@ -2224,7 +2284,7 @@ function scrHelp() {
   </div>
   <div class="card small">
     <h3>Back up</h3>
-    <p>Everything stays on this phone. iOS deletes it if you delete the home-screen icon. Export → <b>Make backup</b> → Share → Save to Files / iCloud Drive (or e-mail it to yourself) at least every few days. Restore with Export → Restore.</p>
+    <p>Everything stays on this phone. Assume iOS deletes it if you delete the home-screen icon (not confirmed). Export → <b>Make backup</b> → Share → Save to Files / iCloud Drive (or e-mail it to yourself) at least every few days. Restore with Export → Restore.</p>
   </div>`;
   setBar(`<button class="btn" data-a="back" data-fallback="#/more">‹ Back</button>`);
 }

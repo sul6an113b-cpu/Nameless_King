@@ -34,7 +34,7 @@ export const TYPES = [
     "group": "Records (pre-walk)",
     "text": "Leak test done, record signed",
     "basis": "code",
-    "codeRef": "B31.1 para 137 Pressure Tests, or B31.3 para 345 Testing (345.3.1 joints exposed during the leak test; exceptions differ by edition) – per project line class. The signed record is a project requirement, not from these clauses (confirm project edition)",
+    "codeRef": "B31.1 para 137 Pressure Tests, or B31.3 para 345 Testing (345.3.1 joints exposed during the leak test; exceptions differ by edition) – per project line class. Test record requirement: verify clause/edition (confirm project edition)",
     "defects": [
      "Test record missing/unsigned",
      "Line not in a test boundary",
@@ -381,13 +381,13 @@ export const TYPES = [
    {
     "id": "single_gasket",
     "group": "Gasket",
-    "text": "Single gasket only",
+    "text": "One gasket per pair of contact faces (no stacking)",
     "basis": "code",
     "codeRef": "ASME B31.3 para 335.2.4 Gaskets. B31.1: verify clause/edition (confirm project edition)",
     "defects": [
-     "Double gasket fitted",
+     "Stacked gaskets fitted",
      "Gasket stacked to fill gap",
-     "Wide gap - suspect 2nd gasket"
+     "Wide gap – suspect stacked gasket (not at spectacle/spacer)"
     ],
     "ask": ""
    },
@@ -1790,17 +1790,30 @@ export const TYPES = [
    {
     "id": "relief_valve",
     "group": "Roof & relief",
-    "text": "PSV fitted; tag set pressure = datasheet",
-    "basis": "code",
-    "codeRef": "ASME Sec VIII – verify clause/edition",
+    "text": "PSV fitted, gag / shipping plug removed",
+    "basis": "practice",
+    "codeRef": "",
     "defects": [
-     "PSV missing/not vertical",
+     "PSV missing (per P&ID)",
      "Shipping plug/gag left in",
-     "Set pressure not per datasheet",
      "Isolation valve not open/sealed",
-     "Discharge not routed safe"
+     "Discharge not routed safe",
+     "PSV not vertical"
     ],
-    "ask": "Is a PSV set-test cert required at handover, how recent must it be, and must the isolation valves be car-sealed open?"
+    "ask": "Must PSV isolation valves be car-sealed or locked open at handover?"
+   },
+   {
+    "id": "relief_setnote",
+    "group": "Roof & relief",
+    "text": "PSV set pressure on plate noted (observe only)",
+    "basis": "project",
+    "codeRef": "",
+    "defects": [
+     "Set illegible",
+     "Set not shown on plate",
+     "Set differs from datasheet (note)"
+    ],
+    "ask": "Is a PSV set-test certificate required at handover, how recent must it be, and which datasheet set pressure applies?"
    },
    {
     "id": "test_records",
@@ -2499,9 +2512,17 @@ export const CLOSURE_CHECKS = [
  },
  {
   "id": "joint_remade",
-  "text": "Re-made joint: new gasket, bolts through nut",
+  "text": "Re-made joint: one gasket per face pair, bolts engaged",
   "basis": "code",
   "codeRef": "ASME B31.3 para 335.2.4 Gaskets; ASME B31.3 para 335.2.3 Bolt Length – acceptance wording changed between editions. B31.1: verify clause/edition (confirm project edition)",
+  "core": false,
+  "required": false
+ },
+ {
+  "id": "joint_parts_project",
+  "text": "Gasket / bolts renewed where the project requires",
+  "basis": "project",
+  "codeRef": "",
   "core": false,
   "required": false
  },
@@ -2539,7 +2560,7 @@ export const CLOSURE_CHECKS = [
  },
  {
   "id": "weld_repair_nde",
-  "text": "Weld repair: NDE repeated, report attached",
+  "text": "Weld repair re-examined (same method / criteria)",
   "basis": "code",
   "codeRef": "ASME B31.3 para 341.3.3 Defective Components and Workmanship (wording split into repair / replace cases since 2014). B31.1: verify clause/edition (confirm project edition)",
   "core": false,

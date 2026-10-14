@@ -285,6 +285,23 @@ async function _removeItemCheck(itemId, checkId) {
   for (const p of itemPunches(itemId)) if (p.checkId === checkId) recs.push(['punches', { ...clone(p), checkId: null }]);
   for (const q of itemQuestions(itemId)) if (q.checkId === checkId) recs.push(['questions', { ...clone(q), checkId: null }]);
   await commit(recs);
+  // An unsaved comment on that checkpoint moves to the item's free comment draft.
+  const from = draftKey(itemId, checkId);
+  if (!hasDraft(from)) return;
+  const to = draftKey(itemId, null);
+  const a = S.drafts.get(from) || {};
+  const b = S.drafts.get(to);
+  const merged = b ? { ...b, text: [b.text, a.text].filter(Boolean).join('; ') } : { ...a, at: nowISO() };
+  const moved = (S.photos.get(from) || []).map((m) => ({ ...m, ownerId: to, updatedAt: nowISO() }));
+  await db.batch([
+    { store: 'meta', op: 'del', key: from },
+    { store: 'meta', op: 'put', value: { key: to, value: merged } },
+    ...moved.map((m) => ({ store: 'photos', op: 'put', value: m })),
+  ]);
+  S.drafts.delete(from);
+  S.drafts.set(to, merged);
+  S.photos.delete(from);
+  if (moved.length) S.photos.set(to, [...(S.photos.get(to) || []), ...moved]);
 }
 
 async function _setResult(itemId, result, note) {

@@ -24,7 +24,7 @@ More → Storage shows whether the offline files are cached, whether the app is 
 - automatic: installed, offline files, protected storage, space, database read/write, photo encoding, file sharing
 - manual: share sheet, saving a file, camera, print/PDF
 
-This turns the "Unknown" rows in the table below into checked results.
+This turns the "Likely" and "Unknown" rows in the table below into checked results for your phone.
 
 If iOS restarts the app in the background (it often does while the camera or Files is open), the app reopens the screen you were on. It checks for a new version each time it comes back to the front.
 
@@ -99,19 +99,21 @@ All of an account's GitHub Pages sites share one web origin (`<user>.github.io`)
 
 ### iPhone behaviour (from WebKit source, docs and bug reports)
 
-| Point | Status |
-|---|---|
-| Home-screen apps are exempt from Safari's 7-day deletion of site data | Confirmed |
-| `navigator.storage.persist()` is granted to home-screen apps | Confirmed |
-| Storage quota is up to about 60 % of disk per site (iOS 17+) | Confirmed |
-| Safari and the home-screen app keep separate storage | Confirmed |
-| The camera button opens the camera directly. "From library…" offers the photo library, with HEIC converted to JPEG | Confirmed |
-| Photos arrive already rotated upright, so the app does no manual EXIF rotation | Confirmed |
-| Share sheet accepts CSV, HTML and ZIP files; `share()` must follow a tap within ~5 s | Confirmed. This is why export is two taps (Prepare → Share) |
-| Deleting the home-screen icon deletes the data | Unknown (no primary source). Treated as true: back up |
-| "Save" (browser download) inside the home-screen app | Unknown. Use **Share → Save to Files** as the main route |
-| Printing the HTML report to PDF from the iPhone | Unknown. The report opens inside the app. Try Share → Print, or save it to Files and print from there. Confirm on your phone |
-| Edge-swipe Back in the home-screen app | Likely. The app makes a swipe close an open sheet instead of leaving the screen |
+Two independent research runs were made. Where they disagree, or the source was secondary, the row says **Likely**. Each row names the Device check that confirms it on your own phone.
+
+| Point | Status | Device check |
+|---|---|---|
+| Home-screen apps are exempt from Safari's 7-day deletion of site data | Likely: WebKit source and WebKit statements; not testable in one session | – |
+| `navigator.storage.persist()` is granted to home-screen apps | Likely: WebKit source. "Granted" still does not make on-phone data a backup | Storage protected |
+| Storage quota is up to about 60 % of disk per site (iOS 17+) | Likely (WebKit blog via MDN) | Storage space |
+| Safari and the home-screen app keep separate storage | Likely (older device tests) | – |
+| The camera button opens the camera directly; library photos arrive as JPEG | Likely (WebKit source) | Camera |
+| Photos arrive upright, so the app does no manual EXIF rotation | Likely (WebKit source) | Camera (look at the photo) |
+| Share sheet accepts CSV, HTML and ZIP files; `share()` must follow a tap within ~5 s | Likely (WebKit source). Export is two taps (Prepare → Share) for this reason | Share a test file |
+| Deleting the home-screen icon deletes the data | Unknown (no primary source). Treated as true: back up | – |
+| "Save" (browser download) inside the home-screen app | Unknown. Use **Share → Save to Files** as the main route | Save a test file |
+| Printing the HTML report to PDF from the iPhone | Unknown. The report opens inside the app; try Share… → Print | Print / PDF |
+| Edge-swipe Back in the home-screen app | Likely. A swipe closes the open sheet or viewer instead of leaving the screen | – |
 
 ### Releasing an update
 

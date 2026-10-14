@@ -160,10 +160,13 @@ function counterTx(kind, change) {
 export const nextSeq = (kind) => counterTx(kind, (n) => n + 1);
 export const bumpSeq = (kind, atLeast) => counterTx(kind, (n) => Math.max(n, atLeast));
 
-export const clearAll = () =>
+// marker: optional meta record written in the same transaction as the wipe
+// (restore uses it so "wiped" and "restore not finished" can never be split).
+export const clearAll = (marker = null) =>
   run((db) => {
     const tx = db.transaction(STORES, 'readwrite');
     for (const s of STORES) tx.objectStore(s).clear();
+    if (marker) tx.objectStore('meta').put(marker);
     return done(tx);
   });
 
