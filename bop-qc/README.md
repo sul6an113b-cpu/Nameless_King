@@ -25,10 +25,11 @@ More → Storage shows whether the offline files are cached, whether the app is 
 | Step | What you do |
 |---|---|
 | Start | **Items → + New item check**: pick the type, type the tag and area (subcontractor and document refs are optional). |
-| Check | Each checkpoint gets **✓ OK**, **✗ Defect**, **? Ask** or **N/A**. *Defect* opens a comment: quick-pick phrase, category, subcontractor, optional project punch no., photo. *Ask* records an unknown as a question. |
-| Photos | 📷 on the item, on a comment, or "after fix" on a punch item. Tap a photo to add a caption or **mark it up** in red. |
+| Check | Each checkpoint gets **✓ OK**, **✗ Defect**, **? Ask** or **N/A**. *Defect* opens a comment: text (or quick-pick phrase), category (always visible above Save), subcontractor, optional project punch no., photos. *Ask* records an unknown as a question. **Next unmarked ↓** jumps down the list. |
+| Unsaved work | A half-written comment and its photos are saved on the phone as you go. A stray tap outside the sheet or a back-swipe does not close it; only **Cancel** discards it. If the app is closed (e.g. iOS closes it while the camera is open), the item shows **Unsaved comment → Resume**. |
+| Photos | 📷 on the item, on a comment, or "after fix" on a punch item. Tap a photo to add a caption or **mark it up** in red; the unmarked original is kept (**Show original**). On a punch item a photo can be moved between "as found" and "after fix". |
 | Result | **Result** → OK / OK with comments / Rejected. The app warns if you pick OK with open comments, if there is an open Cat A, or if checkpoints are unmarked. A rejection needs a reason. **Save & next** starts the next item in the same area. |
-| Follow up | **Punch** tab: filter by status, category, area. *Construction reports closed* → **Ready for QC**. On site: **Verify closure** (closure checks + after-fix photo) → **Verified closed**, or **Not closed** with a reason. A closed item can be re-opened. |
+| Follow up | **Punch** tab: filter by status, category, area. *Construction reports closed* → **Ready for QC**. On site: **Verify closure**. The core checks are always answered; *item located*, *defect fully fixed as written* and *no new damage* must be **Yes** (no N/A). Records, re-test, joint and weld checks are answered when relevant. Then **Verified** or **Not closed** (needs a reason). A verified item is locked (description, category, subcontractor); **Re-open** to change it. Every edit is kept in the item's history. |
 | Re-check | **Re-inspect** on a rejected item starts a new check linked to the old one. |
 | Unknowns | **Ask** tab: open questions, plus suggested ones (undefined categories, unconfirmed code editions, which systems are B31.1 vs B31.3). |
 | Export | **Export** tab, scope by area, subcontractor and dates. See below. |
@@ -49,8 +50,11 @@ CSV files start with a UTF-8 BOM so Excel shows Arabic and special characters co
 ### Backup (do this every few days)
 
 **Export → Make backup → Share → Save to Files / iCloud Drive** (or e-mail it to yourself). The Items screen reminds you when data has changed and no backup has been made for 2 days. Restore with **Export → Restore**:
-- **Merge** adds records from the backup and keeps the newer copy where both exist.
-- **Replace** wipes the phone first.
+- **Merge** adds records from the backup and keeps the newer copy where both exist. If a number (e.g. `P-0012`) is already used on this phone by a different record, the incoming record gets a new number and keeps the old one in its history. Settings and numbering come from the backup only when this phone has no records yet; otherwise this phone's settings stay and checklist additions are merged.
+- **Replace** checks the whole file first and refuses an incomplete backup before anything is deleted. If it is interrupted part-way, the app says so on every start until you run it again.
+- Backups that were unzipped and zipped again (Files → Compress, Windows "Compressed folder") restore too.
+
+A backup counts as done only after a completed **Share** or after you confirm that the downloaded file saved; until then the reminder stays.
 
 If two phones are used, give each its own number prefix (More → prefixes) so `P-0012` never exists twice.
 
@@ -59,8 +63,10 @@ If two phones are used, give each its own number prefix (More → prefixes) so `
 The app follows three rules:
 
 - **Unknown is never filled with a guess.** Checkpoints whose acceptance value comes from project documents are tagged **Project – unknown** and carry a question to ask on site. Tapping **? Ask** puts that question on the Ask list and into every report.
-- **Code clauses are cited only when confirmed by an adversarial check.** Otherwise the reference reads "verify clause/edition". Even confirmed clauses say "confirm project edition". The project's code editions are blank ("unknown – confirm") until you enter them under More → Code editions, and reports print that status.
-- **Category B+ was not defined**, so it is marked "definition not confirmed" until you enter the project definition under More → Punch categories.
+- **Code clauses are cited only when confirmed.** Each cited clause passed an adversarial citation audit and then two more independent skeptics (number/title and content). Every other reference reads "verify clause/edition". Even confirmed clauses say "confirm project edition". The project's code editions are blank ("unknown – confirm") until you enter them under More → Code editions, and reports print that status.
+- One example of why editions matter: ASME B31.3 para 335.2.3 (Bolt Length) is cited by number and title only, because its acceptance wording changed between editions. Secondary sources, including an ASME PVP paper, say the 2016 edition removed the old "not more than one thread short" allowance. Whether one thread short is acceptable is a site question.
+- **Category B+ was not defined**, so it is marked "definition not confirmed" until you enter the project definition under More → Punch categories. A meaning that is typed but not ticked as confirmed is exported as "… (NOT CONFIRMED)".
+- A punch item verified without a "construction reports closed" step has an empty "Ready for QC" date. The app does not fill in a date.
 
 Checkpoint basis tags: **Code** (general code requirement, generic edition), **Practice** (common field QC practice, i.e. inferred), **Project – unknown** (depends on project spec or drawings), **Local** (added by you).
 
@@ -109,8 +115,23 @@ Change files, then bump `VERSION` in `sw.js`. Phones download the new version in
 cd bop-qc
 npx http-server -p 8765 -c-1          # any static server
 PW=$(npm root -g)/playwright/index.mjs node tests/e2e.mjs http://localhost:8765/
+PW=$(npm root -g)/playwright/index.mjs node tests/regression.mjs http://localhost:8765/
 ```
 
-The end-to-end test drives the app in Chromium at iPhone 13 size. It covers the walkdown flow, photo downscaling and mark-up, closure verification, all exports (ZIP validated with Python), wipe and restore, and running offline. It does not replace a check on a real iPhone (Safari/WebKit).
+`tests/e2e.mjs` drives the app in Chromium at iPhone 13 size. It covers the walkdown flow, photo downscaling and mark-up, closure verification, all exports (ZIP validated with Python), wipe and restore, and running offline.
+
+`tests/regression.mjs` covers the review findings:
+- per-comment subcontractor kept on item edits
+- failed saves reported and retryable
+- drafts surviving stray taps, back-swipes and restarts
+- viewer and mark-up behaviour
+- the bottom bar fitting the screen
+- required closure checks
+- subcontractor-filtered exports
+- every photo named in a package CSV being inside the ZIP
+- restore validation, renumbering, settings and re-zipped backups
+- backup confirmation
+
+Neither suite replaces a check on a real iPhone (Safari/WebKit).
 
 Files: `index.html`, `app.css`, `js/app.js` (UI), `js/store.js` (state and all writes), `js/db.js` (IndexedDB), `js/export.js` (CSV, report, ZIP, backup/restore), `js/zip.js`, `js/photo.js`, `js/checklists.js` (library), `sw.js` (offline cache), `manifest.webmanifest`, `icons/`.

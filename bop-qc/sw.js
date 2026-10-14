@@ -1,6 +1,6 @@
 // Offline cache for the app shell. Bump VERSION on every release so phones
 // pick up the new files (the app shows an "Update ready" banner).
-const VERSION = 'bopqc-v1.0.0';
+const VERSION = 'bopqc-v1.1.0';
 const ASSETS = [
   './',
   './index.html',

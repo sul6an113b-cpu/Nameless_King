@@ -6,7 +6,7 @@
 //   punches   comments / punch items   (linked to an item, or standalone)
 //   questions unknowns to ask on site
 //   photos    photo metadata {id, ownerId, ownerType, role, createdAt, w, h, caption, rev}
-//   blobs     photo bytes    {id, data: ArrayBuffer (jpeg), thumb: ArrayBuffer (jpeg)}
+//   blobs     photo bytes    {id, data: ArrayBuffer (jpeg), thumb: ArrayBuffer (jpeg), orig?: ArrayBuffer}
 //             kept apart so metadata loads instantly and bytes load only when shown
 
 const DB_NAME = 'bopqc';
@@ -44,9 +44,16 @@ export function open() {
         db.close();
         location.reload();
       };
+      // iOS can drop the connection while the app is in the background: reopen next time.
+      db.onclose = () => {
+        dbp = null;
+      };
       resolve(db);
     };
-    req.onerror = () => reject(req.error);
+    req.onerror = () => {
+      dbp = null;
+      reject(req.error);
+    };
     req.onblocked = () => reject(new Error('Database blocked by another open copy of the app. Close other tabs.'));
   });
   return dbp;
@@ -65,47 +72,56 @@ const reqP = (r) =>
     r.onerror = () => reject(r.error);
   });
 
-export async function get(store, key) {
-  const db = await open();
-  return reqP(db.transaction(store).objectStore(store).get(key));
+// The connection was lost (WebKit: "Connection to Indexed Database server lost").
+export function isConnLost(e) {
+  return !!e && (e.name === 'InvalidStateError' || e.name === 'UnknownError' || /connection to indexed database|database connection is closing/i.test(e.message || ''));
 }
 
-export async function all(store) {
-  const db = await open();
-  return reqP(db.transaction(store).objectStore(store).getAll());
+// Run fn(db); if the connection was lost, reopen once and retry. A failed
+// transaction never committed, so a retry cannot write twice.
+async function run(fn) {
+  try {
+    return await fn(await open());
+  } catch (e) {
+    if (!isConnLost(e)) throw e;
+    dbp = null;
+    return fn(await open());
+  }
 }
 
-export async function put(store, obj) {
-  const db = await open();
-  const tx = db.transaction(store, 'readwrite');
-  tx.objectStore(store).put(obj);
-  return done(tx);
-}
+export const get = (store, key) => run((db) => reqP(db.transaction(store).objectStore(store).get(key)));
+export const all = (store) => run((db) => reqP(db.transaction(store).objectStore(store).getAll()));
+export const byIndex = (store, index, value) => run((db) => reqP(db.transaction(store).objectStore(store).index(index).getAll(value)));
+export const keys = (store) => run((db) => reqP(db.transaction(store).objectStore(store).getAllKeys()));
 
-export async function del(store, key) {
-  const db = await open();
-  const tx = db.transaction(store, 'readwrite');
-  tx.objectStore(store).delete(key);
-  return done(tx);
-}
+export const put = (store, obj) =>
+  run((db) => {
+    const tx = db.transaction(store, 'readwrite');
+    tx.objectStore(store).put(obj);
+    return done(tx);
+  });
 
-export async function byIndex(store, index, value) {
-  const db = await open();
-  return reqP(db.transaction(store).objectStore(store).index(index).getAll(value));
-}
+export const del = (store, key) =>
+  run((db) => {
+    const tx = db.transaction(store, 'readwrite');
+    tx.objectStore(store).delete(key);
+    return done(tx);
+  });
 
-// Write several records across stores in one transaction: [{store, op:'put'|'del', value|key}]
+// Write several records across stores in one transaction (all or nothing):
+// [{store, op:'put'|'del', value|key}]
 export async function batch(ops) {
   if (!ops.length) return;
-  const db = await open();
   const stores = [...new Set(ops.map((o) => o.store))];
-  const tx = db.transaction(stores, 'readwrite');
-  for (const o of ops) {
-    const s = tx.objectStore(o.store);
-    if (o.op === 'del') s.delete(o.key);
-    else s.put(o.value);
-  }
-  return done(tx);
+  return run((db) => {
+    const tx = db.transaction(stores, 'readwrite');
+    for (const o of ops) {
+      const s = tx.objectStore(o.store);
+      if (o.op === 'del') s.delete(o.key);
+      else s.put(o.value);
+    }
+    return done(tx);
+  });
 }
 
 export async function getMeta(key, fallback) {
@@ -121,7 +137,7 @@ export function setMeta(key, value) {
 // Read-modify-write inside one transaction (callbacks only, no await inside the
 // transaction - older Safari commits a transaction across a promise boundary).
 function counterTx(kind, change) {
-  return open().then(
+  return run(
     (db) =>
       new Promise((resolve, reject) => {
         const tx = db.transaction('meta', 'readwrite');
@@ -144,18 +160,12 @@ function counterTx(kind, change) {
 export const nextSeq = (kind) => counterTx(kind, (n) => n + 1);
 export const bumpSeq = (kind, atLeast) => counterTx(kind, (n) => Math.max(n, atLeast));
 
-export async function clearAll() {
-  const db = await open();
-  const tx = db.transaction(STORES, 'readwrite');
-  for (const s of STORES) tx.objectStore(s).clear();
-  return done(tx);
-}
-
-// All keys of a store (cheap; used to walk photo bytes one at a time).
-export async function keys(store) {
-  const db = await open();
-  return reqP(db.transaction(store).objectStore(store).getAllKeys());
-}
+export const clearAll = () =>
+  run((db) => {
+    const tx = db.transaction(STORES, 'readwrite');
+    for (const s of STORES) tx.objectStore(s).clear();
+    return done(tx);
+  });
 
 export async function estimate() {
   try {

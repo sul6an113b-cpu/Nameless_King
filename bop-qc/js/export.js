@@ -2,11 +2,12 @@
 
 import * as db from './db.js';
 import { S, RESULTS, CHECK_STATES, PUNCH_STATUS, typeInfo, catInfo, catRank, itemPunches, itemQuestions, punchStats, checkProgress, photosOf, load } from './store.js';
-import { makeZip, readZip } from './zip.js';
+import { forgetURL } from './photo.js';
+import { makeZip, openZip } from './zip.js';
 import { esc, fmtDate, fmtDateTime, isoDay, daysBetween, slug, stamp, u8ToBase64, noNum } from './util.js';
-import { CHECKLIST_VERSION } from './checklists.js';
+import { CHECKLIST_VERSION, CLOSURE_CHECKS } from './checklists.js';
 
-export const APP_VERSION = '1.0.0';
+export const APP_VERSION = '1.1.0';
 const BACKUP_FORMAT = 'bopqc-backup';
 
 // ---------- scope -----------------------------------------------------------
@@ -26,15 +27,18 @@ export function scope(f = {}) {
     const d = isoDay(iso);
     return (!f.from || d >= f.from) && (!f.to || d <= f.to);
   };
-  const items = [...S.items.values()].filter((i) => inArea(i.area) && inSub(i.subcontractor) && inDates(i.createdAt)).sort((a, b) => noNum(a.no) - noNum(b.no));
-  const itemIds = new Set(items.map((i) => i.id));
-  const allPunches = [...S.punches.values()].filter((p) => inArea(p.area) && inSub(p.subcontractor));
   const statusOk = (p) => f.punchStatus !== 'notclosed' || p.status !== 'closed';
-  // Punch list: every item in an exported check + standalone items raised in the date range.
-  const punches = allPunches
-    .filter((p) => (p.itemId ? itemIds.has(p.itemId) : inDates(p.createdAt)) && statusOk(p))
-    .sort(punchSort);
-  // Follow-up: everything in the area not yet verified closed, regardless of date.
+  // Items checked in the area / date range. The subcontractor filter applies to
+  // punch items (each comment names who must fix it), not to the item.
+  const areaItems = [...S.items.values()].filter((i) => inArea(i.area) && inDates(i.createdAt));
+  const areaIds = new Set(areaItems.map((i) => i.id));
+  const allPunches = [...S.punches.values()].filter((p) => inArea(p.area) && inSub(p.subcontractor));
+  // Punch list: comments on those items + standalone punch items raised in the date range.
+  const punches = allPunches.filter((p) => (p.itemId ? areaIds.has(p.itemId) : inDates(p.createdAt)) && statusOk(p)).sort(punchSort);
+  const withPunch = new Set(punches.map((p) => p.itemId));
+  const items = areaItems.filter((i) => !f.sub || i.subcontractor === f.sub || withPunch.has(i.id)).sort((a, b) => noNum(a.no) - noNum(b.no));
+  const itemIds = new Set(items.map((i) => i.id));
+  // Follow-up: everything in the area (and subcontractor) not yet verified closed, regardless of date.
   const followUp = allPunches.filter((p) => p.status !== 'closed').sort(punchSort);
   const questions = [...S.questions.values()]
     .filter((q) => (q.itemId ? itemIds.has(q.itemId) : inArea(q.area) && !f.sub && inDates(q.createdAt)))
@@ -53,26 +57,30 @@ export function scopeLabel(f = {}) {
   const parts = [];
   parts.push(f.area ? `Area: ${f.area}` : 'All areas');
   if (f.sub) parts.push(`Subcontractor: ${f.sub}`);
-  if (f.from || f.to) parts.push(`Checks dated ${f.from ? fmtDate(f.from) : '…'} to ${f.to ? fmtDate(f.to) : '…'}`);
+  // f.from / f.to are local calendar days ("2026-10-14"): read them as local time.
+  const day = (d) => fmtDate(`${d}T00:00`);
+  if (f.from || f.to) parts.push(`Checks dated ${f.from ? day(f.from) : '…'} to ${f.to ? day(f.to) : '…'}`);
   else parts.push('All dates');
   if (f.punchStatus === 'notclosed') parts.push('Punch: not closed only');
   return parts.join(' · ');
 }
 
 // ---------- photo file names -------------------------------------------------
-// Stable, readable names so CSV rows and report point at the same files.
+// Stable, readable, unique names so CSV rows, the report and the ZIP point at the
+// same files. Draft photos (comment not saved yet) are not exported.
 export function photoFileNames() {
   const names = new Map();
+  const used = new Set();
   for (const [ownerId, list] of S.photos) {
     const item = S.items.get(ownerId);
     const punch = S.punches.get(ownerId);
-    let base;
-    if (item) base = `${item.no}${item.tag ? '_' + slug(item.tag, 30) : ''}`;
-    else if (punch) base = punch.no;
-    else base = `orphan_${ownerId.slice(0, 8)}`;
+    if (!item && !punch) continue;
+    const base = item ? `${slug(item.no, 20)}${item.tag ? '_' + slug(item.tag, 30) : ''}` : slug(punch.no, 20);
     let e = 0, c = 0;
     for (const p of list) {
-      const n = p.role === 'closure' ? `${base}_closure_${++c}` : `${base}_${++e}`;
+      let n = p.role === 'closure' ? `${base}_closure_${++c}` : `${base}_${++e}`;
+      if (used.has(n)) n = `${n}_${ownerId.slice(0, 6)}`;
+      used.add(n);
       names.set(p.id, `${n}.jpg`);
     }
   }
@@ -94,13 +102,23 @@ export function toCSV(header, rows) {
 }
 
 const resultLabel = (r) => (r ? RESULTS[r].label : 'In progress');
+// An unconfirmed definition is never exported as if it were the project's.
 const catLabel = (code) => {
   const c = catInfo(code);
-  return c.meaning ? c.meaning : c.confirmed === false ? 'Definition not confirmed' : '';
+  if (!c.confirmed) return c.meaning ? `${c.meaning} (NOT CONFIRMED)` : 'Definition not confirmed';
+  return c.meaning || '';
 };
 
+const ANSWER = { ok: 'Yes', no: 'No', na: 'N/A' };
+// The answers given at the last closure verification, e.g. "Item located: Yes; …".
+function closureChecks(p) {
+  const v = p.verify && p.verify.checks;
+  if (!v) return '';
+  return CLOSURE_CHECKS.filter((c) => v[c.id]).map((c) => `${c.text}: ${ANSWER[v[c.id]] || v[c.id]}`).join('; ');
+}
+
 export function punchCSV(punches, names = photoFileNames()) {
-  const header = ['Local no', 'Project punch no', 'Category', 'Category meaning', 'Status', 'Description', 'Checkpoint', 'Tag', 'Area / system', 'Subcontractor', 'Item check no', 'Item type', 'Item result', 'Raised', 'Ready for QC', 'Verified closed', 'Days open', 'Closure note', 'Photos', 'Closure photos', 'History'];
+  const header = ['Local no', 'Project punch no', 'Category', 'Category meaning', 'Status', 'Description', 'Checkpoint', 'Tag', 'Area / system', 'Subcontractor', 'Item check no', 'Item type', 'Item result', 'Raised', 'Ready for QC', 'Verified closed', 'Days open', 'Closure note', 'Closure checks', 'Photos', 'Closure photos', 'History'];
   const rows = punches.map((p) => {
     const item = p.itemId ? S.items.get(p.itemId) : null;
     const ev = photosOf(p.id, 'evidence').map((x) => names.get(x.id)).join('; ');
@@ -111,7 +129,7 @@ export function punchCSV(punches, names = photoFileNames()) {
       p.tag, p.area, p.subcontractor, item ? item.no : '', item ? typeInfo(item.type).label : '', item ? resultLabel(item.result) : '',
       fmtDateTime(p.createdAt), fmtDateTime(p.readyAt), fmtDateTime(p.closedAt),
       p.status === 'closed' ? daysBetween(p.createdAt, p.closedAt) : daysBetween(p.createdAt),
-      last ? last.note : '', ev, cl,
+      last ? last.note : '', closureChecks(p), ev, cl,
       p.history.map((h) => `${fmtDateTime(h.at)} ${h.action}${h.note ? ': ' + h.note : ''}`).join(' | '),
     ];
   });
@@ -250,6 +268,7 @@ export async function reportHTML(sc, { photoMode = 'small' } = {}) {
       ? `<table><thead><tr><th>No</th><th>Cat</th><th>Description</th><th>Tag</th><th>Area</th><th>Subcon</th><th>Status</th><th>Raised</th><th>Days</th></tr></thead><tbody>${list.map(punchRow).join('')}</tbody></table>`
       : '<p class="muted">None.</p>';
 
+  const inScope = new Set(sc.punches.map((p) => p.id));
   const itemsHTML = sc.items
     .map((i) => {
       const t = typeInfo(i.type);
@@ -268,7 +287,7 @@ export async function reportHTML(sc, { photoMode = 'small' } = {}) {
             })
             .join('')}</tbody></table>`
         : '';
-      const ps = itemPunches(i.id);
+      const ps = itemPunches(i.id).filter((p) => inScope.has(p.id));
       const qs = itemQuestions(i.id);
       return `<section class="item">
         <div class="hd"><div><h3>${esc(i.no)} · ${esc(i.tag || '(no tag)')}</h3><div class="muted small">${esc(t.label)} · ${esc(fmtDateTime(i.createdAt))}${i.inspector ? ' · ' + esc(i.inspector) : ''}</div></div>${resultBadge(i.result)}</div>
@@ -322,6 +341,7 @@ export function csvFile(kind, sc) {
 }
 
 // Report + all CSVs + full-size photos in one ZIP (for the office PC).
+// Every photo named in any CSV of the package is inside the ZIP.
 export async function packageFile(sc, onProgress = () => {}) {
   const names = photoFileNames();
   const html = await reportHTML(sc, { photoMode: 'files' });
@@ -333,19 +353,25 @@ export async function packageFile(sc, onProgress = () => {}) {
     { name: 'checkpoints.csv', data: checkpointsCSV(sc.items) },
     { name: 'questions.csv', data: questionsCSV(sc.questions) },
   ];
-  const owners = [...sc.items.map((i) => i.id), ...sc.punches.map((p) => p.id)];
-  const photoIds = owners.flatMap((o) => photosOf(o).map((p) => p.id));
+  const owners = new Set([...sc.items.map((i) => i.id), ...sc.punches.map((p) => p.id), ...sc.followUp.map((p) => p.id)]);
+  const photoIds = [...owners].flatMap((o) => photosOf(o).map((p) => p.id));
   let n = 0;
   for (const id of photoIds) {
-    const b = await db.get('blobs', id);
-    if (b) entries.push({ name: `photos/${names.get(id)}`, data: b.data });
-    onProgress(++n, photoIds.length);
+    entries.push({
+      name: `photos/${names.get(id)}`,
+      load: async () => {
+        const b = await db.get('blobs', id);
+        return b ? b.data : null;
+      },
+    });
   }
-  const blob = await makeZip(entries);
+  const blob = await makeZip(entries, () => onProgress(Math.min(++n, photoIds.length), photoIds.length));
   return new File([blob], `${baseName()}_package_${stamp()}.zip`, { type: 'application/zip' });
 }
 
 // ---------- backup / restore -------------------------------------------------
+// backup.json holds every record; blobs/<id>.jpg (+ _t thumb, _o / _ot original
+// before mark-up) hold the photo bytes. Photos are read one at a time.
 
 export async function backupFile(onProgress = () => {}) {
   const counters = await db.getMeta('counters', {});
@@ -361,84 +387,165 @@ export async function backupFile(onProgress = () => {}) {
     items: [...S.items.values()],
     punches: [...S.punches.values()],
     questions: [...S.questions.values()],
+    drafts: Object.fromEntries(S.drafts),
     photos,
   };
   const entries = [{ name: 'backup.json', data: JSON.stringify(data) }];
-  let n = 0;
   for (const p of photos) {
-    const b = await db.get('blobs', p.id);
-    if (b) {
-      entries.push({ name: `blobs/${p.id}.jpg`, data: b.data });
-      if (b.thumb) entries.push({ name: `blobs/${p.id}_t.jpg`, data: b.thumb });
-    }
-    onProgress(++n, photos.length);
+    // One read per photo; its four parts are handed out from that read, then
+    // released so only one photo is held in memory at a time.
+    let cur = null;
+    const part = (k, last) => async () => {
+      if (!cur) cur = (await db.get('blobs', p.id)) || {};
+      const v = cur[k] || null;
+      if (last) cur = null;
+      return v;
+    };
+    entries.push(
+      { name: `blobs/${p.id}.jpg`, load: part('data') },
+      { name: `blobs/${p.id}_t.jpg`, load: part('thumb') },
+      { name: `blobs/${p.id}_o.jpg`, load: part('orig') },
+      { name: `blobs/${p.id}_ot.jpg`, load: part('origThumb', true) },
+    );
   }
-  const blob = await makeZip(entries);
+  let e = 0;
+  const blob = await makeZip(entries, () => onProgress(Math.min(photos.length, Math.floor(++e / 4)), photos.length));
   return new File([blob], `${baseName()}_backup_${stamp()}.zip`, { type: 'application/zip' });
 }
 
-const newer = (a, b) => !b || (a.updatedAt || a.createdAt || '') > (b.updatedAt || b.createdAt || '');
+const stampOf = (r) => r.updatedAt || r.createdAt || '';
+const newer = (a, b) => !b || stampOf(a) > stampOf(b);
+const photoNewer = (a, b) => !b || stampOf(a) > stampOf(b) || (a.rev || 0) > (b.rev || 0);
+const KIND = { items: 'item', punches: 'punch', questions: 'question' };
+const PAD = { items: 4, punches: 4, questions: 3 };
 
 // mode: 'merge' (add new, keep the newer copy of each record) | 'replace' (wipe first)
 export async function restore(file, mode = 'merge') {
-  const files = await readZip(file);
-  const raw = files.get('backup.json');
-  if (!raw) throw new Error('backup.json not found – this is not a BOP QC backup.');
-  const data = JSON.parse(new TextDecoder().decode(raw));
+  const zip = await openZip(file);
+  // Also accept a backup that was unzipped and re-zipped as a folder.
+  const jsonName = zip.names.find((n) => /(^|\/)backup\.json$/.test(n) && !n.startsWith('__MACOSX/'));
+  if (!jsonName) throw new Error('backup.json not found – this is not a BOP QC backup.');
+  const prefix = jsonName.slice(0, -'backup.json'.length);
+  const bn = (id, sfx = '') => `${prefix}blobs/${id}${sfx}.jpg`;
+  const data = JSON.parse(new TextDecoder().decode(await zip.read(jsonName)));
   if (data.format !== BACKUP_FORMAT) throw new Error('Unknown backup format.');
   if (data.version > 1) throw new Error('This backup was made by a newer version of the app. Update the app first.');
 
-  const report = { items: 0, punches: 0, questions: 0, photos: 0, skipped: 0, missingPhotos: 0 };
-  if (mode === 'replace') await db.clearAll();
-
-  const existing = {
-    items: mode === 'replace' ? new Map() : new Map(S.items),
-    punches: mode === 'replace' ? new Map() : new Map(S.punches),
-    questions: mode === 'replace' ? new Map() : new Map(S.questions),
-  };
-  const existingPhotos = mode === 'replace' ? new Set() : new Set((await db.all('photos')).map((p) => p.id));
-
-  const ops = [];
-  const flush = async () => {
-    if (ops.length) await db.batch(ops.splice(0));
-  };
+  // Check the whole file before changing anything.
   for (const store of ['items', 'punches', 'questions']) {
-    for (const rec of data[store] || []) {
-      if (!rec || !rec.id) continue;
-      if (newer(rec, existing[store].get(rec.id))) {
-        ops.push({ store, op: 'put', value: rec });
-        report[store]++;
-      } else report.skipped++;
-      if (ops.length >= 200) await flush();
-    }
+    for (const r of data[store] || []) if (!r || !r.id || typeof r.no !== 'string') throw new Error(`Backup damaged (${store}). Nothing was changed.`);
   }
-  await flush();
-  for (const ph of data.photos || []) {
-    if (!ph || !ph.id || existingPhotos.has(ph.id)) continue;
-    const full = files.get(`blobs/${ph.id}.jpg`);
-    if (!full) {
-      report.missingPhotos++;
-      continue;
-    }
-    const thumb = files.get(`blobs/${ph.id}_t.jpg`) || full;
-    // slice() copies into a standalone ArrayBuffer (the zip view shares one big buffer).
-    await db.batch([
-      { store: 'blobs', op: 'put', value: { id: ph.id, data: full.slice().buffer, thumb: thumb.slice().buffer } },
-      { store: 'photos', op: 'put', value: ph },
-    ]);
-    report.photos++;
-  }
+  const photos = (data.photos || []).filter((p) => p && p.id && p.ownerId);
+  const missing = photos.filter((p) => !zip.has(bn(p.id)));
+  if (mode === 'replace' && missing.length) throw new Error(`Backup incomplete: ${missing.length} photo file(s) missing. Nothing was changed.`);
+
+  const report = { items: 0, punches: 0, questions: 0, photos: 0, skipped: 0, missingPhotos: missing.length, renumbered: [], settings: 'kept' };
+  const emptyPhone = S.items.size + S.punches.size + S.questions.size === 0;
 
   if (mode === 'replace') {
-    if (data.settings) await db.setMeta('settings', data.settings);
-    if (data.templates) await db.setMeta('templates', data.templates);
-    await db.setMeta('counters', data.counters || {});
-  } else {
-    for (const [k, v] of Object.entries(data.counters || {})) await db.bumpSeq(k, v);
+    await db.clearAll();
+    await db.setMeta('restoreIncomplete', { at: new Date().toISOString(), file: file.name });
   }
-  // Never hand out a number that already exists.
-  const all = { item: await db.all('items'), punch: await db.all('punches'), question: await db.all('questions') };
-  for (const [k, list] of Object.entries(all)) await db.bumpSeq(k, Math.max(0, ...list.map((r) => noNum(r.no))));
+  try {
+    const existing = {
+      items: mode === 'replace' ? new Map() : new Map(S.items),
+      punches: mode === 'replace' ? new Map() : new Map(S.punches),
+      questions: mode === 'replace' ? new Map() : new Map(S.questions),
+    };
+    const existingPhotos = mode === 'replace' ? new Map() : new Map((await db.all('photos')).map((p) => [p.id, p]));
+
+    // Merge: a record from the backup whose number is already used on this phone by
+    // a different record gets a new number, so CHK / P / Q numbers stay unique.
+    if (mode === 'merge') {
+      for (const store of ['items', 'punches', 'questions']) {
+        const maxNo = Math.max(0, ...[...existing[store].values(), ...(data[store] || [])].map((r) => noNum(r.no)));
+        await db.bumpSeq(KIND[store], maxNo);
+      }
+    }
+
+    const ops = [];
+    const flush = async () => {
+      if (ops.length) await db.batch(ops.splice(0));
+    };
+    for (const store of ['items', 'punches', 'questions']) {
+      const used = new Map([...existing[store].values()].map((r) => [r.no, r.id]));
+      for (let rec of data[store] || []) {
+        const local = existing[store].get(rec.id);
+        if (!newer(rec, local)) {
+          report.skipped++;
+          continue;
+        }
+        const clash = used.get(rec.no);
+        if (mode === 'merge' && !local && clash && clash !== rec.id) {
+          const n = await db.nextSeq(KIND[store]);
+          const no = `${rec.no.replace(/\d+\s*$/, '')}${String(n).padStart(PAD[store], '0')}`;
+          report.renumbered.push(`${rec.no} → ${no}`);
+          rec = { ...rec, no, formerNo: rec.no };
+          if (store === 'punches') rec.history = [...(rec.history || []), { at: new Date().toISOString(), action: 'renumbered', note: `${rec.formerNo} → ${no} on restore (number already used on this phone)` }];
+        }
+        used.set(rec.no, rec.id);
+        ops.push({ store, op: 'put', value: rec });
+        report[store]++;
+        if (ops.length >= 200) await flush();
+      }
+    }
+    await flush();
+
+    for (const ph of photos) {
+      const local = existingPhotos.get(ph.id);
+      if (!zip.has(bn(ph.id)) || !photoNewer(ph, local)) continue;
+      const own = async (sfx) => (zip.has(bn(ph.id, sfx)) ? (await zip.read(bn(ph.id, sfx))).slice().buffer : undefined);
+      const full = await own('');
+      const blob = { id: ph.id, data: full, thumb: (await own('_t')) || full };
+      const orig = await own('_o');
+      if (orig) {
+        blob.orig = orig;
+        blob.origThumb = (await own('_ot')) || orig;
+      }
+      await db.batch([
+        { store: 'blobs', op: 'put', value: blob },
+        { store: 'photos', op: 'put', value: ph },
+      ]);
+      if (local) forgetURL(ph.id);
+      report.photos++;
+    }
+
+    for (const [k, v] of Object.entries(data.drafts || {})) {
+      if (k.startsWith('draft:') && (mode === 'replace' || !S.drafts.has(k))) await db.setMeta(k, v);
+    }
+
+    if (mode === 'replace' || emptyPhone) {
+      // A new or wiped phone takes the backup's settings, checklists and numbering.
+      if (data.settings) await db.setMeta('settings', data.settings);
+      if (data.templates) await db.setMeta('templates', data.templates);
+      if (mode === 'replace') await db.setMeta('counters', data.counters || {});
+      else for (const [k, v] of Object.entries(data.counters || {})) await db.bumpSeq(k, v);
+      report.settings = 'restored';
+    } else {
+      // Keep this phone's settings; add checkpoints the backup has and this phone lacks.
+      const t = data.templates || {};
+      const mine = JSON.parse(JSON.stringify(S.templates));
+      for (const [type, list] of Object.entries(t.custom || {})) {
+        const have = new Set((mine.custom[type] || []).map((c) => c.id));
+        mine.custom[type] = [...(mine.custom[type] || []), ...list.filter((c) => !have.has(c.id))];
+      }
+      for (const [type, list] of Object.entries(t.hidden || {})) mine.hidden[type] = [...new Set([...(mine.hidden[type] || []), ...list])];
+      await db.setMeta('templates', mine);
+      for (const [k, v] of Object.entries(data.counters || {})) await db.bumpSeq(k, v);
+    }
+    // Never hand out a number that already exists.
+    const all = { item: await db.all('items'), punch: await db.all('punches'), question: await db.all('questions') };
+    for (const [k, list] of Object.entries(all)) await db.bumpSeq(k, Math.max(0, ...list.map((r) => noNum(r.no))));
+    if (mode === 'replace') await db.del('meta', 'restoreIncomplete');
+  } catch (e) {
+    await load().catch(() => {});
+    if (mode === 'replace') {
+      const err = new Error(`Restore stopped part-way (${e.message || e}). This phone now holds only part of the backup. Run Restore → Replace again with the same file.`);
+      err.partial = true;
+      throw err;
+    }
+    throw e;
+  }
   await load();
   return report;
 }

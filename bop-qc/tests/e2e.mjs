@@ -233,8 +233,8 @@ ok((await page.locator('.badge.st-ready').count()) >= 1, 'punch marked ready for
 await tap('#bar [data-a="p-verify"]');
 await page.waitForSelector('.backdrop [data-s="vc"]');
 ok(await page.locator('.backdrop [data-s="closed"]').isDisabled(), 'Verified closed disabled until checks answered');
-const groups = await page.locator('.backdrop #vrows .chk').count();
-for (let i = 0; i < groups; i++) await page.locator('.backdrop #vrows .chk').nth(i).locator('[data-v="ok"]').click();
+const groups = await page.locator('.backdrop #vrows > .chk').count();
+for (let i = 0; i < groups; i++) await page.locator('.backdrop #vrows > .chk').nth(i).locator('[data-v="ok"]').click();
 const ph3 = await makePhoto('p3.jpg', 1200, 900, '#963');
 await choosePhoto('.backdrop [data-s="photo"]', ph3);
 ok(!(await page.locator('.backdrop [data-s="closed"]').isDisabled()), 'Verified closed enabled when all checks pass');

@@ -126,13 +126,15 @@ export function forgetURL(id) {
 // ---- markup editor --------------------------------------------------------
 // Full-screen freehand pen over the photo. `data` is the JPEG ArrayBuffer.
 // Resolves with the new {data, thumb, w, h} or null if cancelled.
-export function markup(data, { quality = 0.8 } = {}) {
+// mount(el, cancel) lets the caller own the overlay (e.g. so Back cancels it);
+// it returns {release()} which is called when the editor closes.
+export function markup(data, { quality = 0.8, mount = null } = {}) {
   return new Promise(async (resolve) => {
     const src = URL.createObjectURL(new Blob([data], { type: 'image/jpeg' }));
     let img;
     try {
       img = await loadImg(src);
-    } catch (e) {
+    } catch {
       URL.revokeObjectURL(src);
       resolve(null);
       return;
@@ -149,7 +151,7 @@ export function markup(data, { quality = 0.8 } = {}) {
         <button type="button" data-m="color" class="btn swatch" aria-label="Pen colour"><span></span></button>
         <button type="button" data-m="save" class="btn primary">Save</button>
       </div>`;
-    document.body.appendChild(ov);
+    let handle = null;
     const canvas = ov.querySelector('canvas');
     canvas.width = W;
     canvas.height = H;
@@ -198,13 +200,19 @@ export function markup(data, { quality = 0.8 } = {}) {
     canvas.addEventListener('pointerup', end);
     canvas.addEventListener('pointercancel', end);
 
+    let closed = false;
     const close = (val) => {
+      if (closed) return;
+      closed = true;
       URL.revokeObjectURL(src);
       canvas.width = 0;
       canvas.height = 0;
       ov.remove();
+      if (handle) handle.release();
       resolve(val);
     };
+    if (mount) handle = mount(ov, () => close(null));
+    else document.body.appendChild(ov);
     ov.querySelector('.markup-bar').addEventListener('click', async (ev) => {
       const b = ev.target.closest('button');
       if (!b) return;
@@ -224,7 +232,7 @@ export function markup(data, { quality = 0.8 } = {}) {
           const [tw, th] = fit(W, H, THUMB_PX);
           const thumb = await encode(canvas, tw, th, 0.7);
           close({ data: await blobToAB(full), thumb: await blobToAB(thumb), w: W, h: H });
-        } catch (e) {
+        } catch {
           b.textContent = 'Failed – retry';
           b.disabled = false;
         }

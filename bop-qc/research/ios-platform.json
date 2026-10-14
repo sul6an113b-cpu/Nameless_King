@@ -1,0 +1,201 @@
+{
+ "note": "iPhone Safari / home-screen web app behaviour research (second, independent run).",
+ "findings": [
+  {
+   "topic": "0. Research method and limits",
+   "finding": "Direct fetches of webkit.org, developer.mozilla.org, caniuse.com and firt.dev failed with DNS errors from this environment. So: (a) WebKit claims were checked against WebKit's own source code (raw.githubusercontent.com/WebKit/WebKit/main); (b) version support was checked against MDN browser-compat-data JSON on GitHub; (c) blog and forum content was read only through search-engine summaries. WebKit 'main' is the current development branch, not necessarily what ships in iOS 17, 18 or 26. Anything read only in WebKit main is therefore marked 'likely' for shipping iOS.",
+   "confidence": "confirmed",
+   "designImplication": "Before the tool is trusted on site, run a one-page device self-test on the actual iPhone and iOS version. It should check: standalone detection, storage.persisted(), storage.estimate(), canShare() with a csv, html, json and zip file, a camera capture and resize, and an offline relaunch.",
+   "source": "https://github.com/mdn/browser-compat-data ; https://github.com/WebKit/WebKit"
+  },
+  {
+   "topic": "1a. Service worker support and scope at a GitHub Pages sub-path",
+   "finding": "Service workers and ServiceWorkerRegistration.update/updateViaCache are supported from Safari iOS 11.3 / 11.1 (BCD). Per the SW spec, the maximum scope is the directory of the SW script unless the server sends a Service-Worker-Allowed header. GitHub Pages cannot set custom headers, so a SW at /Repo/app/sw.js can control only /Repo/app/*. iOS uses manifest 'scope' to decide what stays in the standalone window. Any navigation outside scope, including another path on the same github.io origin, leaves standalone and opens in Safari.",
+   "confidence": "confirmed",
+   "designImplication": "Put sw.js, manifest and index.html all in /Repo/app/. Register with navigator.serviceWorker.register('./sw.js', {scope:'./'}). In the manifest use relative values (\"start_url\":\"./\", \"scope\":\"./\", \"id\":\"./\"), which resolve against the manifest URL. Keep every in-app link as a hash route or a relative path under /Repo/app/.",
+   "source": "https://raw.githubusercontent.com/mdn/browser-compat-data/main/api/ServiceWorkerRegistration.json ; https://github.com/PWA-POLICE/pwa-bugs"
+  },
+  {
+   "topic": "1b. Shared origin on user.github.io",
+   "finding": "The origin is https://user.github.io: scheme plus host. Every Pages project of that GitHub user therefore shares one origin. They share the IndexedDB, localStorage and Cache Storage namespace and the storage quota, and any page on that origin can read this app's IndexedDB. This follows from the same-origin policy. It is not iOS-specific.",
+   "confidence": "confirmed",
+   "designImplication": "Use a unique IndexedDB name and cache-name prefix, e.g. 'bopqc-v1'. Don't host untrusted or third-party pages on the same github.io account. Inspection photos and notes are project data, so a dedicated GitHub account or a custom domain is safer. Keep the repo private only if the Pages plan allows it. Note that the published site itself is public either way, though no data is published because all data stays on the device.",
+   "source": "https://developer.mozilla.org/en-US/docs/Web/Security/Same-origin_policy (general web platform rule; not fetched in this session)"
+  },
+  {
+   "topic": "1c. Trailing-slash and start_url gotcha",
+   "finding": "start_url and scope are supported from iOS 11.3, and manifest id from iOS 16.4 (BCD). GitHub Pages normally 301-redirects /Repo/app to /Repo/app/. That is standard Pages behaviour, but it was not re-verified in this session. If start_url, or the URL the user had open when tapping Add to Home Screen, differs from the URL that was precached (for example a trailing slash, ?query or index.html), an offline launch can miss the cache. Unverified reports say Safari reads the manifest only when the Share sheet opens, so a slow manifest load can lead to an install without it.",
+   "confidence": "likely",
+   "designImplication": "In the SW fetch handler, answer every navigation request (request.mode==='navigate') with the cached index.html (caches.match('./index.html')), whatever the exact URL or query. Precache the manifest and icons too. Tell the user to add the app to the Home Screen from the /Repo/app/ page itself.",
+   "source": "https://raw.githubusercontent.com/mdn/browser-compat-data/main/manifests/webapp/start_url.json ; https://raw.githubusercontent.com/mdn/browser-compat-data/main/manifests/webapp/id.json ; https://github.com/PWA-POLICE/pwa-bugs"
+  },
+  {
+   "topic": "1d. Service worker update flow on iOS",
+   "finding": "The browser checks for a new SW on navigation. An installed iOS app resumed from the background does not navigate, so it can keep running an old build for a long time. Several developer reports say standalone iOS PWAs stay stale unless the app calls registration.update() on launch or visibilitychange. registration.update() rejects while offline. Pages serves files with Cache-Control max-age=600. Since Chrome 68 the SW script check bypasses the HTTP cache by default, and Safari supports updateViaCache from 11.1. Whether Safari ignores max-age for sw.js by default was not verified.",
+   "confidence": "likely",
+   "designImplication": "Register with {updateViaCache:'none'}. Put a version constant in sw.js and change it on every deploy, and use it in the cache name. Call reg.update() in a try/catch on load and on visibilitychange (when visible), with a debounce. Never auto-reload: show an 'Update ready – tap to reload' banner, and only allow it after the current item is saved to IndexedDB. In the activate handler, delete old caches. Don't call skipWaiting() unconditionally; trigger it from the banner.",
+   "source": "https://github.com/Toboggo/toboggo.app/pull/63 ; https://github.com/BatterWorks/Hatchdoor/issues/332 ; https://developer.chrome.com/blog/fresher-sw ; https://raw.githubusercontent.com/mdn/browser-compat-data/main/api/ServiceWorkerRegistration.json"
+  },
+  {
+   "topic": "1e. iOS 26 Home Screen behaviour",
+   "finding": "From iOS/iPadOS 26, every site added to the Home Screen opens as a web app by default, with or without a manifest. The Add sheet has an 'Open as Web App' toggle. If the user turns it off, the icon is just a bookmark that opens in the default browser. WebKit says manifest icons are used if defined. Separately, in March 2024 Apple reversed its plan to drop Home Screen web apps in the EU (iOS 17.4); that does not matter for Saudi Arabia.",
+   "confidence": "confirmed",
+   "designImplication": "On launch, detect matchMedia('(display-mode: standalone)').matches || navigator.standalone. If false, show a persistent warning: 'Running in Safari tab – data may be cleared and is separate from the Home Screen app. Install via Share > Add to Home Screen with Open as Web App ON.'",
+   "source": "https://webkit.org/blog/16993/news-from-wwdc25-web-technology-coming-this-fall-in-safari-26-beta/ ; https://webkit.org/blog/17333/webkit-features-in-safari-26-0/ ; https://www.heise.de/en/news/iOS-26-and-iPadOS-26-Changed-web-app-behaviour-on-the-home-screen-10749652.html"
+  },
+  {
+   "topic": "2a. Storage quota",
+   "finding": "From iOS 17 / Safari 17 (MDN, quoting WebKit), each origin in a browser app gets up to about 60% of total disk, with an 80% overall cap across all origins. A site saved as a Home Screen web app gets the same origin quota as the browser. Before iOS 17 there was a 1 GiB initial quota with a user prompt. StorageManager.estimate() is supported from Safari 17; usageDetails is not supported.",
+   "confidence": "confirmed",
+   "designImplication": "Quota is not the bottleneck for a few thousand compressed photos. Still show used/quota from navigator.storage.estimate() in Settings, and keep photos at roughly 200–400 KB each after resize.",
+   "source": "https://raw.githubusercontent.com/mdn/content/main/files/en-us/web/api/storage_api/storage_quotas_and_eviction_criteria/index.md ; https://webkit.org/blog/14403/updates-to-storage-policy/ ; https://raw.githubusercontent.com/mdn/browser-compat-data/main/api/StorageManager.json"
+  },
+  {
+   "topic": "2b. 7-day ITP deletion vs Home Screen apps",
+   "finding": "In Safari, script-writable storage (IndexedDB, localStorage, SW registrations, etc.) is deleted after 7 days of Safari use with no user interaction on the site. WebKit's 2020 statement says Home Screen web apps 'are not part of Safari and thus have their own counter of days of use', and that their first-party data is not expected to be deleted. Users have reported other wipes: low device storage, 'Remove Website Data' in Safari settings, and unexplained loss. These reports have no Apple response.",
+   "confidence": "likely",
+   "designImplication": "Run the tool only as a Home Screen app. Even then, treat on-device data as volatile: show 'last export: N days ago' on the home screen, nag after every session with unexported items, and support a full JSON backup and restore.",
+   "source": "https://webkit.org/blog/10218/full-third-party-cookie-blocking-and-more/ ; https://developer.apple.com/forums/thread/710157 ; https://developer.apple.com/forums/thread/730023"
+  },
+  {
+   "topic": "2c. navigator.storage.persist() / persisted()",
+   "finding": "Supported from Safari iOS 15.2 (BCD). Safari shows no prompt. WebKit decides with heuristics, which WebKit's storage-policy post says include whether the site is opened as a Home Screen web app. Persistent origins are excluded from quota-pressure eviction. A 2022–23 forum report says persistence had to be requested again on every app open. Whether persist() protects against ITP or 'Remove Website Data' is undocumented.",
+   "confidence": "likely",
+   "designImplication": "On every launch, call navigator.storage.persist() and then persisted(), and show the result as a status chip ('Storage: persistent / best-effort'). Never treat 'persistent' as a backup.",
+   "source": "https://raw.githubusercontent.com/mdn/browser-compat-data/main/api/StorageManager.json ; https://webkit.org/blog/14403/updates-to-storage-policy/ ; https://developer.apple.com/forums/thread/710157"
+  },
+  {
+   "topic": "2d. Safari vs Home Screen storage separation",
+   "finding": "iOS 14-era testing (Firtman) found that cookies, Web Storage and IndexedDB are isolated between Safari and each Home Screen icon. In that testing the SW registration and Cache Storage were shared with Safari. Current behaviour on iOS 17, 18 and 26 for Cache Storage sharing was not re-verified.",
+   "confidence": "likely",
+   "designImplication": "Data entered in a Safari tab will not appear in the Home Screen app, and vice versa. Data cannot be moved between them except by export and import. Build JSON export/import from day one, and warn when not standalone (see 1e). After installing, open the icon once while online so the standalone container caches everything. Show an 'Offline ready' indicator only once the SW is active and the precache has completed.",
+   "source": "https://firt.dev/ios-14/"
+  },
+  {
+   "topic": "2e. Deleting the Home Screen icon",
+   "finding": "No primary source was found that says what happens to IndexedDB when a Home Screen web app icon is deleted. Because each icon has its own isolated container, data loss is plausible, but this was not confirmed. One low-authority guide implies some data may remain until 'Website Data' is cleared in Settings.",
+   "confidence": "unknown",
+   "designImplication": "Treat deleting the icon as total data loss. Put this in the app's Help text and on the export screen. To verify it on your own device, delete a test install that holds dummy data, re-add it, and check.",
+   "source": "https://firt.dev/ios-14/ ; https://www.tmfnk.com/use/tutorials/how-to-remove-a-pwa/"
+  },
+  {
+   "topic": "3a. <input type=file accept=image/* capture=environment>",
+   "finding": "The file input is supported in all iOS Safari versions (BCD). The capture attribute opens the rear camera directly on iOS. Its exact support version could not be confirmed from BCD in this session, but it is widely used. File inputs work in standalone mode. Developer reports (WKWebView/hybrid apps, not verified for Home Screen apps) describe the web page being reloaded by the system after the camera returns, under memory pressure.",
+   "confidence": "likely",
+   "designImplication": "Offer two buttons per item: 'Camera' (capture=environment) and 'Library' (no capture attribute, so the user can pick existing photos). Before opening the picker, save the current item draft (status, grade, comment text) to IndexedDB, and restore it on load, so a reload loses nothing.",
+   "source": "https://raw.githubusercontent.com/mdn/browser-compat-data/main/html/elements/input/file.json ; https://github.com/react/react-native/issues/21568"
+  },
+  {
+   "topic": "3b. HEIC vs JPEG delivery",
+   "finding": "Multiple reports say iOS Safari transcodes HEIC library photos to JPEG when the accept list does not include HEIC. In Safari 17+, adding image/heic to accept made Safari relabel even JPEG/PNG picks as .heic / image/heic. Camera captures through the file input are commonly reported as JPEG, but this was not confirmed from a primary source. Safari 17+ can decode HEIC natively (WebKit WWDC23), so even a HEIC file should draw to a canvas on iOS 17+.",
+   "confidence": "likely",
+   "designImplication": "Use accept=\"image/*\" only, and never add image/heic. Don't trust file.type or the file name. Always decode and re-encode to JPEG on the device with canvas.toBlob(cb,'image/jpeg',0.7–0.8). Re-encoding also strips EXIF, including GPS, which suits a site where photos shouldn't carry location.",
+   "source": "https://developer.apple.com/forums/thread/743049 ; https://news.ycombinator.com/item?id=23261216 ; https://www.webkit.org/?p=14205"
+  },
+  {
+   "topic": "3c. EXIF orientation and createImageBitmap",
+   "finding": "createImageBitmap is supported from Safari iOS 15, with the resizeWidth, resizeHeight and resizeQuality options from 15 (BCD). imageOrientation:'from-image' is supported from iOS 16. A WebKit commit makes ImageBitmap creation from a Blob honour embedded EXIF orientation; its ship date is not known. For drawImage(HTMLImageElement), modern WebKit applies EXIF orientation by default (CSS image-orientation: from-image), but no source for this was fetched in this session.",
+   "confidence": "likely",
+   "designImplication": "Main path: const bmp = await createImageBitmap(file, {imageOrientation:'from-image', resizeWidth: targetW, resizeQuality:'high'}). Fallback: an <img> from an object URL, then drawImage into a small canvas. Don't hand-rotate from EXIF, because on modern iOS that double-rotates. Include a portrait-photo check in the device self-test.",
+   "source": "https://raw.githubusercontent.com/mdn/browser-compat-data/main/api/_globals/createImageBitmap.json ; https://github.com/WebKit/WebKit/commit/8758b1b9f85526f462e6edb74d5c85228e15d90d"
+  },
+  {
+   "topic": "3d. Canvas size and memory limits for 24/48 MP photos",
+   "finding": "In WebKit main (CanvasBase.cpp), the maximum canvas area on iOS is 8192*8192 = 67,108,864 px, against 16384*16384 on other platforms. Before about iOS 18 the iOS limit was 4096*4096 = 16,777,216 px; a community post says the increase came in iOS 18.0. An oversized canvas silently fails and logs 'Canvas area exceeds the maximum limit'. Older iOS versions also had a total-canvas-memory cap reported at about 384 MB (iOS 15 era). That string was not found in current HTMLCanvasElement.cpp, so the current memory cap is unknown. A 48 MP frame (about 8064x6048 = 48.8 M px) exceeds the old limit and is close to the new one.",
+   "confidence": "likely",
+   "designImplication": "Never create a full-resolution canvas. Downscale directly to the target size (for example a 1600 px long edge) with createImageBitmap resize options, or with drawImage(src, 0,0,w,h) into a small canvas. Process photos one at a time. Afterwards call bmp.close() and set the canvas width and height to 0 to free memory. Store only the resized JPEG; don't keep the original File.",
+   "source": "https://raw.githubusercontent.com/WebKit/WebKit/main/Source/WebCore/html/CanvasBase.cpp ; https://lionpuro.com/posts/canvas-is-finally-usable-on-safari/ ; https://pqina.nl/blog/total-canvas-memory-use-exceeds-the-maximum-limit/"
+  },
+  {
+   "topic": "4a. Web Share with files: MIME types",
+   "finding": "navigator.share is supported from iOS 12.1, data.files and canShare from iOS 14 (BCD). In WebKit's Navigator.cpp (main), canShare() and share() apply no MIME-type or extension allowlist: any non-empty files array is accepted, provided the document is fully active and the web-share permissions policy allows it. MDN's 'usually shareable types' list is Chromium-oriented. Which share-sheet targets iOS offers (Save to Files, Mail, WhatsApp, Print) depends on the type and is not documented.",
+   "confidence": "likely",
+   "designImplication": "Share the export as files: summary.html (human-readable, opens in Quick Look and Files, printable), punch.csv (text/csv), backup.json (application/json), and optionally a .zip of photos. Always call navigator.canShare({files}) first. Test which share targets appear for each type on the device; Save to Files is the key one.",
+   "source": "https://raw.githubusercontent.com/WebKit/WebKit/main/Source/WebCore/page/Navigator.cpp ; https://raw.githubusercontent.com/mdn/browser-compat-data/main/api/Navigator.json ; https://raw.githubusercontent.com/mdn/content/main/files/en-us/web/api/navigator/share/index.md"
+  },
+  {
+   "topic": "4b. Web Share: user gesture and async work",
+   "finding": "In WebKit (Navigator.cpp), share() calls consumeTransientActivation(). Without activation it rejects with NotAllowedError; a second concurrent share rejects with InvalidStateError ('share() is already in progress'). The activation is consumed, so one tap allows one share. In LocalDOMWindow.cpp (main), the activation window is 5 seconds after the tap. Any await before share() (zip building, IndexedDB reads, image encoding) that pushes past about 5 s breaks it. WebKit's User Activation blog uses a slow await fetch() before share() as its example of activation expiring. navigator.userActivation is available from iOS 16.4. A user cancel rejects with AbortError.",
+   "confidence": "likely",
+   "designImplication": "Use a two-step export: (1) 'Prepare export' builds the File objects (HTML, CSV, JSON, zip) and keeps them in memory, with a progress bar; (2) a 'Share' button calls navigator.share({files, title}) synchronously in its click handler, with no awaits before it. Disable the button while sharing is pending. Treat AbortError as a cancel, not an error. Fall back to <a download> if canShare() is false.",
+   "source": "https://raw.githubusercontent.com/WebKit/WebKit/main/Source/WebCore/page/LocalDOMWindow.cpp ; https://raw.githubusercontent.com/WebKit/WebKit/main/Source/WebCore/page/Navigator.cpp ; https://webkit.org/blog/13862/the-user-activation-api/"
+  },
+  {
+   "topic": "4c. <a download> with blob URLs in standalone mode",
+   "finding": "The download attribute is supported from Safari iOS 13 (BCD). For standalone Home Screen apps there are long-standing reports of problems: the file name shown as 'unknown' (WebKit bug 167341), blob downloads failing in standalone while working in Safari, and same-origin links inside scope navigating the standalone window to the file with no way back. A recent GitHub issue proposes blob: URLs as a workaround, but says it was not verified on a device.",
+   "confidence": "unknown",
+   "designImplication": "Make Web Share the primary export path, with <a download> on a blob URL as a secondary fallback. Never navigate the app window to a blob: URL or a file URL, and never use window.open (see 6). After the click, revoke the object URL with a delay (e.g. 60 s). Include a 'Download' test in the device self-test.",
+   "source": "https://bugs.webkit.org/show_bug.cgi?id=167341 ; https://developer.apple.com/forums/thread/95911 ; https://github.com/kerti/uruni/issues/475 ; https://raw.githubusercontent.com/mdn/browser-compat-data/main/html/elements/a.json"
+  },
+  {
+   "topic": "4d. window.print() in standalone mode",
+   "finding": "Several developer reports (iOS 9 forum threads and recent GitHub PRs, which were not tested on a device and name no iOS version) say window.print() does nothing, or produces an unusable print sheet, in iOS Home Screen web apps. No Apple or WebKit statement for iOS 17, 18 or 26 was found.",
+   "confidence": "unknown",
+   "designImplication": "Don't depend on window.print(). Instead export summary.html (or a PDF if you add a JS PDF library) through the share sheet. The user can then print from Files or Quick Look, or send it by Mail. Keep a Print button only if the device self-test shows it works.",
+   "source": "https://github.com/fluxplanner/Flux/pull/104 ; https://developer.apple.com/forums/thread/22911"
+  },
+  {
+   "topic": "5a. Safe-area insets and viewport-fit",
+   "finding": "env(safe-area-inset-*) returns non-zero values only when the viewport meta includes viewport-fit=cover. Recent developer bug reports describe a bottom 'chin' gap or a short layout in standalone PWAs that combine black-translucent with viewport-fit=cover, and safe-area-inset-bottom not updating while the keyboard is open.",
+   "confidence": "likely",
+   "designImplication": "Use <meta name=viewport content=\"width=device-width, initial-scale=1, viewport-fit=cover\">. Pad the fixed bottom action bar (OK / OK w/ comments / Rejected) with padding-bottom: calc(12px + env(safe-area-inset-bottom)), and the header with env(safe-area-inset-top). Drop the bottom inset while a text input is focused.",
+   "source": "https://webventures.rejh.nl/blog/2025/safe-area-inset-bottom-does-not-update/ ; https://github.com/Latitudes-Dev/shuvcode/issues/244 ; https://webkit.org/blog/7929/designing-websites-for-iphone-x/"
+  },
+  {
+   "topic": "5b. Meta tags vs manifest, icons, status bar",
+   "finding": "Manifest display:standalone, scope and start_url have been honoured since iOS 11.3. Only standalone is effective on iOS. Manifest icons are used from iOS 15.4, but 'only when no apple-touch-icon is present' (BCD note). An apple-touch-icon therefore takes precedence. From iOS 26, apple-mobile-web-app-capable is not needed. The status bar is still styled with apple-mobile-web-app-status-bar-style (default, black, black-translucent); black-translucent draws content under the status bar.",
+   "confidence": "likely",
+   "designImplication": "Include both: a manifest (name, short_name, display:standalone, start_url, scope, id, theme_color, background_color, icons 192/512 PNG) and <link rel=apple-touch-icon href=icon-180.png> as a 180x180 opaque PNG. Prefer status-bar-style 'default' or 'black' to avoid the black-translucent safe-area bugs, unless you need edge-to-edge. Keep apple-mobile-web-app-capable=yes for iOS 17/18; it is harmless.",
+   "source": "https://raw.githubusercontent.com/mdn/browser-compat-data/main/manifests/webapp/icons.json ; https://raw.githubusercontent.com/mdn/browser-compat-data/main/manifests/webapp/display.json ; https://webkit.org/blog/12445/new-webkit-features-in-safari-15-4/ ; https://developer.apple.com/library/archive/documentation/AppleApplications/Reference/SafariHTMLRef/Articles/MetaTags.html"
+  },
+  {
+   "topic": "5c. 100vh / dvh",
+   "finding": "svh, lvh and dvh units are supported from iOS 15.4 (BCD). An Apple forum thread from October 2025 reports a regression after an iOS 26.x update: 100dvh overlays leave a gap at the bottom, while the 26.1 beta was fine. There is no Apple response. In standalone there is no Safari toolbar, so vh and dvh mostly coincide. The keyboard does not resize the layout viewport on iOS; it changes visualViewport.",
+   "confidence": "likely",
+   "designImplication": "Avoid whole-page 100vh/dvh layouts. Use a normal scrolling document with a position:fixed bottom bar, or a flex column on html,body{height:100%}. For the comment field, use window.visualViewport resize events to keep the input visible above the keyboard.",
+   "source": "https://developer.apple.com/forums/thread/803987 ; https://raw.githubusercontent.com/mdn/browser-compat-data/main/css/types/length.json"
+  },
+  {
+   "topic": "5d. Input zoom on focus",
+   "finding": "iOS Safari auto-zooms into inputs, selects and textareas whose computed font-size is below 16px. A viewport maximum-scale=1 also stops it, but it is an accessibility anti-pattern.",
+   "confidence": "confirmed",
+   "designImplication": "Set input, select and textarea to font-size: max(16px,1em). Don't disable zoom. Large tap targets (at least 44 px) also help one-handed use with gloves.",
+   "source": "https://weblog.west-wind.com/posts/2023/Apr/17/Preventing-iOS-Textbox-Auto-Zooming-and-ViewPort-Sizing ; https://github.com/heroui-inc/heroui/issues/5326"
+  },
+  {
+   "topic": "5e. Overscroll and rubber-banding",
+   "finding": "overscroll-behavior is supported from Safari iOS 16. It is a partial implementation: 'no effect on scroll containers that have no scrollable overflow'.",
+   "confidence": "confirmed",
+   "designImplication": "Set html,body{overscroll-behavior:none} and give inner scroll lists overscroll-behavior:contain. Accept that some bounce remains on non-scrolling views; it is cosmetic only. There is no pull-to-refresh in standalone, so provide an in-app refresh or update button.",
+   "source": "https://raw.githubusercontent.com/mdn/browser-compat-data/main/css/properties/overscroll-behavior.json"
+  },
+  {
+   "topic": "6a. Navigation outside scope and new windows",
+   "finding": "In standalone, a navigation outside manifest scope opens Safari or an in-app browser sheet, so the user leaves the app. Old reports say window.open() has been broken or unusable in Home Screen apps since iOS 7. A standalone app has no back button and no reload control.",
+   "confidence": "likely",
+   "designImplication": "Make the app a single page with hash routing. Use no target=_blank, no window.open, no external links (code references are plain text, with a note to verify the clause or edition), and no navigation to blob or data URLs. Provide your own Back and Home buttons in the UI.",
+   "source": "https://github.com/PWA-POLICE/pwa-bugs ; https://github.com/MrRio/jsPDF/issues/165"
+  },
+  {
+   "topic": "6b. Process kill or reload while backgrounded",
+   "finding": "iOS can end the web content process of a backgrounded standalone app, for example while the camera or Files is in front or after a long time in the background. When the user returns, the app relaunches at start_url. This is based on developer reports, mostly from WKWebView apps; there is no Apple documentation.",
+   "confidence": "likely",
+   "designImplication": "Autosave every field change to IndexedDB, debounced by about 300 ms. Persist the current route (inspection ID and item ID) and restore it on launch. Never keep unsaved state only in memory. Each tap on OK / OK with comments / Rejected and each punch grade (A/B+/B/C/D) should commit immediately.",
+   "source": "https://github.com/react/react-native/issues/21568 ; https://github.com/fmaclen/canutin/pull/451"
+  },
+  {
+   "topic": "6c. No install prompt or install detection on iOS",
+   "finding": "iOS Safari has no beforeinstallprompt event. The user installs manually with Share > Add to Home Screen. On iOS 26, the 'Open as Web App' toggle must stay ON.",
+   "confidence": "likely",
+   "designImplication": "When not standalone, show a short install card with the steps. After installing, launch once while online so the precache completes, then confirm with an 'Offline ready vX' badge before the first site visit.",
+   "source": "https://www.heise.de/en/news/iOS-26-and-iPadOS-26-Changed-web-app-behaviour-on-the-home-screen-10749652.html"
+  },
+  {
+   "topic": "6d. Data-loss risk summary (open questions for the device test)",
+   "finding": "These are still unconfirmed for the iOS version actually on the phone: (1) whether deleting the icon wipes data; (2) whether Settings > Safari > Clear History and Website Data also wipes Home Screen app data; (3) whether persist() protects against low-storage eviction; (4) whether window.print() and <a download> work in standalone; (5) which share targets appear for .csv, .json, .html and .zip files.",
+   "confidence": "unknown",
+   "designImplication": "Ship a hidden 'Diagnostics' page that runs and records these checks. Until each one is confirmed on the phone, design for the worst case: export often, keep a JSON backup in Files, and support re-import. Make each export include the full status of every open punch item, so items can be followed to closure even after a wipe.",
+   "source": "https://developer.apple.com/forums/thread/730023 ; https://developer.apple.com/forums/thread/710157"
+  }
+ ]
+}

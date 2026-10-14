@@ -26,27 +26,34 @@ function dosTime(d) {
   return { time, date };
 }
 
-// entries: [{name, data: string|Uint8Array|ArrayBuffer|Blob, date?: Date}]
-// Returns a Blob (application/zip). Entries are read one at a time.
-export async function makeZip(entries) {
+// entries: [{name, data}] or [{name, load: async () => data}] where data is
+// string | Uint8Array | ArrayBuffer | Blob. Lazy entries are loaded one at a time and
+// wrapped in their own Blob straight away, so a backup with thousands of photos never
+// holds all photo bytes in memory at once. An entry whose load() returns null is skipped.
+export async function makeZip(entries, onEntry = () => {}) {
   const parts = [];
   const central = [];
   let offset = 0;
+  let count = 0;
   const seen = new Set();
   for (const e of entries) {
+    const raw = e.load ? await e.load() : e.data;
+    onEntry();
+    if (raw == null) continue;
     let name = e.name.replace(/^\/+/, '');
     // Keep names unique - a duplicate would silently shadow a file on extraction.
     if (seen.has(name)) {
-      const dot = name.lastIndexOf('.');
+      const dot = name.lastIndexOf('.') > 0 ? name.lastIndexOf('.') : name.length;
       let i = 2;
       while (seen.has(`${name.slice(0, dot)}_${i}${name.slice(dot)}`)) i++;
       name = `${name.slice(0, dot)}_${i}${name.slice(dot)}`;
     }
     seen.add(name);
     const nameU8 = utf8(name);
-    const data = await toU8(e.data);
+    const data = await toU8(raw);
     const crc = crc32(data);
     const { time, date } = dosTime(e.date || new Date());
+    if (offset + 30 + nameU8.length + data.length > 0xffffffff) throw new Error('The file would be over 4 GB. Export a shorter date range.');
     const lh = new DataView(new ArrayBuffer(30));
     lh.setUint32(0, 0x04034b50, true);
     lh.setUint16(4, 20, true); // version needed
@@ -59,7 +66,7 @@ export async function makeZip(entries) {
     lh.setUint32(22, data.length, true);
     lh.setUint16(26, nameU8.length, true);
     lh.setUint16(28, 0, true);
-    parts.push(lh.buffer, nameU8, data);
+    parts.push(new Blob([lh.buffer, nameU8, data]));
 
     const ch = new DataView(new ArrayBuffer(46));
     ch.setUint32(0, 0x02014b50, true);
@@ -73,21 +80,18 @@ export async function makeZip(entries) {
     ch.setUint32(20, data.length, true);
     ch.setUint32(24, data.length, true);
     ch.setUint16(28, nameU8.length, true);
-    ch.setUint16(30, 0, true);
-    ch.setUint16(32, 0, true);
-    ch.setUint16(34, 0, true);
-    ch.setUint16(36, 0, true);
-    ch.setUint32(38, 0, true);
     ch.setUint32(42, offset, true);
     central.push(ch.buffer, nameU8);
     offset += 30 + nameU8.length + data.length;
+    count++;
   }
+  if (count > 0xffff) throw new Error('Too many files for one ZIP. Export a shorter date range.');
   let cdSize = 0;
   for (const c of central) cdSize += c.byteLength;
   const end = new DataView(new ArrayBuffer(22));
   end.setUint32(0, 0x06054b50, true);
-  end.setUint16(8, entries.length, true);
-  end.setUint16(10, entries.length, true);
+  end.setUint16(8, count, true);
+  end.setUint16(10, count, true);
   end.setUint32(12, cdSize, true);
   end.setUint32(16, offset, true);
   return new Blob([...parts, ...central, end.buffer], { type: 'application/zip' });
@@ -100,22 +104,31 @@ async function inflateRaw(u8) {
   return new Uint8Array(await new Response(out).arrayBuffer());
 }
 
-// Returns Map(name -> Uint8Array). Uses the central directory (robust to data descriptors).
-export async function readZip(blob) {
-  const buf = new Uint8Array(await blob.arrayBuffer());
-  const dv = new DataView(buf.buffer, buf.byteOffset, buf.byteLength);
+const slice = async (file, a, b) => new Uint8Array(await file.slice(a, b).arrayBuffer());
+
+// Opens a ZIP without loading it whole: reads the central directory, then each
+// entry on demand. Returns {names, has(name), read(name) -> Uint8Array}.
+export async function openZip(file) {
+  const size = file.size;
+  const tailStart = Math.max(0, size - 65557);
+  const tail = await slice(file, tailStart, size);
+  const tv = new DataView(tail.buffer, tail.byteOffset, tail.byteLength);
   let eocd = -1;
-  for (let i = buf.length - 22; i >= Math.max(0, buf.length - 65557); i--) {
-    if (dv.getUint32(i, true) === 0x06054b50) {
+  for (let i = tail.length - 22; i >= 0; i--) {
+    if (tv.getUint32(i, true) === 0x06054b50) {
       eocd = i;
       break;
     }
   }
   if (eocd < 0) throw new Error('Not a ZIP file');
-  const count = dv.getUint16(eocd + 10, true);
-  let p = dv.getUint32(eocd + 16, true);
+  const count = tv.getUint16(eocd + 10, true);
+  const cdSize = tv.getUint32(eocd + 12, true);
+  const cdOff = tv.getUint32(eocd + 16, true);
+  const cd = await slice(file, cdOff, cdOff + cdSize);
+  const dv = new DataView(cd.buffer, cd.byteOffset, cd.byteLength);
   const dec = new TextDecoder();
-  const files = new Map();
+  const map = new Map();
+  let p = 0;
   for (let n = 0; n < count; n++) {
     if (dv.getUint32(p, true) !== 0x02014b50) throw new Error('Damaged ZIP (central directory)');
     const method = dv.getUint16(p + 10, true);
@@ -124,16 +137,24 @@ export async function readZip(blob) {
     const xlen = dv.getUint16(p + 30, true);
     const clen = dv.getUint16(p + 32, true);
     const lho = dv.getUint32(p + 42, true);
-    const name = dec.decode(buf.subarray(p + 46, p + 46 + nlen));
+    const name = dec.decode(cd.subarray(p + 46, p + 46 + nlen));
     p += 46 + nlen + xlen + clen;
-    if (name.endsWith('/')) continue;
-    const lnlen = dv.getUint16(lho + 26, true);
-    const lxlen = dv.getUint16(lho + 28, true);
-    const start = lho + 30 + lnlen + lxlen;
-    const raw = buf.subarray(start, start + csize);
-    if (method === 0) files.set(name, raw);
-    else if (method === 8) files.set(name, await inflateRaw(raw));
-    else throw new Error(`Unsupported ZIP compression in ${name}`);
+    if (!name.endsWith('/')) map.set(name, { method, csize, lho });
   }
-  return files;
+  return {
+    names: [...map.keys()],
+    has: (name) => map.has(name),
+    async read(name) {
+      const e = map.get(name);
+      if (!e) return null;
+      const lh = await slice(file, e.lho, e.lho + 30);
+      const lv = new DataView(lh.buffer, lh.byteOffset, lh.byteLength);
+      if (lv.getUint32(0, true) !== 0x04034b50) throw new Error(`Damaged ZIP entry ${name}`);
+      const start = e.lho + 30 + lv.getUint16(26, true) + lv.getUint16(28, true);
+      const raw = await slice(file, start, start + e.csize);
+      if (e.method === 0) return raw;
+      if (e.method === 8) return inflateRaw(raw);
+      throw new Error(`Unsupported ZIP compression in ${name}`);
+    },
+  };
 }

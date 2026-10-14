@@ -1,115 +1,108 @@
-// Checklist library. Generated from the research workflow; plain data, safe to edit.
-// basis: code = general code requirement (generic edition) | practice = common field QC practice (inferred)
-//        project = acceptance depends on project documents -> value unknown, ask on site
-// codeRef: a clause is cited only when an adversarial check confirmed it; otherwise "verify clause/edition".
-// Sources per type: {"piping_line": "draft", "flanged_joint": "draft", "valve": "draft", "pipe_support": "draft", "rotating": "draft", "tank_vessel": "draft", "instrument_hookup": "draft", "general_area": "draft"}
-export const CHECKLIST_VERSION = "2026-10-14 draft (citations pending check)";
+// Checklist library (plain data - safe to edit).
+// Built from field-QC research: one drafter per item type, then a field-QC reviewer and an
+// adversarial citation auditor, then a reconciliation pass; cited clauses were checked again
+// by two independent skeptics and kept only when both agreed.
+//
+// basis:   code     = general code requirement (generic edition - confirm the project edition)
+//          practice = common field QC practice (inferred, not a code requirement)
+//          project  = acceptance depends on project documents -> value unknown, ask on site
+// codeRef: a clause number appears only where it was confirmed; otherwise "verify clause/edition".
+// ask:     the question to raise on site when the requirement is unknown.
+export const CHECKLIST_VERSION = "2026-10-14";
 export const TYPES = [
  {
   "key": "piping_line",
   "label": "Piping line",
   "checks": [
    {
+    "id": "prior_punch_closed",
+    "group": "Records (pre-walk)",
+    "text": "Previous punch/NCR items closed, verified",
+    "basis": "project",
+    "codeRef": "",
+    "defects": [
+     "Punch closed, not fixed",
+     "Punch item still open",
+     "Fix caused new defect",
+     "Open NCR on line",
+     "Closure not signed"
+    ],
+    "ask": "Where is the current punch/NCR list for this line, and who signs closure?"
+   },
+   {
     "id": "leak_test_record",
     "group": "Records (pre-walk)",
     "text": "Leak test done, record signed",
     "basis": "code",
-    "codeRef": "ASME B31.3 / ASME B31.1 – verify clause/edition",
+    "codeRef": "B31.1 para 137 Pressure Tests, or B31.3 para 345 Testing (345.3.1 joints exposed during the leak test; exceptions differ by edition) – per project line class. The signed record is a project requirement, not from these clauses (confirm project edition)",
     "defects": [
-     "Test record not available",
-     "Test record not signed",
-     "Line outside test limits",
-     "Modified after test, no retest",
-     "Joints insulated before test"
+     "Test record missing/unsigned",
+     "Line not in a test boundary",
+     "Welded/modified, no retest",
+     "Joints covered before test",
+     "Gauge cal. not recorded"
     ],
-    "ask": "Which test limit covers this line, and is it released?"
+    "ask": "Which test type and limit cover this line (hydro/pneumatic/initial service), and is it released?"
    },
    {
     "id": "weld_nde_record",
     "group": "Records (pre-walk)",
     "text": "Weld/NDE records complete, no open repairs",
     "basis": "code",
-    "codeRef": "ASME B31.3 / ASME B31.1 / ASME Sec V / ASME Sec IX – verify clause/edition",
+    "codeRef": "B31.1 para 136 Inspection and Examination, or B31.3 para 341 Examination – per project line class. NDE methods ASME Sec V, qualifications ASME Sec IX: verify clause/edition (confirm project edition)",
     "defects": [
      "NDE result pending",
      "Repair not re-examined",
-     "Weld log incomplete",
-     "Welder ID not traceable",
-     "PWHT record missing"
+     "Weld log/welder ID gap",
+     "PWHT record missing (if req.)",
+     "PMI record missing (alloy)"
     ],
-    "ask": "What NDE extent and PWHT (if any) apply to this line class?"
+    "ask": "What NDE extent and PWHT (if any) apply to this line class, and is PMI required for this material?"
    },
    {
-    "id": "flush_record",
-    "group": "Records (pre-walk)",
-    "text": "Flushing/cleaning record available",
-    "basis": "project",
-    "codeRef": "",
-    "defects": [
-     "Flushing not recorded",
-     "Not in flushing scope",
-     "Debris at low point",
-     "Temp flushing spool left"
-    ],
-    "ask": "Is flushing/blowing done by construction or commissioning, and what is the acceptance?"
-   },
-   {
-    "id": "routing",
+    "id": "routing_inline",
     "group": "Routing & condition",
-    "text": "Routing per latest approved drawing",
+    "text": "Routing and inline items as drawn",
     "basis": "project",
     "codeRef": "",
     "defects": [
      "Routing deviates from drawing",
      "Field change not marked up",
-     "Valve not accessible",
-     "Inline item reversed"
+     "Inline item missing/wrong type",
+     "Flow direction reversed",
+     "Not accessible for maintenance"
     ],
-    "ask": "Are field changes red-lined and approved before handover?"
+    "ask": "Are field changes red-lined and approved, and is an inline-item list per line available?"
    },
    {
-    "id": "clearances",
+    "id": "clearances_sleeves",
     "group": "Routing & condition",
-    "text": "Clear of steel, cables and other lines",
+    "text": "Clear of steel/cables; sleeves sealed",
     "basis": "practice",
     "codeRef": "",
     "defects": [
-     "Pipe touching steel",
-     "Pipe touching other line",
+     "Touching steel/line/sleeve",
      "Hot line close to cables",
-     "No space for insulation",
+     "Low pipe at walkway unmarked",
+     "Sleeve/seal missing or open",
      "Blocks access/walkway"
     ],
-    "ask": "What minimum clearances does the project spec require?"
-   },
-   {
-    "id": "slope_pockets",
-    "group": "Routing & condition",
-    "text": "Slope toward drains, no pockets",
-    "basis": "project",
-    "codeRef": "",
-    "defects": [
-     "Slope reversed",
-     "Undrained low point",
-     "Pocket in line",
-     "Sagging between supports"
-    ],
-    "ask": "Which lines must slope, and at what slope?"
+    "ask": "What minimum clearances and walkway headroom apply, and which penetrations need fire-stop or watertight seals?"
    },
    {
     "id": "pipe_surface",
     "group": "Routing & condition",
-    "text": "Pipe free of dents, arc strikes, lugs",
+    "text": "Pipe surface undamaged, temp lugs removed",
     "basis": "practice",
     "codeRef": "",
     "defects": [
-     "Dent on pipe",
-     "Arc strike",
-     "Temp lug not removed",
-     "Gouge/grind mark",
-     "Mechanical damage"
+     "Dent/gouge/arc strike",
+     "Temp lug left/not ground",
+     "CS contamination on SS",
+     "GRE/PE cracked or UV-damaged",
+     "Lining vent hole painted over"
     ],
-    "ask": "What are the acceptance limits for dents, gouges and arc strikes?"
+    "ask": "What acceptance limits apply to dents, gouges and arc strikes, and what examination is needed after temp lug removal?"
    },
    {
     "id": "supports_installed",
@@ -118,13 +111,13 @@ export const TYPES = [
     "basis": "project",
     "codeRef": "",
     "defects": [
-     "Support missing",
-     "Wrong support type",
-     "Support not welded/bolted",
-     "U-bolt/clamp loose",
-     "Pad/shim missing"
+     "Support missing/wrong type",
+     "Loose, damaged or not fixed",
+     "Clamp/U-bolt too tight",
+     "Pad/shim/saddle missing",
+     "SS pipe on bare CS support"
     ],
-    "ask": "Is the support drawing set on site the latest revision?"
+    "ask": "Is the support drawing set on site the latest revision, and is an isolation pad required between SS pipe and CS supports?"
    },
    {
     "id": "no_temp_supports",
@@ -139,7 +132,7 @@ export const TYPES = [
      "Scaffold tube as support",
      "Rope/wire tie left"
     ],
-    "ask": ""
+    "ask": "Were temporary supports added for hydrotest, and are they listed?"
    },
    {
     "id": "supports_seated",
@@ -159,17 +152,32 @@ export const TYPES = [
    {
     "id": "spring_hangers",
     "group": "Supports",
-    "text": "Spring hangers: stops and setting checked",
+    "text": "Spring hangers: stops/setting per plan",
     "basis": "project",
     "codeRef": "",
     "defects": [
-     "Travel stop still fitted",
+     "Stop status not tracked",
      "Stop removed too early",
-     "Indicator off cold setting",
-     "Nameplate missing",
-     "Rod/turnbuckle loose"
+     "Off cold setting/topped out",
+     "Rod loose/out of vertical",
+     "Nameplate missing"
     ],
-    "ask": "When are travel stops removed (after test or before hot commissioning), and by whom?"
+    "ask": "When are travel stops removed (after test or before hot commissioning), and by whom? Cold settings and rod-angle limits are vendor/project values."
+   },
+   {
+    "id": "expansion_joints",
+    "group": "Supports",
+    "text": "Expansion joints: bars/rods per vendor",
+    "basis": "project",
+    "codeRef": "",
+    "defects": [
+     "Shipping bar still fitted",
+     "Limit/tie rods not set",
+     "Bellows/rubber joint damaged",
+     "Liner flow arrow reversed",
+     "Misaligned/overstretched"
+    ],
+    "ask": "When are shipping bars removed, and what limit-rod settings does the vendor give?"
    },
    {
     "id": "small_bore",
@@ -179,41 +187,42 @@ export const TYPES = [
     "codeRef": "",
     "defects": [
      "Small-bore unsupported",
-     "Branch vibrating",
      "Bracing missing",
-     "Gusset missing"
+     "Heavy valve unsupported",
+     "Branch near pump unbraced",
+     "Seal weld missing (if spec)"
     ],
-    "ask": "Does the project spec require bracing on small-bore branches?"
+    "ask": "Does the project spec require bracing on small-bore branches, and are threaded joints to be seal-welded?"
    },
    {
-    "id": "drains_vents",
-    "group": "Drains & vents",
-    "text": "Drains/vents fitted, valved and capped",
+    "id": "slope_drains_vents",
+    "group": "Slope, drains & vents",
+    "text": "Slope per design, drains/vents per spec",
     "basis": "project",
     "codeRef": "",
     "defects": [
-     "Drain missing",
-     "Vent missing",
-     "Plug/cap missing",
-     "Drain valve not accessible",
-     "Discharge not to safe point"
+     "Wrong slope/sag/undrained pocket",
+     "Drain/vent missing",
+     "End closure not per spec",
+     "Drain to wrong/unsafe point",
+     "Temp test vent not removed"
     ],
-    "ask": "Which end closure is required: plug, cap or blind?"
+    "ask": "Which lines must slope and at what slope, and which end closure (plug/cap/blind) and single or double valve are required?"
    },
    {
-    "id": "test_blinds_removed",
+    "id": "blinds_temp_items",
     "group": "Temporary items",
-    "text": "Test blinds and temp items removed",
-    "basis": "practice",
+    "text": "Blinds per status list, temp items gone",
+    "basis": "project",
     "codeRef": "",
     "defects": [
      "Test blind not removed",
-     "Spectacle in wrong position",
-     "Temp gasket left in",
-     "Debris/scaffold left on line",
-     "Open end not capped"
+     "Spectacle not as status list",
+     "Blind/strainer not registered",
+     "Boundary isolation missing",
+     "Debris/scaffold left on line"
     ],
-    "ask": "Is there a register of blinds and temporary items to close against?"
+    "ask": "Is there a blind/spectacle status list for handover, and who maintains it?"
    },
    {
     "id": "reinstatement",
@@ -223,12 +232,27 @@ export const TYPES = [
     "codeRef": "",
     "defects": [
      "Temp spool still fitted",
-     "Instrument not reinstated",
-     "PSV not reinstated",
-     "Orifice plate missing",
-     "Temp gasket not replaced"
+     "Item not reinstated, not listed",
+     "Temp gasket not replaced",
+     "Gasket reused",
+     "Joint not torqued/recorded"
     ],
-    "ask": "Who signs reinstatement: construction, QC or commissioning?"
+    "ask": "Who signs reinstatement (construction, QC or commissioning), and which items stay out until flushing ends?"
+   },
+   {
+    "id": "flush_preservation",
+    "group": "Flushing & preservation",
+    "text": "Flushed and drained, open ends sealed",
+    "basis": "project",
+    "codeRef": "",
+    "defects": [
+     "Flush not recorded/signed",
+     "Test water not drained",
+     "Open end not sealed",
+     "N2/preservation not kept",
+     "Preservation tag missing"
+    ],
+    "ask": "Is flushing in construction or commissioning scope, and what preservation applies after test (drain, dry, N2, inhibitor)?"
    },
    {
     "id": "paint",
@@ -237,11 +261,11 @@ export const TYPES = [
     "basis": "project",
     "codeRef": "",
     "defects": [
-     "Paint damaged",
-     "Weld area not painted",
+     "Damaged, not touched up",
+     "Field weld not painted",
      "Rust at support contact",
-     "Touch-up missing",
-     "Wrong colour/system"
+     "Wrong colour/colour band",
+     "Wrap missing at grade entry"
     ],
     "ask": "What coating system, colour and DFT apply to this line?"
    },
@@ -252,11 +276,11 @@ export const TYPES = [
     "basis": "project",
     "codeRef": "",
     "defects": [
-     "Insulation missing",
-     "Cladding not sealed",
-     "Cladding damaged",
+     "Insulation/box missing",
+     "Cladding damaged/unsealed",
+     "Overlap not shedding water",
      "Personnel protection missing",
-     "Removable box missing"
+     "Tag/nameplate covered"
     ],
     "ask": "What insulation type and thickness apply, and which lines need personnel protection?"
    },
@@ -274,6 +298,21 @@ export const TYPES = [
      "Marking faded/illegible"
     ],
     "ask": "What is the project marking standard (colours, spacing, locations)?"
+   },
+   {
+    "id": "shields_bonding",
+    "group": "Safety fittings",
+    "text": "Spray shields/bonding jumpers fitted",
+    "basis": "project",
+    "codeRef": "",
+    "defects": [
+     "Spray shield missing",
+     "Shield loose/wrong type",
+     "Bonding jumper missing",
+     "Jumper loose/corroded",
+     "Insulating joint bridged"
+    ],
+    "ask": "Which chemical lines need flange spray shields, and which lines need bonding jumpers or insulating joints?"
    }
   ]
  },
@@ -284,14 +323,15 @@ export const TYPES = [
    {
     "id": "flange_alignment",
     "group": "Fit-up",
-    "text": "Flanges aligned, even gap, no forced fit",
+    "text": "Even gap, studs square, no visible strain",
     "basis": "code",
-    "codeRef": "ASME B31.3 / ASME B31.1 – verify clause/edition",
+    "codeRef": "ASME B31.1 / ASME B31.3 – verify clause/edition",
     "defects": [
-     "Flanges misaligned",
      "Uneven gap around flange",
+     "Studs not square / nut not flat",
      "Bolt holes offset",
-     "Joint pulled into line"
+     "Support strained/shimmed to fit",
+     "Pipe springs when loosened (joint open)"
     ],
     "ask": "Which alignment tolerance applies: the project spec or the value in the code edition?"
    },
@@ -310,15 +350,30 @@ export const TYPES = [
     "ask": "What rating and facing (RF/FF/RTJ) does the line class require, and what is the rule for mating with FF equipment nozzles?"
    },
    {
+    "id": "nozzle_pipe_strain",
+    "group": "Fit-up",
+    "text": "Pump/equipment nozzle: no pipe strain",
+    "basis": "practice",
+    "codeRef": "verify clause/edition",
+    "defects": [
+     "Nozzle flange forced into line",
+     "Support missing near nozzle",
+     "Support jacked/shimmed to fit",
+     "Shaft moved at bolt-up",
+     "No pipe-strain record"
+    ],
+    "ask": "Is a free-bolting/pipe-strain check required at pump nozzles, who witnesses it, and must it come before final alignment?"
+   },
+   {
     "id": "gasket_type",
     "group": "Gasket",
-    "text": "Gasket type/material per line class",
+    "text": "Gasket marking/colour per line class",
     "basis": "project",
-    "codeRef": "",
+    "codeRef": "ASME B16.20 – verify clause/edition",
     "defects": [
      "Wrong gasket type",
+     "Ring colour not per spec",
      "Gasket not identifiable",
-     "Inner ring missing (if spec)",
      "Gasket rating not marked"
     ],
     "ask": "Which gasket type, material and inner/outer rings does each line class require?"
@@ -326,31 +381,43 @@ export const TYPES = [
    {
     "id": "single_gasket",
     "group": "Gasket",
-    "text": "One gasket only, centred, undamaged",
+    "text": "Single gasket only",
     "basis": "code",
-    "codeRef": "ASME B31.3 / ASME B31.1 – verify clause/edition",
+    "codeRef": "ASME B31.3 para 335.2.4 Gaskets. B31.1: verify clause/edition (confirm project edition)",
     "defects": [
      "Double gasket fitted",
-     "Gasket off-centre",
-     "Gasket protrudes into bore",
-     "Gasket damaged/crushed",
-     "Sealant on gasket (check spec)"
+     "Gasket stacked to fill gap",
+     "Wide gap - suspect 2nd gasket"
     ],
     "ask": ""
    },
    {
+    "id": "gasket_condition",
+    "group": "Gasket",
+    "text": "Gasket centred, visible edge sound",
+    "basis": "practice",
+    "codeRef": "",
+    "defects": [
+     "Gasket off-centre",
+     "Visible edge damaged/crushed",
+     "Sealant on gasket (check spec)",
+     "Protrudes into bore (joint open)"
+    ],
+    "ask": "Are gasket sealants or compounds allowed by the project or gasket maker?"
+   },
+   {
     "id": "bolts_complete",
     "group": "Bolting",
-    "text": "All holes bolted, correct stud size",
+    "text": "All holes bolted, correct size; washers if spec",
     "basis": "code",
     "codeRef": "ASME B16.5 – verify clause/edition",
     "defects": [
-     "Bolt missing",
-     "Nut missing",
+     "Bolt/nut missing",
      "Undersize stud",
-     "Mixed stud sizes"
+     "Mixed stud sizes",
+     "Washer missing (if spec)"
     ],
-    "ask": ""
+    "ask": "Which flange standards apply besides B16.5 (e.g. B16.47, AWWA, EN, equipment nozzles), and are washers required?"
    },
    {
     "id": "bolt_grade_marking",
@@ -371,28 +438,14 @@ export const TYPES = [
     "group": "Bolting",
     "text": "Studs fully through nuts, both ends",
     "basis": "code",
-    "codeRef": "ASME B31.3 / ASME B31.1 – verify clause/edition",
+    "codeRef": "ASME B31.3 para 335.2.3 Bolt Length – acceptance wording changed between editions. B31.1: verify clause/edition (confirm project edition)",
     "defects": [
-     "Bolt not fully through nut",
-     "Excess stud projection",
-     "Uneven projection both sides",
-     "Stud too short - replace"
+     "Nut not fully engaged",
+     "1 thread short (check spec)",
+     "Excess projection (check spec)",
+     "Uneven projection"
     ],
-    "ask": "Under the project edition/spec, is full engagement required or is one thread short allowed? Is there a min/max stud protrusion?"
-   },
-   {
-    "id": "nuts_washers",
-    "group": "Bolting",
-    "text": "Nuts seated flat; washers as specified",
-    "basis": "project",
-    "codeRef": "",
-    "defects": [
-     "Nut not seated flat",
-     "Washer missing",
-     "Wrong washer type",
-     "Nut type not per spec"
-    ],
-    "ask": "Are washers required, and of what type (e.g. for tensioning or insulating kits)?"
+    "ask": "For B31.3 and B31.1 lines under the project editions/spec: is full engagement required or is one thread short allowed? Is there a min/max stud protrusion?"
    },
    {
     "id": "bolt_condition",
@@ -404,93 +457,128 @@ export const TYPES = [
      "Bolts rusted",
      "Coating damaged",
      "Threads damaged",
-     "Nut corners rounded"
+     "Nut corners rounded",
+     "Mixed coated/plain bolts"
     ],
     "ask": "What is the rust acceptance (clean or replace), and what bolt protection is required (coating/grease/caps)?"
    },
    {
-    "id": "tightened_marked",
+    "id": "torque_done_recorded",
     "group": "Bolting",
-    "text": "Joint tightened and marked/tagged",
+    "text": "Torque done, marked and recorded",
+    "basis": "project",
+    "codeRef": "ASME PCC-1 – verify clause/edition",
+    "defects": [
+     "Bolts hand-tight/loose",
+     "No torque mark/tag",
+     "Torque not recorded",
+     "Record unsigned/incomplete",
+     "Tool calibration not shown"
+    ],
+    "ask": "Is a per-joint torque/tension record and tightening mark required? Which method and value source apply, and who signs (subcontractor/QC)?"
+   },
+   {
+    "id": "bolt_access",
+    "group": "Bolting",
+    "text": "Studs removable, tool access clear",
     "basis": "practice",
     "codeRef": "",
     "defects": [
-     "Bolts hand-tight only",
-     "Loose bolt found",
-     "No torque mark",
-     "Joint tag missing"
+     "Stud blocked by steel",
+     "No wrench/tensioner access",
+     "Joint inside wall/sleeve",
+     "Cable tray clashes with joint"
     ],
-    "ask": "Does the project require a paint mark or tag on tightened joints?"
+    "ask": "Is a minimum tool/tensioner clearance specified at flanged joints?"
    },
    {
-    "id": "test_blinds_removed",
-    "group": "Blinds & spacers",
-    "text": "Test blinds and temp gaskets removed",
-    "basis": "practice",
+    "id": "temp_items_cleared",
+    "group": "Blinds & temp items",
+    "text": "Test blinds out; temp items removed/tagged",
+    "basis": "project",
     "codeRef": "",
     "defects": [
      "Test blind left in",
-     "Temp gasket not replaced",
-     "Temporary bolting left",
-     "Blind removal not recorded"
+     "Temp strainer left/untagged",
+     "Spool in place of valve/FE",
+     "Orifice plate missing/reversed",
+     "Open flange not covered"
     ],
-    "ask": "Must hydrotest gaskets and bolting be replaced with permanent ones, and is blind removal tracked in a register?"
+    "ask": "Which test blinds, temp strainers or spools may stay at handover, and how are they tagged and tracked?"
+   },
+   {
+    "id": "reinstated_joint",
+    "group": "Blinds & temp items",
+    "text": "Post-test broken joint re-made & recorded",
+    "basis": "project",
+    "codeRef": "ASME B31.1 / ASME B31.3 – verify clause/edition",
+    "defects": [
+     "Old/temp gasket reused",
+     "Temp bolting left in",
+     "Not re-tightened",
+     "Not on reinstatement list",
+     "No leak check after re-make"
+    ],
+    "ask": "Must joints broken after test get new gaskets, is a reinstatement sign-off required, and how are they leak-checked before commissioning?"
    },
    {
     "id": "spectacle_position",
-    "group": "Blinds & spacers",
+    "group": "Blinds & temp items",
     "text": "Spectacle/spade in required position",
     "basis": "project",
     "codeRef": "",
     "defects": [
      "Spectacle in wrong position",
-     "Blind not tagged",
-     "Spacer missing with paddle",
+     "Paddle out, no spacer fitted",
+     "Blind tag/rating missing",
      "No room to swing blind",
-     "Blind rating not marked"
+     "Jackscrews missing (if spec)"
     ],
     "ask": "What open/closed position is required at handover, and who controls blind position after handover?"
    },
    {
-    "id": "insulating_kit",
-    "group": "Fittings & finish",
-    "text": "Insulating kit fitted where specified",
+    "id": "nonmetallic_flange",
+    "group": "Special joints",
+    "text": "Plastic/lined flange: washers, no cracks",
     "basis": "project",
     "codeRef": "",
     "defects": [
-     "Insulating kit missing",
-     "Sleeve/washer damaged",
-     "Kit bridged by metal/paint",
-     "Isolation not tested"
+     "Flange cracked",
+     "Washers missing",
+     "Over-tightened/crushed",
+     "Backing ring wrong/missing",
+     "Liner face damaged"
     ],
-    "ask": "Which joints need insulating kits, and is an isolation test required?"
+    "ask": "Which BOP lines are non-metallic or lined, and what torque limits, washers and gaskets does the maker require?"
    },
    {
-    "id": "spray_guard",
-    "group": "Fittings & finish",
-    "text": "Spray guard fitted where specified",
+    "id": "wafer_valve_joint",
+    "group": "Special joints",
+    "text": "Wafer/lug valve: disc clear, gasket per maker",
     "basis": "project",
     "codeRef": "",
     "defects": [
-     "Spray guard missing",
-     "Guard damaged",
-     "Wrong guard type",
-     "Guard not secured"
+     "Disc fouls pipe/liner",
+     "Extra gasket on liner seat",
+     "Wrong stud/cap-screw length",
+     "Lug screws bottomed"
     ],
-    "ask": "Which services or lines need flange spray guards?"
+    "ask": "Does the maker want separate gaskets or the liner as gasket, and is a full-stroke check required before handover?"
    },
    {
-    "id": "bonding_jumper",
+    "id": "joint_accessories",
     "group": "Fittings & finish",
-    "text": "Bonding jumper fitted where specified",
+    "text": "Insul. kit / spray guard / bond jumper if spec",
     "basis": "project",
     "codeRef": "",
     "defects": [
-     "Bonding jumper missing",
-     "Jumper loose",
-     "Jumper corroded"
+     "Insulating kit missing/bridged",
+     "Spray guard missing/loose",
+     "Bonding jumper missing/loose",
+     "Insul. sleeve/washer damaged",
+     "Requirement unknown - ask"
     ],
-    "ask": "Are flange bonding jumpers required, and on which lines (e.g. fuel gas)?"
+    "ask": "Which joints need insulating kits (and an isolation test), spray guards or bonding jumpers?"
    },
    {
     "id": "paint_finish",
@@ -515,24 +603,10 @@ export const TYPES = [
     "defects": [
      "Leak at flange",
      "Stain/residue at joint",
-     "Gasket extruding"
+     "Gasket extruding",
+     "Line status unknown - ask"
     ],
     "ask": ""
-   },
-   {
-    "id": "torque_record",
-    "group": "Records",
-    "text": "Torque/tension record available",
-    "basis": "project",
-    "codeRef": "ASME PCC-1 – verify clause/edition",
-    "defects": [
-     "Torque not recorded",
-     "Joint not on record",
-     "Record unsigned",
-     "Value not per procedure",
-     "Tool calibration not shown"
-    ],
-    "ask": "Is a per-joint torque/tension record required? Which method and value source apply, and who signs (subcontractor/QC)?"
    }
   ]
  },
@@ -543,7 +617,7 @@ export const TYPES = [
    {
     "id": "tag",
     "group": "Identification",
-    "text": "Valve tag fitted, legible, matches line",
+    "text": "Valve tag fitted, legible, matches P&ID",
     "basis": "practice",
     "codeRef": "",
     "defects": [
@@ -551,9 +625,9 @@ export const TYPES = [
      "Tag illegible",
      "Tag differs from P&ID",
      "Temporary tag only",
-     "Tag loose"
+     "Tag on handwheel (removable)"
     ],
-    "ask": "Which tag type, material and fixing does the project spec require, and must all hand valves be tagged?"
+    "ask": "Which valves need tags, and what tag type, material and fixing does the project require?"
    },
    {
     "id": "body_marking",
@@ -568,7 +642,7 @@ export const TYPES = [
      "Marking illegible",
      "Nameplate missing"
     ],
-    "ask": "What valve type, pressure class and material does the line class / valve spec require for this line? Check the local copy."
+    "ask": "What type, pressure class and material does the local line class/valve spec require here?"
    },
    {
     "id": "flow_arrow",
@@ -580,37 +654,23 @@ export const TYPES = [
      "Installed against flow",
      "Flow arrow missing",
      "Arrow painted over",
-     "Flow direction unclear"
+     "Arrow hidden by insulation"
     ],
-    "ask": "Is this valve unidirectional (datasheet), and what flow direction does the local P&ID show?"
+    "ask": "Is this valve unidirectional (datasheet), and which flow direction does the local P&ID show?"
    },
    {
-    "id": "check_orient",
+    "id": "stem_check_orient",
     "group": "Orientation",
-    "text": "Check valve orientation per maker's IOM",
+    "text": "Stem/actuator/check orientation per spec/IOM",
     "basis": "project",
     "codeRef": "",
     "defects": [
-     "Swing check in down-flow",
-     "Hinge pin not horizontal",
-     "Orientation not per IOM",
-     "Cover access blocked"
-    ],
-    "ask": "Which mounting orientations does the manufacturer's IOM allow for this check valve type?"
-   },
-   {
-    "id": "stem_orient",
-    "group": "Orientation",
-    "text": "Stem/actuator orientation as per layout",
-    "basis": "project",
-    "codeRef": "",
-    "defects": [
-     "Stem below horizontal",
-     "Actuator rotated wrong",
-     "Stem clashes with steel",
+     "Stem orientation not per spec",
+     "Actuator rotated/unsupported",
+     "Check orientation not per IOM",
      "Not per piping layout"
     ],
-    "ask": "Does the project piping spec restrict stem orientation (for example, not below horizontal)?"
+    "ask": "Does the piping spec limit stem orientation, and which mountings does this check valve's IOM allow?"
    },
    {
     "id": "operator_access",
@@ -620,12 +680,70 @@ export const TYPES = [
     "codeRef": "",
     "defects": [
      "Handwheel/lever missing",
+     "Handwheel loose/damaged",
      "Not reachable from platform",
-     "Clash with adjacent item",
-     "Chainwheel or chain missing",
-     "Position indicator missing"
+     "Chain not secured/hooked",
+     "Clash/no maintenance access"
     ],
-    "ask": "What maximum operating height, and what chainwheel or extension-spindle criteria, does the project spec set?"
+    "ask": "What operating height, chainwheel and extension-spindle limits does the project spec set?"
+   },
+   {
+    "id": "operation",
+    "group": "Operation & access",
+    "text": "Valve operates freely (with permit holder only)",
+    "basis": "project",
+    "codeRef": "",
+    "defects": [
+     "Valve seized/stiff",
+     "Disc binds (wafer valve)",
+     "Indicator not matching position",
+     "Position indicator missing",
+     "Gearbox stiff/damaged"
+    ],
+    "ask": "Is valve operation in construction QC scope, and may QC operate this valve under site isolation/LOTO rules?"
+   },
+   {
+    "id": "reinstated",
+    "group": "Body & ends",
+    "text": "Valve refitted; temporary spool/blind removed",
+    "basis": "project",
+    "codeRef": "",
+    "defects": [
+     "Flush spool still in place",
+     "Valve internals not refitted",
+     "Test blind left in",
+     "Temp/test gasket left",
+     "Transport lock/cap left on"
+    ],
+    "ask": "Which valves or internals were removed for flushing/test on this system, and where is the reinstatement list?"
+   },
+   {
+    "id": "end_bolt_engage",
+    "group": "Body & ends",
+    "text": "End flange bolts fully through nuts",
+    "basis": "code",
+    "codeRef": "ASME B31.3 para 335.2.3 Bolt Length – acceptance wording changed between editions. B31.1: verify clause/edition (confirm project edition)",
+    "defects": [
+     "Bolt short of nut",
+     "Bolts rusted",
+     "Bolt/nut missing",
+     "Mixed bolt grades",
+     "Wrong bolt length (wafer/lug)"
+    ],
+    "ask": "Is this line B31.1 or B31.3, and what engagement allowance does the project edition state?"
+   },
+   {
+    "id": "end_torque_rec",
+    "group": "Body & ends",
+    "text": "End joint tightening record available",
+    "basis": "project",
+    "codeRef": "",
+    "defects": [
+     "Torque not recorded",
+     "Record not available",
+     "Joint not marked as tightened"
+    ],
+    "ask": "Is a torque/tightening record required for valve end joints on this line class, and who holds it?"
    },
    {
     "id": "gland_bonnet",
@@ -643,164 +761,148 @@ export const TYPES = [
     "ask": ""
    },
    {
-    "id": "end_bolting",
-    "group": "Body & ends",
-    "text": "End flange bolts through nuts; torque record",
-    "basis": "code",
-    "codeRef": "ASME B31.3 / ASME B31.1 – verify clause/edition",
-    "defects": [
-     "Bolt not fully through nut",
-     "Bolts rusted",
-     "Bolt/nut missing",
-     "Torque not recorded",
-     "Mixed bolt grades"
-    ],
-    "ask": "Is a torque or tightening record required for valve end joints on this line class, and who holds it?"
-   },
-   {
     "id": "vent_drain_plug",
     "group": "Body & ends",
-    "text": "Open-end vent/drain valves plugged/capped",
+    "text": "Vents/drains fitted; open ends plugged/capped",
     "basis": "project",
     "codeRef": "",
     "defects": [
-     "Plug/cap missing",
-     "Plastic shipping plug left",
-     "Valve left open",
-     "Blind flange missing"
+     "Vent/drain valve missing",
+     "Plug/cap/blind missing",
+     "Shipping plug left in",
+     "Valve left open"
     ],
-    "ask": "What does the project require on open-ended vents and drains: plug, cap or blind flange?"
+    "ask": "Which closure does the project require on open-ended vents and drains: plug, cap or blind?"
    },
    {
     "id": "finish",
     "group": "Body & ends",
-    "text": "Paint/insulation done; plate and gland clear",
+    "text": "Paint/insulation done; nameplate, gland visible",
     "basis": "project",
     "codeRef": "",
     "defects": [
-     "Paint damaged/missing",
-     "Rust on body",
-     "Insulation covers nameplate",
-     "Gland insulated over",
+     "Paint damaged/rusted",
+     "Stem/threads painted",
+     "Paint over nameplate",
+     "Insulation over gland/plate",
      "Removable box missing"
     ],
-    "ask": "Does the paint/insulation spec require valves on this line to be insulated, and if so, are removable boxes or jackets required?"
+    "ask": "Does the paint/insulation spec require this valve insulated, and with removable boxes or jackets?"
    },
    {
     "id": "locks",
     "group": "Locking",
-    "text": "LO/LC lock or car seal fitted as required",
+    "text": "LO/LC/CSO locking provision fitted",
     "basis": "project",
     "codeRef": "",
     "defects": [
-     "Lock missing",
-     "Car seal missing/broken",
-     "Valve in wrong position",
+     "Lockable lugs/device missing",
+     "Lock/seal missing (if due now)",
      "Lock tag missing",
-     "Not in lock register"
+     "Tamper switch missing (if specified)"
     ],
-    "ask": "Which valves are LO, LC or CSO on the P&ID, and who keeps the lock/key register: construction or commissioning?"
+    "ask": "Which valves are LO/LC/CSO on the local P&ID, and when and by whom are locks/seals fitted and positions set?"
    },
    {
-    "id": "cv_hookup",
-    "group": "Control valves",
-    "text": "Actuator air, tubing, cable, earth hooked up",
+    "id": "actuator_hookup",
+    "group": "Actuated valves (CV/XV/MOV)",
+    "text": "Actuator hookup done: air/cable/earth/covers",
     "basis": "practice",
     "codeRef": "",
     "defects": [
      "Air supply not connected",
-     "Tubing unsupported",
-     "Cable gland not sealed",
-     "Positioner cover missing",
-     "Fail action not marked"
+     "Tubing unsupported/kinked",
+     "Cable gland/entry not sealed",
+     "Earth missing",
+     "Cover/terminal lid missing"
     ],
-    "ask": "Is control valve hookup inspected by I&C QC or mechanical QC, and is the fail position (FO/FC) taken from the instrument datasheet?"
+    "ask": "Who inspects actuator hookup (I&C, electrical or mechanical QC), and is fail-action marking required?"
    },
    {
-    "id": "cv_transport",
-    "group": "Control valves",
-    "text": "Transport locks/brackets removed from actuator",
-    "basis": "practice",
-    "codeRef": "",
-    "defects": [
-     "Transport lock not removed",
-     "Shipping bracket still fitted",
-     "Vent/breather plug left in",
-     "Protective cap left on"
-    ],
-    "ask": "Does construction remove transport locks, or does the vendor representative do it at commissioning?"
-   },
-   {
-    "id": "cv_station",
-    "group": "Control valves",
-    "text": "CV block/bypass/drain valves fitted",
+    "id": "psv_reinstated",
+    "group": "Relief valves",
+    "text": "PSV refitted; test blind/gag removed",
     "basis": "project",
     "codeRef": "",
     "defects": [
-     "Block valve missing",
-     "Bypass valve missing",
-     "Drain valve missing",
-     "Actuator support missing"
+     "PSV not reinstalled",
+     "Spool/blind in place of PSV",
+     "Test gag still fitted",
+     "Inlet/outlet blind or cap left",
+     "Temp gasket not replaced"
     ],
-    "ask": "Does the local P&ID show a block/bypass/drain arrangement for this CV, and does it need an actuator support?"
+    "ask": "Were PSVs removed or gagged for hydrotest/flushing, and who records and signs reinstatement?"
    },
    {
     "id": "psv_plate",
-    "group": "Relief valves (observe only)",
-    "text": "Set-pressure plate legible; seal intact",
-    "basis": "code",
+    "group": "Relief valves",
+    "text": "PSV nameplate, seal and test tag present",
+    "basis": "project",
     "codeRef": "verify clause/edition",
     "defects": [
      "Nameplate missing",
-     "Set pressure illegible",
      "Plate painted over",
      "Seal wire broken/missing",
-     "Set value to verify vs datasheet"
+     "Test tag missing",
+     "Test date not on tag"
     ],
-    "ask": "What set pressure does the PSV datasheet specify? Compare locally and record only the value you observe."
+    "ask": "Is a PSV bench test/re-test and test tag required before handover, and where is the record held?"
    },
    {
-    "id": "psv_record",
-    "group": "Relief valves (observe only)",
-    "text": "PSV bench-test/set record available",
-    "basis": "project",
+    "id": "psv_mounting",
+    "group": "Relief valves",
+    "text": "PSV upright; lever free; bellows vent open",
+    "basis": "practice",
     "codeRef": "",
     "defects": [
-     "Test record not available",
-     "Test tag missing",
-     "Test date not on tag",
-     "Tag no. not on record"
+     "PSV not upright (per IOM)",
+     "Lever tied/wired/blocked",
+     "Lever missing (if on datasheet)",
+     "Bellows vent plugged",
+     "Shipping plug left in vent"
     ],
-    "ask": "Is a PSV bench test or re-test required before handover, who performs it, and where is the record held?"
+    "ask": "Is this PSV bellows type with a lever (datasheet), and what mounting and vent does the IOM require?"
    },
    {
     "id": "psv_isolation",
-    "group": "Relief valves (observe only)",
-    "text": "PSV inlet/outlet blocks locked/sealed open",
-    "basis": "code",
-    "codeRef": "ASME B31.3 / ASME B31.1 – verify clause/edition",
+    "group": "Relief valves",
+    "text": "PSV block valves secured per P&ID (LO/CSO)",
+    "basis": "project",
+    "codeRef": "ASME B31.3 para 322.6.1 Stop Valves in Pressure Relief Piping. B31.1: verify clause/edition (confirm project edition)",
     "defects": [
-     "Block valve not locked open",
-     "Car seal missing",
-     "Block valve closed",
+     "Lock/seal provision missing",
+     "Car seal missing (if due now)",
+     "Block position not per status",
      "Spare PSV blocks not secured"
     ],
-    "ask": "Which PSV block valves are CSO/LO on the P&ID, and are mechanical interlocks used?"
+    "ask": "Which 322.6.1 condition (or B31.1 rule) applies to these blocks, and when and by whom are they sealed open?"
+   },
+   {
+    "id": "psv_setnote",
+    "group": "Relief valves",
+    "text": "Set pressure on plate noted (observe only)",
+    "basis": "project",
+    "codeRef": "",
+    "defects": [
+     "Set illegible",
+     "Set not shown on plate",
+     "Set differs from datasheet (note)"
+    ],
+    "ask": "What set pressure does the local PSV datasheet give? Compare locally; record only what you see."
    },
    {
     "id": "psv_discharge",
-    "group": "Relief valves (observe only)",
+    "group": "Relief valves",
     "text": "Discharge routing noted (observe only)",
     "basis": "project",
-    "codeRef": "ASME B31.3 / ASME B31.1 – verify clause/edition",
+    "codeRef": "ASME B31.1 / ASME B31.3 – verify clause/edition",
     "defects": [
-     "Outlet faces walkway",
-     "Discharge unsupported",
-     "No drain at low point",
-     "Outlet blinded or capped",
-     "Rain cap missing"
+     "Outlet toward walkway/platform",
+     "Discharge looks unsupported",
+     "No low-point drain seen",
+     "Rain cap/weep hole: confirm design"
     ],
-    "ask": "Does the design route discharge to atmosphere or to a closed header, and who reviews routing concerns: design or process?"
+    "ask": "Does the design discharge to atmosphere or a closed header, and who reviews routing concerns?"
    }
   ]
  },
@@ -809,49 +911,78 @@ export const TYPES = [
   "label": "Supports & pipe rack",
   "checks": [
    {
-    "id": "rack_base",
-    "group": "Rack structure",
-    "text": "Base plates grouted, anchor nuts tight",
-    "basis": "practice",
-    "codeRef": "",
-    "defects": [
-     "Grout missing",
-     "Grout cracked / voids",
-     "Anchor nut loose",
-     "Bolt not fully through nut",
-     "Anchor bolts rusted"
-    ],
-    "ask": "Civil spec: grout type, and are double nuts or a minimum thread projection required?"
-   },
-   {
-    "id": "rack_steel",
-    "group": "Rack structure",
-    "text": "Rack steel & bracing complete, bolts tight",
+    "id": "base_anchor",
+    "group": "Steel & bases",
+    "text": "Rack & support bases, anchors, grout complete",
     "basis": "project",
     "codeRef": "",
     "defects": [
-     "Bracing missing",
-     "Bolts missing",
-     "Bolt not fully through nut",
-     "Torque mark missing",
-     "Member bent / damaged"
+     "Grout missing / not full plate",
+     "Grout cracked / voids",
+     "Anchor nut missing / loose",
+     "Thread short (if rule req'd)",
+     "Spalled concrete at anchor"
     ],
-    "ask": "Structural bolt tightening method, and is a torque/tension record required?"
+    "ask": "Civil spec: what grout type, thread projection rule, and post-installed anchor type and edge distance apply?"
+   },
+   {
+    "id": "support_steel",
+    "group": "Steel & bases",
+    "text": "Rack/support steel complete, bolts & welds",
+    "basis": "project",
+    "codeRef": "",
+    "defects": [
+     "Member / bracing missing",
+     "Bolt missing / short of nut",
+     "Torque mark missing (if req'd)",
+     "Weld incomplete / cracked",
+     "Earthing bond missing"
+    ],
+    "ask": "Structural spec: what bolt tightening method and record, and which welding standard, apply to support steel? Is rack earthing checked here or by electrical QC?"
    },
    {
     "id": "sup_location",
     "group": "Support type & location",
     "text": "Support type & location as per drawing",
     "basis": "project",
-    "codeRef": "ASME B31.3 / ASME B31.1 – verify clause/edition",
+    "codeRef": "ASME B31.1 / ASME B31.3 – verify clause/edition",
     "defects": [
      "Support missing",
      "Wrong support type",
      "Support mislocated",
      "Extra support not on drawing",
-     "Support number not marked"
+     "Support ID not marked (if req'd)"
     ],
-    "ask": "Is the walkdown being done against the latest approved support drawing revision?"
+    "ask": "Is the walkdown against the latest approved support drawing revision, and is this line B31.1 or B31.3?"
+   },
+   {
+    "id": "nozzle_sup",
+    "group": "Support type & location",
+    "text": "Supports at equipment nozzles in place",
+    "basis": "practice",
+    "codeRef": "",
+    "defects": [
+     "Support missing at nozzle",
+     "Temp support at nozzle",
+     "Flange visibly forced",
+     "Pipe weight on nozzle"
+    ],
+    "ask": "Does QC witness a pipe-strain/free-bolting check at pump nozzles, and on which checklist is it recorded?"
+   },
+   {
+    "id": "smallbore_sup",
+    "group": "Support type & location",
+    "text": "Small-bore, vents, drains, impulse lines supported",
+    "basis": "practice",
+    "codeRef": "",
+    "defects": [
+     "Small-bore unsupported",
+     "Valve hanging on small-bore",
+     "Impulse line unclipped",
+     "Drain/vent hits steel",
+     "Tube clamp missing"
+    ],
+    "ask": "Is there a project small-bore support standard, and is impulse-line support piping or instrument QC scope?"
    },
    {
     "id": "sup_bearing",
@@ -860,9 +991,10 @@ export const TYPES = [
     "basis": "practice",
     "codeRef": "",
     "defects": [
-     "Pipe not bearing on support",
-     "Gap under shoe",
+     "Gap under pipe / shoe",
+     "Visible sag between supports",
      "Unapproved packing / shim",
+     "Shim loose / not fixed",
      "Support bent / overloaded"
     ],
     "ask": "Are any supports designed with an intentional cold gap (e.g. on thermal lines)?"
@@ -870,45 +1002,32 @@ export const TYPES = [
    {
     "id": "shoe_position",
     "group": "Shoes, guides & stops",
-    "text": "Shoe centred, enough length for movement",
+    "text": "Shoe on steel, offset & length per detail",
     "basis": "project",
     "codeRef": "",
     "defects": [
-     "Shoe off-centre",
+     "Offset not per detail",
+     "Shoe welded to beam",
      "Shoe near beam edge",
-     "Shoe not attached to pipe",
+     "Shoe weld missing / cracked",
      "Shoe too low for insulation"
     ],
     "ask": "Are shoes cold-offset for thermal growth, and what offset is specified?"
    },
    {
-    "id": "guides",
+    "id": "guides_stops",
     "group": "Shoes, guides & stops",
-    "text": "Guides fitted, gap as per detail",
+    "text": "Guides, stops & anchors as per detail",
     "basis": "project",
     "codeRef": "",
     "defects": [
-     "Guide missing",
-     "Guide gap wrong",
+     "Guide / stop missing",
+     "Gap not per detail",
      "Guide welded to shoe",
-     "Guide too short for travel"
-    ],
-    "ask": "What guide gap does the support detail specify?"
-   },
-   {
-    "id": "anchors_stops",
-    "group": "Shoes, guides & stops",
-    "text": "Anchors & line stops fixed as detailed",
-    "basis": "project",
-    "codeRef": "",
-    "defects": [
-     "Anchor not welded",
-     "Stop missing",
      "Stop on wrong side",
-     "Stop gap wrong",
-     "Anchor bolts loose"
+     "Anchor weld / bolts incomplete"
     ],
-    "ask": "What stop gap and anchor weld/bolt details does the support detail specify?"
+    "ask": "What guide gap, stop gap and anchor weld/bolt details does the support detail specify?"
    },
    {
     "id": "slide_ptfe",
@@ -917,11 +1036,11 @@ export const TYPES = [
     "basis": "practice",
     "codeRef": "",
     "defects": [
-     "PTFE pad missing",
-     "PTFE damaged / displaced",
+     "PTFE missing / damaged",
+     "PTFE burnt by welding",
      "Paint / spatter on slide face",
      "Slide tack-welded solid",
-     "Slide plate misaligned"
+     "Plate misaligned / fixings loose"
     ],
     "ask": "Which supports specify PTFE or other low-friction pads?"
    },
@@ -932,100 +1051,103 @@ export const TYPES = [
     "basis": "practice",
     "codeRef": "",
     "defects": [
-     "Clash with steel",
-     "Clash with cable tray",
+     "Clash with steel / cable tray",
      "Touching adjacent pipe",
+     "Branch/drain will hit steel",
      "Insulation fouling support",
-     "Debris blocking slide"
+     "Cable/tube tied to pipe"
     ],
     "ask": "Which lines run hot, and in which direction should they move?"
    },
    {
-    "id": "clamps_ubolts",
+    "id": "clamps_pads",
     "group": "Clamps & pads",
-    "text": "U-bolts/clamps fitted, nuts tight, locked",
+    "text": "U-bolt/clamp snug or gap, pads per detail",
     "basis": "project",
     "codeRef": "",
     "defects": [
-     "U-bolt missing",
-     "Nut loose",
-     "Lock nut missing",
-     "U-bolt tight on guided line",
-     "Bolt not fully through nut"
+     "U-bolt / clamp missing",
+     "Snug/gap not per detail",
+     "Nut loose / short of nut",
+     "Isolation / wear pad missing",
+     "Plastic pipe clamp overtight"
     ],
-    "ask": "Should each U-bolt be snug (hold-down) or have a gap (guide)? Are double nuts required?"
+    "ask": "Which U-bolts are snug and which gapped, are lock nuts required, and which lines need pads or continuous support (SS, plastic, lined)?"
    },
    {
-    "id": "isolation_pads",
-    "group": "Clamps & pads",
-    "text": "Isolation/wear pads fitted where specified",
+    "id": "exp_joint",
+    "group": "Expansion joints",
+    "text": "Expansion joint shipping bars status noted",
     "basis": "project",
     "codeRef": "",
     "defects": [
-     "Isolation pad missing",
-     "Pad damaged / displaced",
-     "SS in contact with CS",
-     "Wear pad not fitted"
+     "Obs: bars IN",
+     "Obs: bars OUT",
+     "Bellows damaged / misaligned",
+     "Flow arrow reversed",
+     "Bar removed, not recorded"
     ],
-    "ask": "Which lines need isolation or wear pads (stainless, GRP/plastic, lined, coated)?"
+    "ask": "Are there expansion joints in this system, and at what stage, and by whom, are shipping bars removed?"
    },
    {
     "id": "spring_stops",
-    "group": "Spring & constant hangers",
-    "text": "Travel stop / locking pin status noted",
+    "group": "Hangers",
+    "text": "Travel stops / locking pins status noted",
     "basis": "project",
     "codeRef": "ASME B31.1 / ASME B31.3 – verify clause/edition",
     "defects": [
-     "Travel stop still fitted",
-     "Stop removed too early",
-     "Locking pin missing",
-     "Stop status not tagged"
+     "Obs: stops IN",
+     "Obs: stops OUT",
+     "Stop removed before hydro/flush",
+     "Stop removed, not recorded",
+     "Locking pin missing / lost"
     ],
-    "ask": "At what stage are travel stops removed, by whom, and is a QC witness required?"
+    "ask": "When are stops removed, by whom, and is a QC witness required? Must they stay in during hydrotest/flush, or are temp supports used?"
    },
    {
-    "id": "spring_cold",
-    "group": "Spring & constant hangers",
-    "text": "Cold load indicator at set mark (observe)",
+    "id": "spring_setting",
+    "group": "Hangers",
+    "text": "Nameplate vs schedule; indicator (stops out)",
     "basis": "project",
     "codeRef": "",
     "defects": [
+     "Wrong hanger size / type",
+     "Nameplate / ID missing",
      "Indicator off cold mark",
      "Spring at end of travel",
-     "Cold mark not marked",
-     "Nameplate unreadable"
+     "No cold mark on scale"
     ],
-    "ask": "What cold load/travel does the hanger schedule give, and who records the setting?"
+    "ask": "What type, size, load and cold position does the hanger schedule give, and who records the cold setting?"
    },
    {
     "id": "spring_hardware",
-    "group": "Spring & constant hangers",
-    "text": "Hanger rods plumb, lock nuts, threads engaged",
+    "group": "Hangers",
+    "text": "Rod: lock nuts, thread engaged, angle per detail",
     "basis": "practice",
     "codeRef": "",
     "defects": [
      "Lock nut missing",
-     "Turnbuckle not engaged",
+     "No thread visible in turnbuckle",
      "Rod bent",
-     "Rod out of plumb",
-     "Hanger tag missing"
+     "Rod angle not per detail",
+     "Rod touching steel / insulation"
     ],
     "ask": "What rod angle or cold offset of hanger rods is allowed?"
    },
    {
-    "id": "attach_welds",
+    "id": "pipe_welds",
     "group": "Welding",
-    "text": "Support welds complete, no visible defects",
+    "text": "Welds on pipe sound; no unapproved attachments",
     "basis": "code",
     "codeRef": "ASME B31.1 / ASME B31.3 / ASME Sec IX – verify clause/edition",
     "defects": [
+     "Crack / porosity",
+     "Undercut / arc strike on pipe",
      "Weld incomplete",
-     "Undercut on pipe",
-     "Arc strike on pipe",
-     "Weld spatter",
-     "Weld not painted"
+     "New weld on pipe after test",
+     "Unapproved bracket on pipe"
     ],
-    "ask": "Do attachment welds to pressure pipe need NDE or PWHT under the project spec?"
+    "ask": "Do support welds on pressure pipe need NDE/PWHT? If pipe was welded after hydrotest, what retest/NDE is required, and who approves it?"
    },
    {
     "id": "temp_removed",
@@ -1034,13 +1156,13 @@ export const TYPES = [
     "basis": "practice",
     "codeRef": "",
     "defects": [
-     "Temporary support left",
-     "Wooden block under pipe",
+     "Temp / hydrotest support left",
+     "Wooden block / wedge under pipe",
      "Temp lug not removed",
      "Lug area not ground / repaired",
-     "Pipe tied to scaffold"
+     "Rope, chain, scaffold as support"
     ],
-    "ask": ""
+    "ask": "Where temp lugs are removed from pipe, is NDE or a repair record required?"
    },
    {
     "id": "paint_finish",
@@ -1049,28 +1171,43 @@ export const TYPES = [
     "basis": "project",
     "codeRef": "",
     "defects": [
-     "Paint damaged",
+     "Paint / galvanising damaged",
      "No touch-up after welding",
-     "Rust at support",
-     "Galvanising damaged",
-     "Coating missing under shoe"
+     "Rust at support / under clamp",
+     "Cladding not sealed at shoe",
+     "Insulation crushed at support"
     ],
-    "ask": "Which touch-up system applies to painted support steel and to galvanised steel?"
+    "ask": "Which touch-up system applies to painted and galvanised support steel, and who applies it?"
    },
    {
-    "id": "records",
-    "group": "Records",
-    "text": "Support walkdown & spring set records available",
+    "id": "sup_hazard",
+    "group": "Safety",
+    "text": "No trip, head or access hazard from supports",
     "basis": "practice",
     "codeRef": "",
     "defects": [
-     "Record not available",
-     "Record not signed",
-     "Spring setting not recorded",
-     "Torque not recorded",
-     "Open punch not closed"
+     "Head-knocker unmarked",
+     "Trip hazard at walkway",
+     "Sharp edge / cut end",
+     "Blocks valve access",
+     "Blocks escape route"
     ],
-    "ask": "Which support records are required in the handover dossier?"
+    "ask": "What project marking is required for head-knockers and trip hazards?"
+   },
+   {
+    "id": "punch_closure",
+    "group": "Closure & records",
+    "text": "Earlier punch closed in field; records signed",
+    "basis": "project",
+    "codeRef": "",
+    "defects": [
+     "Closed on paper, open in field",
+     "Fix incomplete / new defect",
+     "Punch tag still fitted",
+     "Record missing / not signed",
+     "Welder ID untraceable (if req'd)"
+    ],
+    "ask": "Who signs support punch closure? Does QC field-verify every category (A/B/B+/C/D)? Which support records go in the handover dossier?"
    }
   ]
  },
@@ -1079,18 +1216,33 @@ export const TYPES = [
   "label": "Pump / rotating equip.",
   "checks": [
    {
-    "id": "tag_nameplate",
+    "id": "status_isolation",
     "group": "Identification",
-    "text": "Tag fitted; nameplate matches datasheet",
+    "text": "Status/isolation tag checked first",
     "basis": "project",
     "codeRef": "",
     "defects": [
-     "Tag missing",
-     "Nameplate illegible/painted over",
-     "Nameplate differs from datasheet",
-     "Motor nameplate differs"
+     "No status/LOTO tag",
+     "Energised - no PTW visible",
+     "Guard off while energised",
+     "Status tag unclear/outdated"
     ],
-    "ask": "Is the current-revision datasheet (pump and motor) on site to compare?"
+    "ask": "After handover to commissioning, may QC open guards/covers? Who issues PTW?"
+   },
+   {
+    "id": "tag_nameplate",
+    "group": "Identification",
+    "text": "Tag/arrows fitted; nameplate matches datasheet",
+    "basis": "project",
+    "codeRef": "",
+    "defects": [
+     "Tag missing/wrong/duplicate",
+     "Nameplate missing/illegible",
+     "Nameplate differs from datasheet",
+     "Rotation arrow missing/painted",
+     "Pump/motor arrows disagree"
+    ],
+    "ask": "Is the current-revision pump and motor datasheet on site to compare?"
    },
    {
     "id": "anchor_bolts",
@@ -1108,206 +1260,224 @@ export const TYPES = [
     "ask": "Is anchor bolt torque required and recorded per project spec?"
    },
    {
+    "id": "holddown_shims",
+    "group": "Foundation",
+    "text": "Pump/motor hold-down bolts tight; shims OK",
+    "basis": "practice",
+    "codeRef": "",
+    "defects": [
+     "Hold-down bolt loose",
+     "Bolt not fully through nut",
+     "Shims rusty/damaged",
+     "Shim pack not per spec",
+     "Jack screws not per spec"
+    ],
+    "ask": "Shim material/max count, jack-screw treatment and dowelling per vendor or spec?"
+   },
+   {
     "id": "grout",
     "group": "Foundation",
-    "text": "Grout complete, no cracks, voids or gaps",
+    "text": "Grout complete, edges sealed, no cracks",
     "basis": "practice",
     "codeRef": "verify clause/edition",
     "defects": [
      "Grout cracked",
-     "Voids under baseplate",
-     "Grout edge not finished",
-     "Jack screws not backed off",
-     "Grout record missing"
+     "Grout edge not sealed",
+     "Foundation concrete spalled",
+     "Fill/vent holes not plugged",
+     "Hollow on tap test (if done)"
     ],
-    "ask": "Grout type, void acceptance and jack-screw treatment per project spec?"
+    "ask": "Grout type, void acceptance and levelling-screw treatment per spec? Is tap testing allowed?"
    },
    {
     "id": "pipe_strain",
     "group": "Piping at nozzles",
-    "text": "No pipe strain at nozzles; pipe supported",
+    "text": "Nozzle flanges aligned; pipe supported near pump",
     "basis": "practice",
-    "codeRef": "ASME B31.3 / ASME B31.1 – verify clause/edition",
+    "codeRef": "ASME B31.1 / ASME B31.3 – verify clause/edition",
     "defects": [
      "Flange misaligned at nozzle",
-     "Pipe forced into nozzle",
-     "Support missing near pump",
-     "Temporary support left in place",
-     "Pipe weight on nozzle"
+     "Support missing/not bearing",
+     "Temp support left in place",
+     "Exp. joint bars/rods status unclear",
+     "Spring stop status unclear"
     ],
-    "ask": "Is a pipe-strain check (dial indicators at coupling during bolt-up) required and recorded?"
+    "ask": "Nozzle flange alignment tolerance: vendor or spec? Spring stops and exp.-joint rods: set or released at handover?"
    },
    {
-    "id": "temp_strainer",
+    "id": "blinds_strainer",
     "group": "Piping at nozzles",
-    "text": "Temp suction strainer logged and flagged",
+    "text": "Test blinds out; temp strainer flagged",
     "basis": "project",
     "codeRef": "",
     "defects": [
+     "Test blind/spade left in",
+     "Shipping cover between flanges",
+     "Blind removed - not in register",
      "Temp strainer not in register",
-     "Strainer flag/tab missing",
-     "Strainer installed backwards",
-     "Strainer missing where required"
+     "Strainer flag/tab missing"
     ],
-    "ask": "Is a temporary start-up strainer required here, and who keeps the register?"
+    "ask": "Who keeps the blind and strainer registers? Is a temp strainer required here?"
    },
    {
-    "id": "seal_plan",
+    "id": "seal_drains",
     "group": "Seal and drains",
-    "text": "Seal plan piping complete and supported",
+    "text": "Seal plan piping, drains and vents complete",
     "basis": "project",
     "codeRef": "API 682 – verify clause/edition",
     "defects": [
-     "Seal flush line missing",
-     "Seal pot/level gauge missing",
-     "Orifice missing or untagged",
-     "Seal tubing unsupported",
-     "Seal plan differs from datasheet"
+     "Seal piping not per datasheet",
+     "Seal pot/orifice missing",
+     "Gland leak-off not piped",
+     "Drain/vent plug missing",
+     "Seal/drain line unsupported"
     ],
-    "ask": "Which seal plan (if any) applies to this pump per datasheet?"
-   },
-   {
-    "id": "drains_vents",
-    "group": "Seal and drains",
-    "text": "Casing/baseplate drains and vents fitted",
-    "basis": "practice",
-    "codeRef": "",
-    "defects": [
-     "Casing drain plug missing",
-     "Drain not piped to hub",
-     "Baseplate drain blocked",
-     "Vent valve/plug missing",
-     "Drain piping unsupported"
-    ],
-    "ask": "Are casing/baseplate drains to be piped to a drain hub per design?"
+    "ask": "Which seal plan (if any) per datasheet? Casing drains piped to a hub per design?"
    },
    {
     "id": "coupling_guard",
     "group": "Coupling and rotation",
-    "text": "Coupling guard fitted, all fasteners in",
+    "text": "Coupling status logged; guard fully fitted",
     "basis": "practice",
     "codeRef": "",
     "defects": [
      "Coupling guard missing",
-     "Guard bolts missing/loose",
-     "Guard touching coupling",
-     "Guard off - not logged",
-     "Guard damaged"
+     "Guard loose/touching coupling",
+     "Guard opening allows reach-in",
+     "Spacer out - not logged",
+     "Coupling bolts loose"
     ],
-    "ask": "Is the guard off on purpose (alignment or solo run), and is that tracked?"
+    "ask": "Coupling open for solo run: who reconnects and re-aligns? Non-sparking guards needed in Ex areas?"
    },
    {
-    "id": "rotation_arrow",
-    "group": "Coupling and rotation",
-    "text": "Rotation arrows fitted (pump and driver)",
-    "basis": "practice",
-    "codeRef": "",
-    "defects": [
-     "Rotation arrow missing",
-     "Pump/motor arrows disagree",
-     "Arrow painted over",
-     "Rotation not verified"
-    ],
-    "ask": "Has motor rotation been checked (solo run), and is the record available?"
-   },
-   {
-    "id": "transit_locks",
-    "group": "Coupling and rotation",
-    "text": "Transit locks/shipping brackets removed",
-    "basis": "practice",
+    "id": "transit_preservation",
+    "group": "Shipping and preservation",
+    "text": "Transit locks/seal clips off; preservation OK",
+    "basis": "project",
     "codeRef": "",
     "defects": [
      "Transit lock still fitted",
-     "AV mount bolts not released",
-     "Motor shaft lock not removed",
-     "Shipping bracket left on skid"
+     "Seal setting clips not removed",
+     "AV mount/shaft lock not released",
+     "Preservation log missing/overdue",
+     "Openings not sealed"
     ],
-    "ask": "Who removes transit locks (construction or vendor), and at what stage?"
+    "ask": "Who removes transit locks and seal clips, and when? Preservation interval/method per vendor?"
    },
    {
     "id": "lubrication",
     "group": "Lubrication",
-    "text": "Lube level visible, grade per schedule",
+    "text": "Lube: level visible, tag fitted, no leaks",
     "basis": "project",
     "codeRef": "",
     "defects": [
      "Oil level low/not visible",
-     "Oiler missing/broken",
-     "Oil contaminated/water",
-     "Lube grade not identified",
-     "Breather/fill plug missing"
+     "Oil leak at bearing",
+     "Oiler/breather missing/broken",
+     "Lube tag/label missing",
+     "Grease nipple/plug missing"
     ],
-    "ask": "Lube grade and who does first fill, per lube schedule or vendor?"
+    "ask": "Is first oil fill construction scope? If not, how is 'not filled yet' recorded?"
    },
    {
     "id": "instruments",
     "group": "Instruments and electrical",
-    "text": "Local instruments fitted and tagged",
+    "text": "Local instruments and stop station fitted, tagged",
     "basis": "project",
     "codeRef": "",
     "defects": [
-     "Pressure gauge missing",
+     "Gauge missing/glass broken",
+     "Gauge not at zero (idle)",
      "Gauge isolation valve missing",
-     "Vibration/temp sensor not fitted",
-     "Instrument tag missing",
-     "Impulse line unsupported"
+     "Instrument/station tag missing",
+     "Local stop missing/unlabelled"
     ],
-    "ask": "Which local instruments are specified for this unit per design?"
+    "ask": "Which local instruments and local stop station does the design show for this unit?"
    },
    {
-    "id": "earthing",
+    "id": "motor_earthing",
     "group": "Instruments and electrical",
-    "text": "Baseplate and motor frame earthed",
+    "text": "Motor hookup and earthing (observe only)",
     "basis": "project",
     "codeRef": "",
     "defects": [
-     "Earth cable missing",
-     "Earth lug loose/corroded",
-     "Earth on painted surface",
-     "Bonding jumper missing"
+     "Earth cable missing/loose",
+     "Unused entry open/plastic plug",
+     "Gland loose/box cover open",
+     "Cable unsupported/untagged",
+     "Ex marking not visible"
     ],
-    "ask": "Earthing points and conductor size per project earthing design?"
+    "ask": "Hazardous area here (Ex motor/glands)? Earthing points and size per design?"
    },
    {
-    "id": "motor_hookup",
-    "group": "Instruments and electrical",
-    "text": "Motor cable, gland and terminal box closed",
-    "basis": "practice",
-    "codeRef": "",
-    "defects": [
-     "Gland loose/not sealed",
-     "Terminal box cover open",
-     "Cover bolts missing",
-     "Cable unsupported",
-     "Cable tag missing"
-    ],
-    "ask": "Is this a hazardous area (Ex-rated glands/motor required)?"
-   },
-   {
-    "id": "fan_compressor",
+    "id": "fan_items",
     "group": "Fans/compressors/blowers",
-    "text": "Fan/compr.: belt guard, inlet screen, PSV, traps",
+    "text": "Fan: belt guard, inlet screen, flex joint",
     "basis": "practice",
     "codeRef": "",
     "defects": [
-     "Belt guard missing",
-     "Belt tension not recorded",
-     "Inlet screen/filter missing",
-     "PSV tag/cert missing",
-     "Condensate drain/trap missing"
+     "Belt guard missing/open",
+     "Inlet/bird screen missing",
+     "Flex connector torn/taut",
+     "Damper linkage loose",
+     "Belt tension not recorded"
     ],
-    "ask": "Are PSV test certificate and belt-tension record required for handover?"
+    "ask": "Is a belt-tension record required for handover?"
+   },
+   {
+    "id": "compressor_psv",
+    "group": "Fans/compressors/blowers",
+    "text": "Compressor/blower: PSV sealed and tagged",
+    "basis": "practice",
+    "codeRef": "",
+    "defects": [
+     "PSV gag/blind not removed",
+     "PSV seal broken/tag missing",
+     "PSV outlet not to safe point",
+     "Drain/trap not piped",
+     "Inlet filter/panel missing"
+    ],
+    "ask": "Is a PSV test certificate required for handover, and who holds it?"
+   },
+   {
+    "id": "wet_pit",
+    "group": "Vertical/sump pumps",
+    "text": "Wet pit/sump clean; screens fitted",
+    "basis": "practice",
+    "codeRef": "",
+    "defects": [
+     "Debris/formwork in sump",
+     "Intake screen missing",
+     "Discharge head bolts loose",
+     "Guide rail/lift chain missing",
+     "Submersible cable unsupported"
+    ],
+    "ask": "Who signs off sump cleanliness before first fill?"
+   },
+   {
+    "id": "dosing_pump",
+    "group": "Dosing pumps",
+    "text": "Dosing pump: relief, damper, cal. column",
+    "basis": "project",
+    "codeRef": "",
+    "defects": [
+     "Relief valve missing/not piped",
+     "Pulsation damper missing",
+     "Calibration column missing",
+     "Chemical leak at pump head",
+     "Drip tray/bund missing"
+    ],
+    "ask": "Which dosing skids are vendor packages, and what relief/damper/calibration items does the design show?"
    },
    {
     "id": "paint_housekeeping",
     "group": "Finish",
-    "text": "Paint touched up; temp items cleared",
+    "text": "Paint touched up; debris and temp items cleared",
     "basis": "practice",
     "codeRef": "",
     "defects": [
      "Paint damaged/rust spots",
      "Touch-up not done",
-     "Temp covers/blinds left",
      "Debris on baseplate",
      "Temp material left"
     ],
@@ -1316,32 +1486,31 @@ export const TYPES = [
    {
     "id": "alignment_record",
     "group": "Records",
-    "text": "Final alignment record available",
+    "text": "Final alignment and solo-run records seen",
     "basis": "project",
     "codeRef": "verify clause/edition",
     "defects": [
      "Alignment record missing",
-     "Only pre-piping record",
      "Out of tolerance on record",
-     "Record not signed off",
-     "Tolerance basis not stated"
+     "Record predates piping/rework",
+     "Pipe-strain check not recorded",
+     "Solo-run/rotation not recorded"
     ],
-    "ask": "Alignment tolerances (vendor or spec), and is a final check after piping required?"
+    "ask": "Alignment tolerances (vendor/spec)? Final check after piping required? Solo-run record in MC or commissioning?"
    },
    {
-    "id": "preservation",
+    "id": "prior_punch",
     "group": "Records",
-    "text": "Preservation log up to date",
+    "text": "Prior punch items re-verified closed",
     "basis": "project",
     "codeRef": "",
     "defects": [
-     "Preservation log missing",
-     "Shaft rotation overdue",
-     "Desiccant/VCI expired",
-     "Openings not sealed",
-     "Space heater not energised"
+     "Closed on paper, still open",
+     "Closure not signed by constr.",
+     "No closure photo",
+     "New damage from rework"
     ],
-    "ask": "Preservation interval and method per vendor or project procedure?"
+    "ask": "Who signs construction closure before QC verification?"
    }
   ]
  },
@@ -1356,28 +1525,28 @@ export const TYPES = [
     "basis": "practice",
     "codeRef": "",
     "defects": [
-     "Bund wall cracked",
-     "Pipe penetration not sealed",
+     "Bund wall/lining cracked",
+     "Penetration not sealed",
+     "Bund drain valve left open",
      "Bund drain valve missing",
-     "Debris/water in bund",
-     "Bund lining damaged"
+     "Debris/water in bund"
     ],
-    "ask": "Bund lining type, and is the bund drain valve required locked closed?"
+    "ask": "What bund lining type is required, and must the bund drain valve be locked closed?"
    },
    {
-    "id": "anchor_bolts",
+    "id": "anchors_saddle",
     "group": "Bund & base",
-    "text": "Anchor bolts: nuts tight, full thread engagement",
-    "basis": "practice",
+    "text": "Anchor nuts fitted; sliding saddle free",
+    "basis": "project",
     "codeRef": "",
     "defects": [
-     "Anchor nut missing",
-     "Anchor nut loose",
+     "Anchor nut missing/loose",
      "Bolt short of nut",
      "Lock nut/tack missing",
-     "Anchor bolt corroded"
+     "Slide nut fully tightened",
+     "Slot blocked/saddle welded"
     ],
-    "ask": "What anchor nut locking (double nut, tack weld or none) and tightening are specified by design or vendor?"
+    "ask": "Is this item anchored per design, what nut locking applies, and which saddle slides with what nut setting (snug, gap, double nut)?"
    },
    {
     "id": "base_grout_seal",
@@ -1386,238 +1555,267 @@ export const TYPES = [
     "basis": "practice",
     "codeRef": "",
     "defects": [
-     "Grout cracked",
-     "Voids under base plate",
-     "Edge seal missing",
+     "Grout cracked/missing",
+     "Grout hollow on tap test",
+     "Bottom edge not sealed",
      "Water ponding at base",
      "Shims not grouted"
     ],
     "ask": "Is a tank bottom-edge sealant or a specific grout type specified?"
    },
    {
-    "id": "earthing",
+    "id": "earthing_cp",
     "group": "Earthing",
-    "text": "Earth cable connected at every earth boss",
+    "text": "Earth cable at every boss; CP point if fitted",
     "basis": "project",
     "codeRef": "",
     "defects": [
      "Earth cable missing",
-     "Earth lug loose",
-     "Lug painted over",
+     "Earth lug loose/painted over",
      "Connection corroded",
-     "No earth label"
+     "CP test box/cable damaged",
+     "Earth/CP point not labelled"
     ],
-    "ask": "How many earthing points are required per tank or vessel, and is a continuity or resistance test record required?"
+    "ask": "How many earth points per item, is a continuity or resistance record required, and is CP fitted on any tank bottom?"
    },
    {
-    "id": "coating",
+    "id": "coating_insulation",
     "group": "Shell & ID",
-    "text": "Paint/coating complete, no damage or rust",
+    "text": "Paint/insulation complete, no damage/rust",
     "basis": "project",
     "codeRef": "",
     "defects": [
-     "Coating damaged",
-     "Rust spots",
-     "Touch-up not done",
-     "Wrong colour/band",
-     "DFT record missing"
+     "Coating damaged/rust spots",
+     "Rust stain on stainless",
+     "CS-SS contact, no isolation",
+     "Insulation/cladding open/wet",
+     "Repad tell-tale plugged"
     ],
-    "ask": "What paint system and colour code apply, and is a DFT or holiday-test record required (internal linings especially)?"
+    "ask": "Which paint system and colour code apply, which items are insulated and for what purpose, and is a DFT or holiday-test record required?"
    },
    {
-    "id": "nameplate_tag",
+    "id": "nonmetallic_shell",
     "group": "Shell & ID",
-    "text": "Nameplate & tag fitted, legible, match datasheet",
+    "text": "GRP/HDPE tank: no cracks, UV or chem damage",
+    "basis": "practice",
+    "codeRef": "",
+    "defects": [
+     "Crack/craze at nozzle",
+     "UV chalking/discolour",
+     "Hold-down strap loose",
+     "Base not fully supported",
+     "Weeping at seam"
+    ],
+    "ask": "Which tanks are GRP, HDPE or lined steel, and to what design standard (verify clause/edition)?"
+   },
+   {
+    "id": "nameplate",
+    "group": "Shell & ID",
+    "text": "Nameplate fitted, legible, not painted over",
     "basis": "code",
-    "codeRef": "API 650 – verify clause/edition",
+    "codeRef": "API 650 para 10.1 Nameplates (API 650 tanks only). Vessels / other tanks: verify clause/edition (confirm project edition)",
     "defects": [
      "Nameplate missing",
-     "Nameplate painted over",
-     "Data differs from datasheet",
-     "Tag number missing",
-     "Temporary tag only"
+     "Nameplate painted/insulated over",
+     "Nameplate illegible",
+     "Code stamp missing (if req'd)",
+     "Nameplate loose/damaged"
     ],
-    "ask": ""
+    "ask": "For non-API 650 vessels and skids, which code governs the nameplate or stamping (ASME VIII, vendor, EN), and is a code stamp required?"
+   },
+   {
+    "id": "tag_labels",
+    "group": "Shell & ID",
+    "text": "Tag & labels fitted; nameplate = datasheet",
+    "basis": "project",
+    "codeRef": "",
+    "defects": [
+     "Tag number missing",
+     "Temporary tag only",
+     "Data differs from datasheet",
+     "Content/hazard label missing",
+     "Label faded/wrong content"
+    ],
+    "ask": "Which labelling and hazard-sign standard applies (client, local regulation or other)?"
    },
    {
     "id": "temp_attachments",
     "group": "Shell & ID",
-    "text": "Temp cleats removed, ground and recoated",
+    "text": "Temp cleats & shipping restraints removed",
     "basis": "practice",
     "codeRef": "",
     "defects": [
      "Temp cleat not removed",
-     "Weld scar not ground",
+     "Scar/arc strike not ground",
      "Area not recoated",
-     "Arc strike visible",
-     "Lifting lug left on"
+     "Shipping brace/bolt left on",
+     "Lug left on (to be removed)"
     ],
-    "ask": "Do lifting lugs stay or come off per design, and is NDE required where temporary attachments were removed?"
+    "ask": "Do lifting lugs and trunnions stay per design, is NDE required where temporary attachments were removed, and which restraints does the vendor mark for removal?"
    },
    {
-    "id": "nozzle_flange_bolting",
+    "id": "nozzle_bolting",
     "group": "Nozzles & manways",
-    "text": "Nozzle/manway flanges: gasket OK, bolts through nut",
+    "text": "Nozzle/manway bolts: engagement & condition",
     "basis": "code",
-    "codeRef": "ASME B31.3 – verify clause/edition",
+    "codeRef": "ASME B31.3 para 335.2.3 Bolt Length – acceptance wording changed between editions (B31.3 piping joints only). Tank / vessel nozzles: verify clause/edition (confirm project edition)",
     "defects": [
-     "Bolt not fully through nut",
+     "Bolt short of full nut engagement",
      "Bolts rusted",
-     "Wrong gasket type",
-     "Flange misaligned",
-     "Washer/nut missing"
+     "Washer/nut missing",
+     "Mixed bolt grade/size",
+     "Flange misaligned"
     ],
-    "ask": "Which gasket type applies per nozzle or piping class, and is the connecting piping B31.1 or B31.3?"
+    "ask": "Is the connecting piping B31.1 or B31.3, which edition applies, and is any thread short of full nut engagement acceptable under the project spec?"
    },
    {
-    "id": "torque_record",
+    "id": "flange_joint_spec",
     "group": "Nozzles & manways",
-    "text": "Torque record for nozzle/manway joints",
+    "text": "Gasket, torque, spray guard per spec",
     "basis": "project",
     "codeRef": "",
     "defects": [
-     "Torque not recorded",
+     "Wrong gasket type",
+     "Gasket off-centre/protruding",
      "Torque mark missing",
-     "Record incomplete",
-     "Joint not in record",
-     "Gasket reused after opening"
+     "Gasket reused after opening",
+     "Spray guard missing (chem)"
     ],
-    "ask": "Which joints need controlled tightening with a record, and do the torque values come from the spec or the vendor?"
+    "ask": "Which gasket applies per piping class, which joints need a torque record (spec or vendor values), and are spray guards required on chemical joints?"
    },
    {
-    "id": "blinds_spares",
+    "id": "nozzle_pipe_strain",
     "group": "Nozzles & manways",
-    "text": "Test blinds out; spare nozzles blinded",
+    "text": "No pipe strain on nozzles; first support fitted",
     "basis": "practice",
     "codeRef": "",
     "defects": [
-     "Test blind left in",
-     "Spare nozzle open",
-     "Plastic cap only",
-     "Temporary gasket fitted",
-     "Blind bolting incomplete"
+     "Pipe forced into nozzle",
+     "Flange gap/offset at nozzle",
+     "First support missing",
+     "Temp support at nozzle",
+     "Pipe weight on plastic nozzle"
     ],
-    "ask": "Which nozzles are spare, and how should each be closed (blind flange or plug) per design?"
+    "ask": "Are flexible connectors or bellows specified at any tank nozzle?"
    },
    {
-    "id": "overflow_drain",
+    "id": "blinds_preservation",
     "group": "Nozzles & manways",
-    "text": "Overflow & drain lines complete and routed",
+    "text": "Test blinds out; nozzles closed/preserved",
     "basis": "project",
     "codeRef": "",
     "defects": [
-     "Overflow not piped",
-     "Overflow screen missing",
-     "Drain valve not capped",
+     "Test blind left in",
+     "Spare nozzle open/cap only",
+     "Nozzle cover missing",
+     "N2 blanket pressure lost",
+     "Water left after hydrotest"
+    ],
+    "ask": "Which nozzles are spare and how are they closed (blind or plug), and what preservation (N2, desiccant, drained) is required until commissioning?"
+   },
+   {
+    "id": "drains_vents",
+    "group": "Nozzles & manways",
+    "text": "Drains, vents, overflow fitted; ends capped",
+    "basis": "project",
+    "codeRef": "",
+    "defects": [
+     "Drain/vent not installed",
+     "Drain/vent plug/cap missing",
+     "Overflow not piped/screened",
      "Seal loop/pot missing",
      "Drain line unsupported"
     ],
-    "ask": "Where should the overflow terminate (drain, bund or seal pot), and how is the drain valve end closed per design?"
+    "ask": "Where should the overflow terminate (drain, bund or seal pot), and how is each drain and vent end closed per design?"
    },
    {
     "id": "internals_boxup",
     "group": "Nozzles & manways",
-    "text": "Internals clean before box-up; record signed",
-    "basis": "practice",
+    "text": "If open: internals clean before box-up",
+    "basis": "project",
     "codeRef": "",
     "defects": [
-     "Debris inside",
-     "Box-up record missing",
+     "Foreign material inside",
      "Internal lining damaged",
      "Internals missing/loose",
-     "Closed without witness"
+     "Closed without witness (if HP)"
     ],
     "ask": "Is a QC or client witness hold point required before manway closure, and which internals are specified?"
    },
    {
-    "id": "level_instruments",
+    "id": "instruments",
     "group": "Instruments",
-    "text": "Level gauge/transmitter installed, hooked up",
+    "text": "Level/PG/TG fitted, valved, hooked up, tagged",
     "basis": "practice",
     "codeRef": "",
     "defects": [
-     "Instrument not installed",
+     "Instrument missing/untagged",
      "Gauge glass broken/dirty",
-     "Root valve missing",
-     "Cable gland not sealed",
-     "Instrument tag missing"
+     "Root/isolation valve missing",
+     "Bridle/gauge unsupported",
+     "Cable gland not sealed"
     ],
-    "ask": "Which level devices (gauge, transmitter, switch) are specified, and is a loop-check record needed before handover?"
+    "ask": "Which level, pressure and temperature devices are specified, and is a loop-check or gauge calibration record needed at handover?"
    },
    {
-    "id": "access_structure",
+    "id": "access",
     "group": "Access",
-    "text": "Ladder/stair/platform complete, bolts tight",
-    "basis": "practice",
+    "text": "Ladder/stair/platform & handrails complete",
+    "basis": "project",
     "codeRef": "API 650 – verify clause/edition",
     "defects": [
      "Bolts missing/loose",
-     "Ladder cage incomplete",
-     "Stair tread loose",
-     "Grating clip missing",
-     "Galvanising damaged"
-    ],
-    "ask": "Which access and fall-protection standard applies on site (client or local regulation)?"
-   },
-   {
-    "id": "handrails",
-    "group": "Access",
-    "text": "Handrails, toe boards, self-closing gates fitted",
-    "basis": "project",
-    "codeRef": "",
-    "defects": [
-     "Handrail gap",
+     "Handrail gap/loose",
      "Toe board missing",
-     "Self-closing gate missing",
-     "Handrail loose",
-     "Sharp edges/burrs"
+     "Ladder gate/chain missing",
+     "Cage/tread/grating loose"
     ],
-    "ask": "What handrail height, toe board and ladder gate type does the project safety standard require?"
+    "ask": "Which access and fall-protection standard governs on site (client or local regulation), and what handrail height, toe board and ladder gate type are required?"
    },
    {
     "id": "vents_arrestors",
     "group": "Roof & relief",
-    "text": "Vent/PVRV/flame arrestor fitted, covers removed",
+    "text": "Vent/PVRV/arrestor/breather fitted, covers off",
     "basis": "project",
     "codeRef": "API 2000 / ISO 16852 – verify clause/edition",
     "defects": [
      "Shipping cover left on",
-     "Bird screen missing",
-     "Flame arrestor missing",
-     "Wrong vent type vs datasheet",
+     "Device missing/not per datasheet",
+     "Screen missing/blocked",
+     "Desiccant breather spent",
      "Gauge hatch not closed"
     ],
-    "ask": "Which tanks need a PVRV or flame arrestor rather than an open vent, and is a device certificate required?"
+    "ask": "Which tanks need a PVRV, flame arrestor, desiccant breather, CO2 absorber or N2 blanket instead of an open vent, and are device certificates required?"
    },
    {
     "id": "relief_valve",
     "group": "Roof & relief",
-    "text": "PSV fitted, tagged; set-test cert available",
+    "text": "PSV fitted; tag set pressure = datasheet",
     "basis": "code",
     "codeRef": "ASME Sec VIII – verify clause/edition",
     "defects": [
-     "PSV not installed",
-     "Set-test cert missing",
-     "Seal/tag missing",
-     "Isolation valve not locked open",
+     "PSV missing/not vertical",
+     "Shipping plug/gag left in",
+     "Set pressure not per datasheet",
+     "Isolation valve not open/sealed",
      "Discharge not routed safe"
     ],
-    "ask": "Does the PSV tag set pressure match the datasheet, and must inlet/outlet isolation valves be car-sealed or locked open?"
+    "ask": "Is a PSV set-test cert required at handover, how recent must it be, and must the isolation valves be car-sealed open?"
    },
    {
     "id": "test_records",
     "group": "Records",
-    "text": "Hydrotest & NDE records available",
-    "basis": "code",
+    "text": "Test & cert records in handover dossier",
+    "basis": "project",
     "codeRef": "API 650 / ASME Sec VIII / ASME Sec V – verify clause/edition",
     "defects": [
-     "Hydrotest record missing",
-     "Settlement record missing",
-     "NDE report missing",
-     "Mfr data report missing",
-     "Record not signed off"
+     "No hydrotest/settlement record",
+     "No NDE report or MDR",
+     "No PSV set-test cert",
+     "No coating/DFT record",
+     "No box-up/torque record"
     ],
-    "ask": "Which records make up the tank/vessel handover dossier (hydrotest, settlement, NDE, MDR, coating)?"
+    "ask": "What does the tank or vessel handover dossier contain (hydrotest, settlement, NDE, MDR, PSV cert, coating/DFT, box-up, torque)?"
    }
   ]
  },
@@ -1630,104 +1828,130 @@ export const TYPES = [
     "group": "Tap & root valve",
     "text": "Root valve fitted, type/rating per hookup",
     "basis": "project",
-    "codeRef": "ASME B31.3 / ASME B31.1 – verify clause/edition",
+    "codeRef": "ASME B31.1 / ASME B31.3 – verify clause/edition",
     "defects": [
      "Root valve missing",
-     "Wrong valve type/rating",
-     "Handle/handwheel missing",
-     "Root valve not accessible",
-     "Root valve not tagged"
+     "Wrong type/rating",
+     "Globe valve against flow",
+     "Gland/bonnet leak",
+     "Handle missing/no access"
     ],
     "ask": "Which code (B31.1 or B31.3) governs this line, and what root valve type/rating does the hookup specify?"
    },
    {
-    "id": "tie_in_bolting",
+    "id": "sbc_bracing",
     "group": "Tap & root valve",
-    "text": "Flanged tie-in: bolts fully through nut",
+    "text": "Small-bore tap braced, no heavy overhang",
+    "basis": "practice",
+    "codeRef": "",
+    "defects": [
+     "Valve/manifold unbraced",
+     "Tap on vibrating line unbraced",
+     "Crack/leak at tap weld",
+     "Brace welded to pipe"
+    ],
+    "ask": "Which taps must be braced on this project, and what bracing method is approved?"
+   },
+   {
+    "id": "tie_in_bolts",
+    "group": "Tap & root valve",
+    "text": "Tie-in flange: bolts fully through nut",
     "basis": "code",
-    "codeRef": "ASME B31.3 / ASME B31.1 – verify clause/edition",
+    "codeRef": "ASME B31.3 para 335.2.3 Bolt Length – acceptance wording changed between editions. B31.1: verify clause/edition (confirm project edition)",
     "defects": [
      "Bolt not fully through nut",
-     "Bolts rusted",
-     "Torque not recorded",
-     "Gasket not as spec",
      "Bolt missing"
     ],
-    "ask": "Gasket type and torque record required for instrument tie-in flanges?"
+    "ask": "For the project code edition, is one thread short of full nut engagement acceptable?"
+   },
+   {
+    "id": "tie_in_joint",
+    "group": "Tap & root valve",
+    "text": "Tie-in: alignment, gasket, torque, threads",
+    "basis": "project",
+    "codeRef": "",
+    "defects": [
+     "Flange misaligned/gap uneven",
+     "Gasket not as spec",
+     "Torque not recorded",
+     "Bolts rusted",
+     "Seal weld missing (if spec)"
+    ],
+    "ask": "What are the tie-in gasket type, torque record and alignment criteria, and are threaded connections seal-welded (on which services)?"
    },
    {
     "id": "impulse_slope",
     "group": "Impulse line & tubing",
-    "text": "Impulse line slope/routing per hookup",
-    "basis": "project",
+    "text": "Impulse line slope & tap orientation per service",
+    "basis": "practice",
     "codeRef": "",
     "defects": [
      "Slope wrong for service",
-     "Low point/pocket in gas line",
-     "High point in liquid line",
-     "Line sagging",
-     "Routing differs from hookup"
+     "Pocket/high point in line",
+     "Tap on top of liquid line",
+     "Tap at bottom of gas line",
+     "Condensate pots not level"
     ],
-    "ask": "Required slope direction and value for this service (liquid, gas, steam)?"
+    "ask": "Required slope value for this service (liquid, gas, steam)?"
    },
    {
     "id": "tube_material",
     "group": "Impulse line & tubing",
-    "text": "Tube & fittings material/size per spec",
+    "text": "Tube & fitting material/make per spec",
     "basis": "project",
     "codeRef": "",
     "defects": [
-     "Wrong tube material",
-     "Wrong tube OD/wall",
+     "Wrong tube OD (vs fitting)",
+     "Tube marking not per spec",
      "Mixed fitting makes",
      "CS fitting on SS tube"
     ],
-    "ask": "Spec tube material, OD/wall and approved fitting make?"
+    "ask": "What tube material, OD/wall and fitting make does the spec require, and is mixing makes prohibited?"
    },
    {
     "id": "fittings_made_up",
     "group": "Impulse line & tubing",
-    "text": "Compression fittings made up, gap-checked",
+    "text": "Compression fittings made up, no leak",
     "basis": "practice",
     "codeRef": "",
     "defects": [
-     "Fitting not gap-checked",
-     "Fitting loose",
-     "Tape/sealant on compression thread",
+     "Gap gauge enters (undertight)",
+     "Remade fitting, gauge N/A",
+     "Sealant on compression fitting",
      "Leak/stain at fitting",
      "Tube scored/kinked at fitting"
     ],
-    "ask": "Is a gap-gauge check required, and is it recorded?"
+    "ask": "Which fitting maker's make-up/remake instructions apply, and is a gap-gauge record required?"
    },
    {
     "id": "tubing_supports",
     "group": "Impulse line & tubing",
-    "text": "Tubing clipped, supported, no strain",
+    "text": "Tubing/capillary supported, no strain or kink",
     "basis": "practice",
     "codeRef": "",
     "defects": [
-     "Unsupported span",
-     "Clip/cleat missing",
-     "Tube load on instrument",
-     "SS tube on CS, no isolator",
-     "Tubing kinked/flattened"
+     "Unsupported span/clip missing",
+     "Tube/capillary kinked",
+     "Load on instrument/fitting",
+     "SS on CS, no isolator",
+     "Walkway/trip hazard"
     ],
-    "ask": "Max tubing support spacing and isolator requirement per spec?"
+    "ask": "What are the max tubing support spacing, the isolator rule for SS on CS, and the capillary coil/support method?"
    },
    {
     "id": "vents_drains",
     "group": "Impulse line & tubing",
-    "text": "Vent/drain/test points fitted & plugged",
-    "basis": "project",
+    "text": "Vents/drains/test points fitted, ends plugged",
+    "basis": "practice",
     "codeRef": "",
     "defects": [
      "Vent/drain plug missing",
-     "Drain valve left open",
-     "Test tee cap missing",
      "Open end not plugged",
-     "Drain not routed safely"
+     "Test tee cap missing",
+     "Drain not routed safely",
+     "Valve pos. vs line-up (obs.)"
     ],
-    "ask": "Which vents/drains/test points does the hookup show, and drain routing for hazardous/hot service?"
+    "ask": "Which vents/drains/test points does the hookup show, and how should drains be routed on hazardous or hot service?"
    },
    {
     "id": "manifold",
@@ -1737,27 +1961,42 @@ export const TYPES = [
     "codeRef": "",
     "defects": [
      "HP/LP legs reversed",
-     "Equalizing valve open",
-     "Manifold loose on bracket",
-     "Valve handle missing",
-     "Manifold type not as hookup"
+     "HP/LP not marked at tap/TX",
+     "Manifold type not as hookup",
+     "Manifold loose/handle missing",
+     "Valve pos. vs line-up (obs.)"
     ],
-    "ask": "Manifold type (2/3/5-valve) per hookup?"
+    "ask": "Which manifold type (2/3/5-valve) does the hookup specify?"
+   },
+   {
+    "id": "inline_element",
+    "group": "Manifold & instrument",
+    "text": "Flow element/thermowell fitted, right way",
+    "basis": "practice",
+    "codeRef": "",
+    "defects": [
+     "FE reversed (arrow/tab)",
+     "Spacer in, plate not fitted",
+     "Thermowell missing, plug only",
+     "TE not inserted/head open",
+     "Earth ring missing (if req.)"
+    ],
+    "ask": "Are orifice plates, meters and TEs fitted now or after flushing, and what straight-run and earthing-ring requirements does the spec set?"
    },
    {
     "id": "instrument_mounting",
     "group": "Manifold & instrument",
-    "text": "Instrument rigid, accessible, readable",
+    "text": "Instrument/gauge rigid, intact, readable",
     "basis": "practice",
     "codeRef": "",
     "defects": [
-     "Instrument loose",
-     "Stand not anchored",
-     "Display not readable",
-     "No maintenance access",
-     "Sunshade missing"
+     "Instrument/stand loose",
+     "Glass/cover cracked",
+     "Paint overspray on instrument",
+     "Bracket welded to pipe",
+     "No siphon on steam (if spec)"
     ],
-    "ask": "Is a sunshade/protective cover required for field instruments?"
+    "ask": "Which services need a siphon/snubber, are sunshades required, and are welded attachments allowed after the pressure test (is a retest needed)?"
    },
    {
     "id": "instrument_tag",
@@ -1769,70 +2008,40 @@ export const TYPES = [
      "Tag plate missing",
      "Tag differs from nameplate",
      "Temporary tag only",
-     "Tag illegible/faded",
-     "Range/material differs from datasheet"
+     "Tag illegible/painted",
+     "Range/material vs datasheet"
     ],
-    "ask": "Tag plate material/fixing method, and which datasheet fields to check (range, material, rating)?"
+    "ask": "What tag plate material and fixing does the project require, and which datasheet fields should be checked (range, material, rating)?"
    },
    {
-    "id": "cable_gland",
-    "group": "Cable & gland",
-    "text": "Gland type/size correct, tight, sealed",
+    "id": "gland_jb",
+    "group": "Cable, gland & JB",
+    "text": "Glands tight & sealed; JB closed, labelled",
     "basis": "project",
     "codeRef": "",
     "defects": [
-     "Gland loose",
-     "Wrong gland size",
-     "Shroud/seal missing",
-     "Shipping plug in spare entry",
-     "Spare entry not plugged"
+     "Gland loose/wrong size",
+     "Armour not clamped",
+     "Spare entry: transit plug/open",
+     "JB cover/gasket not sealed",
+     "JB label missing"
     ],
-    "ask": "Gland type per area (Ex/IP rating, armoured, shroud) and approved stopping plugs?"
+    "ask": "What gland type and IP/Ex rating apply per area, which stopping plugs are approved, and may QC open JBs (permit)?"
    },
    {
-    "id": "cable_routing",
-    "group": "Cable & gland",
-    "text": "Cable supported, bend radius OK, tagged",
+    "id": "cable_tray",
+    "group": "Cable, gland & JB",
+    "text": "Cable supported in tray/conduit, protected",
     "basis": "practice",
     "codeRef": "",
     "defects": [
-     "Cable unsupported/hanging",
-     "Bend too tight",
-     "Sheath damaged",
-     "Cable tag missing",
-     "No drip loop at entry"
+     "Cable unsupported/outside tray",
+     "Tray cover/support missing",
+     "Sheath damaged/tight bend",
+     "Drop to instrument unprotected",
+     "Cable tag missing"
     ],
-    "ask": "Minimum bend radius basis (manufacturer or spec) and cable tag format?"
-   },
-   {
-    "id": "tray_conduit",
-    "group": "Tray, conduit & JB",
-    "text": "Tray/conduit complete, covers & bushes",
-    "basis": "project",
-    "codeRef": "",
-    "defects": [
-     "Tray cover missing",
-     "Tray support missing",
-     "Sharp edge, no bush/grommet",
-     "Conduit end not sealed",
-     "Cable outside tray"
-    ],
-    "ask": "Which runs need covers, and what IS/non-IS segregation rule applies?"
-   },
-   {
-    "id": "jb_condition",
-    "group": "Tray, conduit & JB",
-    "text": "JB closed, gasket OK, labelled",
-    "basis": "practice",
-    "codeRef": "",
-    "defects": [
-     "Cover screws missing",
-     "Gasket damaged",
-     "Water/debris inside JB",
-     "JB label missing",
-     "Spare entry open"
-    ],
-    "ask": "Is an internal JB check (terminations, ferrules) in QC walkdown scope?"
+    "ask": "What is the bend radius basis (maker or spec), which runs need covers, what IS/non-IS segregation rule applies, and what cable tag format is used?"
    },
    {
     "id": "earthing_bonding",
@@ -1845,9 +2054,9 @@ export const TYPES = [
      "Lug loose/corroded",
      "Tray bonding jumper missing",
      "Earth lug on paint",
-     "Earth not labelled"
+     "Gland earth tag missing"
     ],
-    "ask": "Instrument earthing scheme (PE vs IS/clean earth) and which end is the screen earthed?"
+    "ask": "What instrument earthing scheme applies (PE vs IS/clean earth), at which end is the screen earthed, and what is the tray bonding rule?"
    },
    {
     "id": "ex_marking_obs",
@@ -1859,9 +2068,9 @@ export const TYPES = [
      "Ex label not visible",
      "Ex label painted over",
      "Gland Ex marking not seen",
-     "Refer to Ex inspector"
+     "Ex d cover bolt missing"
     ],
-    "ask": "Is this area classified, and who verifies Ex compliance?"
+    "ask": "Is this area classified, under which scheme (zone or class/division), and who verifies Ex compliance?"
    },
    {
     "id": "temp_items_removed",
@@ -1871,27 +2080,40 @@ export const TYPES = [
     "codeRef": "",
     "defects": [
      "Shipping plug left in",
-     "Protective tape left on",
      "Temp blind/dummy left in",
-     "Instrument not reinstated",
-     "Debris/offcuts left"
+     "Hydrotest gauge left in",
+     "Instrument not refitted",
+     "Protective tape/debris left"
     ],
-    "ask": ""
+    "ask": "Is there a register of instruments removed for flushing/hydro?"
    },
    {
     "id": "leak_test_record",
     "group": "Clearance & records",
-    "text": "Hookup leak test done & recorded",
+    "text": "Hookup leak test record seen",
     "basis": "project",
-    "codeRef": "ASME B31.3 / ASME B31.1 – verify clause/edition",
+    "codeRef": "ASME B31.1 / ASME B31.3 – verify clause/edition",
     "defects": [
-     "Leak test not recorded",
+     "Record not seen",
      "Record incomplete",
-     "Instrument not isolated in test",
      "Leak/stain seen",
-     "Test not witnessed by QC"
+     "QC witness missing (if req.)"
     ],
-    "ask": "Are hookups leak-tested with the line or separately, and with what medium/pressure?"
+    "ask": "Are hookups tested with the line or separately, with what medium/pressure, and were instruments isolated or removed during the test?"
+   },
+   {
+    "id": "punch_reverify",
+    "group": "Clearance & records",
+    "text": "Earlier punch on this hookup closed",
+    "basis": "project",
+    "codeRef": "",
+    "defects": [
+     "Reported closed, not done",
+     "Fix caused new defect",
+     "Wrong item fixed",
+     "No closure photo/record"
+    ],
+    "ask": "Who signs closure (Construction or QC), and is a closure photo required?"
    }
   ]
  },
@@ -1906,10 +2128,11 @@ export const TYPES = [
     "basis": "practice",
     "codeRef": "",
     "defects": [
-     "Escape route blocked",
-     "Material stored on walkway",
+     "Escape route/exit blocked",
+     "Material/trip hazard on walkway",
      "Temporary barricade left",
-     "Trip hazard on walkway"
+     "Open excavation not barricaded",
+     "Low headroom not marked"
     ],
     "ask": ""
    },
@@ -1920,28 +2143,42 @@ export const TYPES = [
     "basis": "practice",
     "codeRef": "",
     "defects": [
-     "Handrail missing",
-     "Toe board missing",
-     "Grating not clamped",
+     "Handrail/toe board missing",
+     "Grating/stair tread loose",
      "Floor opening unprotected",
-     "Stair tread loose"
+     "Self-closing gate missing",
+     "Rope/tape used as handrail"
     ],
     "ask": ""
    },
    {
     "id": "lighting",
     "group": "Access & Lighting",
-    "text": "Permanent lighting installed and working",
+    "text": "Light fittings installed; lit if energised",
     "basis": "project",
     "codeRef": "",
     "defects": [
-     "Light fitting not working",
      "Fitting missing",
-     "Temporary lighting still in use",
-     "Emergency light not working",
-     "Fitting cover/lens missing"
+     "Cover/lens missing",
+     "Not lit (area energised)",
+     "Temp lighting left after perm. live",
+     "Emergency light charge LED off"
     ],
-    "ask": "Is permanent lighting energised yet, and is a lux survey or emergency-light test record needed before handover?"
+    "ask": "Is permanent lighting energised in this area?"
+   },
+   {
+    "id": "area_earthing",
+    "group": "Earthing",
+    "text": "Steel/rack earthing connected, pits covered",
+    "basis": "project",
+    "codeRef": "",
+    "defects": [
+     "Earth cable not connected",
+     "Earth lug loose/corroded",
+     "Earth cable damaged",
+     "Earth pit cover missing"
+    ],
+    "ask": "Which general-area items (lighting, earthing, signage, fire water, showers, lifting gear) are in mechanical QC scope?"
    },
    {
     "id": "housekeeping",
@@ -1950,28 +2187,28 @@ export const TYPES = [
     "basis": "practice",
     "codeRef": "",
     "defects": [
-     "Debris on floor",
-     "Scrap material left",
+     "Debris/scrap/packing left",
+     "Weld rods/discs left",
      "Oil/chemical spill",
-     "Packing waste left",
-     "Weld rods/discs left"
+     "Sand/dust build-up",
+     "Grinding dust on equipment"
     ],
     "ask": ""
    },
    {
     "id": "temp_materials",
     "group": "Housekeeping & Temporary Items",
-    "text": "Temporary supports, hoses, cables removed",
+    "text": "Temp hoses, cables, cylinders, rigging removed",
     "basis": "practice",
     "codeRef": "",
     "defects": [
-     "Temporary support left",
-     "Temp hose left connected",
-     "Welding cable not removed",
-     "Wood packing left in place",
-     "Rigging left on structure"
+     "Gas cylinder left in area",
+     "Temp hose/rigging left",
+     "Temp power board/cable left",
+     "Welding machine/cable left",
+     "Non-Ex temp equipment in gas area"
     ],
-    "ask": ""
+    "ask": "Is this area hazardous-area classified?"
    },
    {
     "id": "scaffolds",
@@ -1980,70 +2217,73 @@ export const TYPES = [
     "basis": "project",
     "codeRef": "",
     "defects": [
-     "Scaffold not removed",
-     "Scaffold tag expired",
+     "Scaffold/loose tubes left",
+     "Scaffold tag missing",
      "Scaffold blocking access",
-     "Loose tubes/clamps left"
+     "Scaffold bearing on pipe/insulation",
+     "Scaffold tied to pipe/tray/rail"
     ],
-    "ask": "Which scaffolds may stay for commissioning, and is there an agreed retention list?"
+    "ask": "Which scaffolds may stay for commissioning?"
    },
    {
     "id": "test_blinds_removed",
     "group": "Housekeeping & Temporary Items",
-    "text": "Test blinds/spades removed, gaskets fitted",
-    "basis": "practice",
+    "text": "Test blinds out; spades/spectacles positioned",
+    "basis": "project",
     "codeRef": "",
     "defects": [
      "Test blind left in line",
+     "Blind handle visible at joint",
+     "Spectacle/spade in wrong position",
      "Temporary gasket not replaced",
-     "Blind removal not signed off",
-     "Blind not in register"
+     "Removal not signed off (if req.)"
     ],
-    "ask": "Is a test-blind register kept for this system, and does QC sign off each removal?"
+    "ask": "Where are required spade/spectacle positions listed?"
    },
    {
     "id": "preservation",
     "group": "Housekeeping & Temporary Items",
-    "text": "Open ends capped, equipment preserved",
+    "text": "Open ends capped, covers fitted",
     "basis": "project",
     "codeRef": "",
     "defects": [
      "Open end not capped",
-     "Preservation tag missing",
      "Protective cover missing",
-     "Preservation not recorded"
+     "Cover removed, not refitted",
+     "Sand ingress at opening",
+     "Nearby hot work, item unprotected"
     ],
-    "ask": "What preservation is required after handover, and who owns it (construction or commissioning)?"
+    "ask": "Who owns preservation after handover?"
    },
    {
     "id": "drainage_bunds",
     "group": "Drainage",
     "text": "Drains, trenches, bunds clear; covers fitted",
-    "basis": "practice",
+    "basis": "project",
     "codeRef": "",
     "defects": [
-     "Drain blocked",
-     "Trench cover missing",
-     "Standing water",
-     "Bund wall damaged/not sealed",
-     "Bund drain valve open"
+     "Drain/trench blocked (sand/silt)",
+     "Trench cover missing/not flush",
+     "Bund wall/lining damaged",
+     "Bund drain valve wrong position",
+     "Standing water"
     ],
-    "ask": "What is the normal position of the bund drain valve under the operating philosophy?"
+    "ask": "What is the normal position of bund drain valves?"
    },
    {
     "id": "safety_shower",
     "group": "Safety Equipment",
-    "text": "Safety shower/eyewash: access clear, water on",
+    "text": "Safety shower/eyewash: clear, supply open",
     "basis": "project",
     "codeRef": "verify clause/edition",
     "defects": [
      "Access obstructed",
-     "No water supply",
-     "Sign missing",
-     "Flow test not recorded",
-     "Dust cap missing"
+     "Supply valve not locked open",
+     "Dust cap/sign missing",
+     "Flow test record missing (if req.)",
+     "Supply line in sun (if spec'd)"
     ],
-    "ask": "Which standard governs showers/eyewash here, and is a flow test record required before handover?"
+    "ask": "Which standard governs safety showers/eyewash?"
    },
    {
     "id": "fire_water_obs",
@@ -2052,41 +2292,42 @@ export const TYPES = [
     "basis": "project",
     "codeRef": "",
     "defects": [
-     "Hydrant access blocked",
-     "Hydrant cap missing",
+     "Hydrant/monitor access blocked",
+     "Hydrant cap/handwheel missing",
      "Monitor damaged",
-     "Handwheel missing",
-     "Tag/marking missing"
+     "Hose box empty/damaged",
+     "Valve position not as required"
     ],
-    "ask": "Is fire water in QC walkdown scope or inspected separately, and which fire code governs?"
+    "ask": "Which fire code governs fire water here?"
    },
    {
-    "id": "equipment_tags",
-    "group": "Labelling & Signage",
-    "text": "Equipment and valve tags fitted, legible",
+    "id": "lifting_appliances",
+    "group": "Safety Equipment",
+    "text": "Monorail/hoist/davit: SWL marked, cert seen",
     "basis": "project",
     "codeRef": "",
     "defects": [
-     "Tag missing",
-     "Tag illegible",
+     "SWL marking missing",
+     "Load-test cert not available",
+     "Trolley end stop missing",
+     "Hoist not parked/secured"
+    ],
+    "ask": "Which lifting appliances need a load-test cert before handover?"
+   },
+   {
+    "id": "tags_line_marking",
+    "group": "Labelling & Signage",
+    "text": "Tags fitted; line ID and flow arrows marked",
+    "basis": "project",
+    "codeRef": "",
+    "defects": [
+     "Tag missing or illegible",
+     "Temporary/marker tag only",
      "Tag does not match equipment",
-     "Tag loose/not fixed"
+     "Flow arrow missing/wrong way",
+     "Line marking faded/peeling"
     ],
-    "ask": "Which tagging spec applies (tag material, fixing method, location)?"
-   },
-   {
-    "id": "line_marking",
-    "group": "Labelling & Signage",
-    "text": "Line ID and flow arrows marked",
-    "basis": "project",
-    "codeRef": "",
-    "defects": [
-     "Flow arrow missing",
-     "Flow arrow wrong direction",
-     "Line ID missing",
-     "Colour band missing"
-    ],
-    "ask": "Which pipe marking and colour-code standard does the project use?"
+    "ask": "Which equipment tagging spec applies?"
    },
    {
     "id": "safety_signage",
@@ -2100,7 +2341,7 @@ export const TYPES = [
      "Escape route sign missing",
      "PPE sign missing"
     ],
-    "ask": "Which signage spec applies, including required languages?"
+    "ask": "Which safety signage spec and languages apply?"
    },
    {
     "id": "insulation_damage",
@@ -2109,13 +2350,26 @@ export const TYPES = [
     "basis": "project",
     "codeRef": "",
     "defects": [
-     "Cladding dented",
-     "Insulation missing",
-     "Cladding joint open",
-     "End cap missing",
-     "Insulation wet"
+     "Cladding dented/joint open",
+     "Insulation/end cap missing",
+     "Sealant missing at penetration",
+     "Cladding lap lets water in",
+     "Water stain/drip from cladding"
     ],
-    "ask": "Must insulation be complete before handover, or may it be punched? What are the acceptance criteria?"
+    "ask": "May insulation be punched at handover?"
+   },
+   {
+    "id": "personnel_protection",
+    "group": "Finish & Protection",
+    "text": "Hot-surface personnel protection fitted",
+    "basis": "project",
+    "codeRef": "",
+    "defects": [
+     "PP guard missing",
+     "PP guard loose/damaged",
+     "PP insulation missing"
+    ],
+    "ask": "Which hot lines/surfaces need personnel protection?"
    },
    {
     "id": "paint_touchup",
@@ -2124,41 +2378,42 @@ export const TYPES = [
     "basis": "project",
     "codeRef": "",
     "defects": [
-     "Paint damaged",
-     "Rust spots",
-     "Touch-up not done",
+     "Paint damaged/rust spots",
      "Field weld not painted",
-     "Overspray on equipment"
+     "Paint on nameplate/stem/gauge",
+     "Galvanising damage not repaired",
+     "Rust stain on stainless steel"
     ],
-    "ask": "Which touch-up system and DFT acceptance does the project paint spec require?"
+    "ask": "Which paint touch-up system applies?"
    },
    {
-    "id": "punch_closure",
-    "group": "Handover Records",
-    "text": "Previous punch items closed and verified",
-    "basis": "practice",
-    "codeRef": "",
-    "defects": [
-     "Punch item still open",
-     "Marked closed, not fixed",
-     "No closure evidence photo",
-     "Punch category disputed"
-    ],
-    "ask": "Which role signs punch closure (QC, client, or both)?"
-   },
-   {
-    "id": "handover_records",
-    "group": "Handover Records",
-    "text": "Handover records available for area/system",
+    "id": "no_open_cat_a",
+    "group": "Handover",
+    "text": "No open Cat A punch in area/system",
     "basis": "project",
     "codeRef": "",
     "defects": [
-     "Record not available",
-     "Record unsigned",
-     "Record incomplete",
-     "Record not matching site"
+     "Open Cat A item in area",
+     "Cat A marked closed, not fixed",
+     "Closed item has no photo (if req.)",
+     "Fix caused new damage"
     ],
-    "ask": "Which record types are mandatory in the handover dossier for this system?"
+    "ask": "Does B+ also block handover?"
+   },
+   {
+    "id": "system_boundary",
+    "group": "Handover",
+    "text": "System limits tagged; handover records available",
+    "basis": "project",
+    "codeRef": "",
+    "defects": [
+     "Boundary valve/blind not tagged",
+     "Boundary blind missing",
+     "Limits differ from handover mark-up",
+     "Handover record not available",
+     "Record unsigned/incomplete"
+    ],
+    "ask": "How are system handover limits marked on site?"
    }
   ]
  },
@@ -2168,185 +2423,416 @@ export const TYPES = [
   "checks": []
  }
 ];
+// Punch closure verification. core = always answered; required = must be Yes (no N/A).
 export const CLOSURE_CHECKS = [
  {
-  "id": "loto",
-  "text": "Isolation / LOTO status known before touching"
+  "id": "safe_access",
+  "text": "Safe to inspect? LOTO/permit status known",
+  "basis": "practice",
+  "codeRef": "",
+  "core": true,
+  "required": false
  },
  {
-  "id": "located",
-  "text": "Item located; tag and location match the punch"
+  "id": "item_located",
+  "text": "Item located; tag/location matches punch log",
+  "basis": "practice",
+  "codeRef": "",
+  "core": true,
+  "required": true
  },
  {
-  "id": "as_written",
-  "text": "Fix addresses the punch as written"
+  "id": "defect_cleared",
+  "text": "Punched defect fully fixed, as written",
+  "basis": "practice",
+  "codeRef": "",
+  "core": true,
+  "required": true
  },
  {
-  "id": "rectified",
-  "text": "Original defect fully rectified"
+  "id": "permanent_fix",
+  "text": "Permanent fix, not temporary workaround",
+  "basis": "practice",
+  "codeRef": "",
+  "core": true,
+  "required": false
  },
  {
-  "id": "permanent",
-  "text": "Permanent fix, not a temporary workaround"
+  "id": "no_new_damage",
+  "text": "No new damage caused by the fix",
+  "basis": "practice",
+  "codeRef": "",
+  "core": true,
+  "required": true
  },
  {
-  "id": "no_damage",
-  "text": "No new damage caused by the fix"
+  "id": "reinstated",
+  "text": "Removed items refitted (guards, insul., tags)",
+  "basis": "practice",
+  "codeRef": "",
+  "core": true,
+  "required": false
  },
  {
-  "id": "refitted",
-  "text": "Removed items refitted (guards, insulation, tags)"
+  "id": "area_cleared",
+  "text": "Temp materials, blinds, plugs removed",
+  "basis": "practice",
+  "codeRef": "",
+  "core": true,
+  "required": false
  },
  {
-  "id": "cleared",
-  "text": "Temporary materials and debris cleared"
+  "id": "fix_visible",
+  "text": "Fix visible, not hidden by insul./paint",
+  "basis": "project",
+  "codeRef": "",
+  "core": true,
+  "required": false
  },
  {
-  "id": "records",
-  "text": "Supporting record attached where needed (torque, alignment, NDE, re-test)"
+  "id": "closure_signed",
+  "text": "Construction closure sign-off present",
+  "basis": "project",
+  "codeRef": "",
+  "core": false,
+  "required": false
+ },
+ {
+  "id": "joint_remade",
+  "text": "Re-made joint: new gasket, bolts through nut",
+  "basis": "code",
+  "codeRef": "ASME B31.3 para 335.2.4 Gaskets; ASME B31.3 para 335.2.3 Bolt Length – acceptance wording changed between editions. B31.1: verify clause/edition (confirm project edition)",
+  "core": false,
+  "required": false
+ },
+ {
+  "id": "correct_parts",
+  "text": "Replacement parts match spec/rating",
+  "basis": "project",
+  "codeRef": "",
+  "core": false,
+  "required": false
+ },
+ {
+  "id": "line_clean",
+  "text": "Opened line kept clean / re-flushed",
+  "basis": "project",
+  "codeRef": "",
+  "core": false,
+  "required": false
+ },
+ {
+  "id": "record_attached",
+  "text": "Supporting record attached (torque, align, etc.)",
+  "basis": "project",
+  "codeRef": "",
+  "core": false,
+  "required": false
+ },
+ {
+  "id": "retest_done",
+  "text": "Re-test done where the fix requires it",
+  "basis": "project",
+  "codeRef": "ASME B31.1 / ASME B31.3 – verify clause/edition",
+  "core": false,
+  "required": false
+ },
+ {
+  "id": "weld_repair_nde",
+  "text": "Weld repair: NDE repeated, report attached",
+  "basis": "code",
+  "codeRef": "ASME B31.3 para 341.3.3 Defective Components and Workmanship (wording split into repair / replace cases since 2014). B31.1: verify clause/edition (confirm project edition)",
+  "core": false,
+  "required": false
+ },
+ {
+  "id": "weld_repair_qual",
+  "text": "Weld repair: welder ID and WPS on record",
+  "basis": "code",
+  "codeRef": "ASME Sec IX / ASME B31.1 / ASME B31.3 – verify clause/edition",
+  "core": false,
+  "required": false
+ },
+ {
+  "id": "asbuilt_marked",
+  "text": "As-built markup updated if config changed",
+  "basis": "project",
+  "codeRef": "",
+  "core": false,
+  "required": false
+ },
+ {
+  "id": "photo_after",
+  "text": "QC after-photo: same view, tag visible",
+  "basis": "practice",
+  "codeRef": "",
+  "core": false,
+  "required": false
+ },
+ {
+  "id": "open_defects_punched",
+  "text": "Open/new defects punched, category set",
+  "basis": "project",
+  "codeRef": "",
+  "core": false,
+  "required": false
+ },
+ {
+  "id": "closure_recorded",
+  "text": "Result recorded; required parties signed",
+  "basis": "project",
+  "codeRef": "",
+  "core": false,
+  "required": false
  }
 ];
 export const SITE_QUESTIONS = {
  "piping_line": [
   "Which code governs each line (B31.1 or B31.3), and which edition is in the contract?",
-  "What NDE extent and PWHT apply to each line class or fluid service?",
-  "Which test limit covers the line, is it released, and where can QC see the signed record?",
+  "Where is the current punch/NCR list for each line, and who signs closure?",
+  "How is the B+ punch tier defined, and who assigns punch categories (A/B/B+/C/D)?",
+  "Which test type and limit cover the line (hydro/pneumatic/initial service), is it released, and where can QC see the signed record?",
+  "What NDE extent, PWHT and PMI apply to each line class or material?",
   "Are field routing changes red-lined and approved before handover?",
-  "Which lines must slope, and at what minimum slope?",
-  "What minimum clearances to steel, other lines and cables does the project spec require?",
+  "Does a separate valve/flange checklist cover valve type and flow direction, or should this line walkdown cover them?",
+  "What minimum clearances to steel, other lines and cables, and what walkway headroom, does the project spec require?",
+  "Which penetrations need fire-stop or watertight seals, and to which detail?",
+  "What are the acceptance limits for dents, gouges and arc strikes, and what examination is required after temporary lug removal?",
+  "Which lines are non-metallic or lined, and what support and UV-protection rules apply?",
   "Which supports are anchors, guides or sliding, and what guide gaps and shoe overhang are specified?",
+  "Is an isolation pad required between stainless pipe and carbon-steel supports?",
+  "Were temporary supports added for hydrotest, and are they listed?",
   "When are spring hanger travel stops removed (after test or before hot commissioning), and who removes them?",
-  "Does the project require bracing on small-bore branches, and to which detail?",
-  "What end closure is required on drains and vents (plug, cap or blind)?",
-  "Is there a register of blinds and temporary items to close against, and who signs reinstatement?",
+  "When are expansion-joint shipping bars removed, and what limit-rod settings does the vendor give?",
+  "Does the project require bracing on small-bore branches, and are threaded joints to be seal-welded?",
+  "Which lines must slope, and at what minimum slope?",
+  "What end closure is required on drains and vents (plug, cap or blind), and where is a double valve needed?",
+  "Is there a blind/spectacle status list for handover, and who maintains it?",
+  "Is there a register of temporary items (strainers, spools, removed instruments), and who signs reinstatement?",
   "Is flushing/blowing in construction or commissioning scope, and what is the acceptance?",
-  "What are the acceptance limits for dents, gouges and arc strikes on pipe?",
+  "What preservation applies after test (drain, dry, N2, inhibitor), and to which lines?",
   "Which coating system, colour and DFT apply, and what insulation type, thickness and personnel protection?",
   "What is the project line marking standard (colours, flow arrows, spacing, locations)?",
-  "Which lines need flange bonding or earthing jumpers (e.g. fuel gas)?",
-  "How is the B+ punch tier defined, and who assigns punch categories (A/B/B+/C/D)?"
+  "Which chemical lines need flange spray shields, and of what type?",
+  "Which lines need flange bonding or earthing jumpers (e.g. fuel gas), and where are insulating joints fitted?"
  ],
  "flanged_joint": [
   "Which code and edition applies to each system (B31.1 power piping vs B31.3 process piping), and where is the boundary between them?",
+  "Which flange standards apply besides B16.5 (e.g. B16.47 above NPS 24, AWWA, EN, equipment nozzles)?",
   "What flange alignment tolerance applies (project spec vs code edition value)?",
-  "What stud protrusion is acceptable (full engagement only, or one thread short allowed; min/max threads beyond the nut)?",
+  "What stud protrusion is acceptable on B31.1 and B31.3 lines (full engagement only, or one thread short allowed; min/max threads beyond the nut)?",
+  "Are washers required (e.g. for tensioning), and of what type?",
+  "Are gasket sealants or compounds allowed?",
   "What is the tightening method (torque wrench vs tensioning), where do the values come from, and is the project assembly procedure based on ASME PCC-1?",
   "Is a per-joint torque record required? Who witnesses or signs it, and must tool calibration be shown?",
   "Is a joint tag or paint mark required on tightened joints?",
-  "Were temporary gaskets/bolting used for hydrotest, and must they be replaced before handover?",
+  "Must temporary hydrotest gaskets/bolting be replaced before handover, and can bolts and gaskets be reused after a joint is broken?",
+  "How are joints re-made after test leak-checked before commissioning, and is a reinstatement sign-off required?",
   "Is a blind/spectacle register kept, and what position is required at handover to commissioning?",
+  "Which test blinds, temporary strainers or spools may remain at handover, and how are they tracked?",
   "Which joints need insulating kits, and is an isolation test required?",
   "Which services need flange spray guards?",
   "Which lines need flange bonding jumpers (e.g. fuel gas)?",
   "What is the rust acceptance for bolting: clean and protect, or replace? What bolt coating/protection is specified?",
-  "Can bolts and gaskets be reused after a joint is broken?",
   "Which joints, if any, need re-torque or hot torque after first heat-up, and how is that tracked?",
+  "Is a pipe-strain/free-bolting check required at pump nozzles, who records it, and must it come before final alignment?",
+  "Which lines are non-metallic or lined, and what maker torque limits, washers and gaskets apply?",
+  "For wafer/lug butterfly valves: separate gasket or liner-as-gasket, and is a full-stroke check required before handover?",
+  "Is a minimum tool/tensioner clearance specified at flanged joints?",
   "How is punch tier B+ defined, and what category do typical flange defects get (e.g. missing torque record, rusted bolts)?",
   "When construction closes a flange punch item, does QC verify it by re-inspection, witnessing or record review?"
  ],
  "valve": [
   "Which code and edition (B31.1 or B31.3) applies to each BOP system's valves?",
-  "Which project document holds valve type, class and material per line class, and is a current copy available locally?",
-  "Valve tagging: which valves need tags (all hand valves, or line/instrument valves only), and what tag material and fixing are required?",
-  "Which valves are LO, LC or CSO, who installs the locks or seals, and who owns the lock/key register at handover?",
+  "Which project document gives valve type, class and material per line class, and is a current copy available locally?",
+  "Which valves need tags (all hand valves or line/instrument valves only), and what tag material and fixing are required?",
+  "Which valves are LO, LC or CSO? When are locks and car seals fitted and positions set, by whom, and who owns the lock/key register at handover?",
+  "Are fire water isolation valves supervised by a tamper switch or by a lock?",
+  "Which B31.3 322.6.1 condition (or B31.1 rule) does the project apply to PSV block valves, and at what stage are they sealed open?",
   "Is a PSV bench test or re-test required before handover, who performs it, and in what record format?",
-  "Is checking PSV set pressure against the datasheet in QC scope, or only process/commissioning scope?",
-  "Is a torque/tightening record required for valve end flanges, and does that depend on line class? Who records it?",
+  "Is checking PSV set pressure against the datasheet in QC scope, or only in process/commissioning scope?",
+  "Who records and signs reinstatement of PSVs and in-line valves after test or flushing?",
+  "Is a torque/tightening record required for valve end joints, does it depend on line class, and who records it?",
   "Does the piping spec restrict stem orientation, operating height or chainwheel use?",
-  "Is control valve hookup (air, tubing, cable, earth) inspected by I&C QC or mechanical QC?",
-  "Who removes actuator transport locks: construction or the vendor representative at commissioning?",
-  "Is valve stroke/function checking in construction QC scope, or does it belong to commissioning?",
+  "Under the site isolation/LOTO rules, may QC operate valves during walkdowns, and is stroke/function checking construction QC or commissioning scope?",
+  "Who inspects actuator hookup (CV/XV/MOV): I&C, electrical or mechanical QC? Are MOV limit/torque settings commissioning scope?",
+  "Does the project require fail-action (FO/FC) marking on control and on/off valves?",
+  "Who removes actuator transport locks: construction, or the vendor representative at commissioning?",
   "What does the project require on open-ended vents and drains: plug, cap or blind flange?",
   "How does this project define punch category B+?",
-  "Which valve defects does the project grade as category A (for example, a reversed check valve or a closed PSV block valve)?"
+  "Can an item with a category A punch be recorded OK with comments, or must it be Rejected?",
+  "Which valve defects does the project grade as category A (for example a reversed check valve, a blinded or gagged PSV, or a closed PSV block valve)?"
  ],
  "pipe_support": [
   "Which code governs each BOP system's piping (B31.1 or B31.3), and which edition does the project use?",
-  "Which pipe hanger/support standard does the project spec reference (MSS SP-58 is an example, not confirmed), and which edition?",
+  "Which pipe support standard does the project spec reference (MSS SP-58 is an example only, not confirmed), and which edition?",
   "Where are guide gaps, shoe offsets and stop gaps defined: the support standard detail or the stress output?",
-  "At what stage are spring/constant hanger travel stops removed, who removes them, and does QC witness it?",
+  "When are spring/constant hanger travel stops removed, by whom, must they stay in during hydrotest/flush, and does QC witness removal?",
   "Who records spring hanger cold settings, and who signs that record off?",
+  "Are there expansion joints/bellows in BOP systems, and at what stage, and by whom, are shipping bars removed?",
   "Is a hot walkdown of supports planned during commissioning, and does QC attend?",
   "Are supports numbered/tagged in the field, and in what marking format?",
-  "Structural bolt tightening on racks: what method is used, and is it recorded per connection or by sampling?",
-  "What welding standard applies to rack and support steel welds that are not on pressure pipe?",
+  "Rack structural bolting: what method is used, is it recorded per connection or by sampling, and is torque marking required?",
+  "Is rack earthing checked in this walkdown or by electrical QC?",
+  "What welding standard applies to support steel welds that are not on pressure pipe?",
   "Is NDE or PWHT required on support attachment welds to pressure pipe, and is a record expected?",
-  "Which materials or lines need isolation or wear pads (stainless, GRP/plastic, lined or coated pipe)?",
+  "If pipe is welded or modified after hydrotest, what retest/NDE is required and who approves it?",
+  "Which lines need isolation/wear pads or continuous support (stainless, GRP/plastic, lined or coated)?",
+  "Is there a project small-bore support standard, and is impulse-line support piping or instrument QC scope?",
+  "Civil spec: what grout type, anchor thread projection rule, and post-installed anchor type and edge distance apply?",
+  "Is the pipe-strain/free-bolting check at pump nozzles witnessed by QC, and where is it recorded?",
   "What paint/galvanising touch-up system applies to supports, and who applies it?",
   "Have temporary supports used for erection/hydrotest been logged, so their removal can be verified?",
+  "Do project QC forms accept 'N/A (not fitted)' for items like springs, PTFE, bellows or pads, kept out of the OK / comments / Rejected tallies?",
   "How is 'B+' defined on this project, and how are support defects graded between A, B, B+, C and D?",
   "Who owns support walkdown punch items before handover: piping, civil/structural or stress?"
  ],
  "rotating": [
   "Which piping code governs each system at the pumps: B31.1 or B31.3? Which editions?",
-  "Does the project spec invoke API RP 686 for machinery installation (grout, anchors, alignment, pipe strain)? Which edition?",
-  "Which pump standard applies to BOP pumps (API 610, ISO 5199, ASME B73, or vendor standard)? Does API 682 apply to seals?",
-  "Alignment method and tolerances: from the vendor manual or the project spec? Is a final alignment after piping bolt-up required?",
-  "Is a pipe-strain check (dial indicators during flange bolt-up) required? Which role witnesses it (QC, vendor, client)?",
-  "Grout type, void acceptance criteria and jack-screw treatment after grouting, per spec?",
+  "Does the project spec invoke API RP 686 for machinery installation (grout, anchors, alignment, pipe strain)? Which edition (2009 2nd ed. reported superseded in 2024 - confirm)?",
+  "Which pump standard applies to BOP pumps (API 610, ISO 5199, ASME B73 or vendor standard)? Does API 682 apply to seals?",
+  "Are fire pumps covered here or by a separate fire-protection checklist? Governing standard and edition (e.g. NFPA 20 - verify applicability/edition)?",
+  "Alignment method and tolerances: vendor manual or project spec? Is a final alignment after piping bolt-up required?",
+  "Is a pipe-strain check (dial indicators during flange bolt-up) required? Who witnesses it (QC, vendor, client)?",
+  "Nozzle flange alignment tolerance at machines: vendor or spec value?",
+  "Spring stops and expansion-joint rods/shipping bars: set, removed or released at handover?",
+  "Grout type, void acceptance criteria and levelling/jack-screw treatment after grouting, per spec? Is tap testing allowed?",
+  "Shim material/max count and dowelling of pump and motor feet: per vendor or spec?",
   "Anchor bolt torque values: is a torque record required for handover?",
-  "Who removes transit locks and does the first lube oil fill (construction, vendor or commissioning), and when?",
+  "Who removes transit locks and seal setting clips (construction, vendor or commissioning), and when?",
+  "Is first oil fill construction scope? If not, how is 'not filled yet' recorded?",
+  "Is the coupling left open for solo run? Who reconnects it and re-checks alignment?",
   "Preservation procedure and interval for installed rotating equipment awaiting commissioning?",
-  "Are temporary start-up strainers required, and who keeps the register (construction or commissioning)?",
+  "Are temporary start-up strainers required, and who keeps the blind and strainer registers?",
   "Which skids or items need vendor installation sign-off before handover?",
-  "Hazardous area classification for fuel-gas and chemical areas: are Ex motors and glands required?",
-  "Are motor terminations and earthing signed off by electrical QC, with mechanical QC observing only?",
-  "Is the motor solo run / rotation record part of the mechanical completion package or commissioning?",
+  "After handover to commissioning, may QC open guards or covers? Who issues PTW?",
+  "Hazardous area classification for fuel-gas and chemical areas: are Ex motors, Ex glands and non-sparking guards required?",
+  "Are motor terminations, earthing and local stop stations signed off by electrical QC, with mechanical QC observing only?",
+  "Is the motor solo-run/rotation record part of the mechanical completion package or of commissioning?",
+  "Who signs off sump/wet-pit cleanliness before first fill?",
+  "Are PSV test certificates and belt-tension records required for compressor/fan handover?",
+  "Which dosing skids are vendor packages?",
   "How is the B+ punch category defined on this project, and which rotating-equipment defects go there?",
   "Which punch category is used for a missing coupling guard on equipment not yet energised?"
  ],
  "tank_vessel": [
-  "What is the design or construction code of each tank, vessel and skid vessel (API 650, ASME VIII Div 1, vendor or EN code), and which project edition applies?",
+  "What design or construction code is each tank, vessel and skid vessel built to (API 650, ASME VIII Div 1, vendor, EN, GRP/HDPE standard), and which project edition applies?",
   "How is the 'B+' punch category defined on this project, and who assigns it?",
-  "Is QC or client witness a hold point before any manway box-up?",
-  "Which painting spec applies (system, colour code), and is a DFT or holiday-test record required for internal linings on demin and chemical tanks?",
-  "How many earthing points per tank or vessel, and is an earth continuity or resistance test record required?",
-  "Which flange joints need controlled tightening and a torque record, and where do the torque values come from (spec or vendor)?",
-  "Which tanks need a PVRV or flame arrestor, and are device certificates part of handover?",
-  "PSV: is a set-test certificate required before handover, and must isolation valves be car-sealed or locked open?",
-  "What anchor bolt locking and tightening are required (double nut, tack weld, torque)?",
-  "What lining is required in chemical-area bunds, and what is the normal position of the bund drain valve (locked closed?)?",
-  "Do lifting lugs and trunnions stay or come off, and is NDE required where temporary attachments were removed?",
-  "Which access or fall-protection standard governs handrails, ladders and gates on site (client or local regulation)?",
-  "What does the tank/vessel handover dossier contain (hydrotest, settlement survey, NDE, MDR/certification, coating records)?",
-  "What preservation is required after hydrotest (drain, dry, nitrogen blanket) for vessels and skids awaiting commissioning?",
-  "Is cathodic protection specified for any tank bottom, and is its test point or junction box part of this walkdown?",
+  "What bund lining type is required, and must the bund drain valve be locked closed?",
+  "Is each tank or vessel anchored per design, what anchor nut locking applies, and which saddles slide with what nut setting (snug, gap, double nut)?",
+  "Is a tank bottom-edge sealant or a specific grout type specified?",
+  "How many earth points per item, is a continuity or resistance record required, and is cathodic protection fitted on any tank bottom (test points part of this walkdown)?",
+  "Which paint system and colour code apply, which items are insulated and for what purpose, and is a DFT or holiday-test record required (internal linings especially)?",
+  "Which tanks are GRP, HDPE or lined steel, and to what design standard?",
+  "For non-API 650 vessels and skids, which code governs the nameplate or stamping, and is a code stamp required?",
+  "Which labelling and hazard-sign standard applies (client, local regulation or other)?",
+  "Do lifting lugs and trunnions stay per design, is NDE required where temporary attachments were removed, and which shipping restraints does the vendor mark for removal?",
+  "Is the piping at tank and vessel nozzles B31.1 or B31.3, and does the project spec require full bolt thread projection past the nut?",
+  "Which gasket applies per piping class, which joints need a torque record, and do torque values come from the spec or the vendor?",
+  "Are flange spray guards required on chemical tank joints, and on which services?",
+  "Are flexible connectors or bellows specified at any tank nozzle?",
+  "Which nozzles are spare and how are they closed, and what preservation (N2 blanket, desiccant, drained and dried) is required until commissioning?",
+  "Where should each overflow terminate (drain, bund or seal pot), and how is each drain and vent end closed per design?",
+  "Is a QC or client witness hold point required before any manway box-up, and which internals are specified?",
+  "Which level, pressure and temperature devices are specified, and is a loop-check or gauge calibration record needed at handover?",
+  "Which access and fall-protection standard governs on site, and what handrail height, toe board and ladder gate type are required?",
+  "Which tanks need a PVRV, flame arrestor, desiccant breather, CO2 absorber or N2 blanket instead of an open vent, and are device certificates part of handover?",
+  "Is a PSV set-test certificate required at handover, how recent must it be, and must PSV isolation valves be car-sealed open?",
+  "What does the tank or vessel handover dossier contain (hydrotest, settlement survey, NDE, MDR/certification, PSV cert, coating, box-up, torque records)?",
+  "Does any fuel or hydrocarbon tank have fixed fire protection (foam or cooling ring), and is it part of this walkdown?",
   "Is a calibration (strapping) certificate required for any tank?"
  ],
  "instrument_hookup": [
+  "Which editions of ASME B31.1, B31.3, B16.5, Sec V, Sec IX and API 650 are contracted for this project?",
   "Which code (B31.1 or B31.3) governs instrument piping on each BOP system, and where is the process/instrument code break?",
-  "Which hookup revision is current for walkdown, and where is the controlled copy?",
-  "Approved tube material, OD/wall and fitting make; is mixing fitting makes prohibited?",
-  "Is a compression-fitting gap-gauge check required, and is it recorded?",
+  "Is instrument hookup and cable sign-off mechanical QC, E&I QC, or joint?",
+  "On handed-over or energised systems, may QC operate valves or open JBs, and under which permit?",
+  "Which hookup revision is current for walkdown, and where is the controlled copy kept?",
+  "What tube material and OD/wall are approved, which fitting make, and is mixing fitting makes prohibited?",
+  "Which fitting maker's make-up/remake instructions apply, and is a gap-gauge check recorded?",
   "Required impulse line slope per service (liquid, gas, steam)?",
-  "Max support spacing for tubing and for cable?",
-  "Are hookups leak-tested with the process line or separately? Test medium/pressure? Instrument isolated or removed during test?",
-  "Tag plate standard: material, fixing method, wording?",
+  "What is the max support spacing for tubing and for cable, and what isolator rule applies for SS tubing on CS supports?",
+  "Which taps require bracing, and what bracing method is approved?",
+  "Are threaded instrument connections seal-welded, and on which services?",
+  "Are welded attachments to pipe allowed after the pressure test, and is a retest needed?",
+  "Are orifice plates, meters and TEs fitted before or after flushing?",
+  "Is there a register of instruments removed for flushing/hydro?",
+  "Are hookups leak-tested with the process line or separately? With what medium/pressure? Are instruments isolated or removed during the test?",
+  "What is the tag plate standard (material, fixing method, wording)?",
   "Are sunshades/protective covers required for field transmitters?",
-  "Cable gland type and IP/Ex rating per area; approved stopping plugs for spare entries?",
-  "Which BOP areas are hazardous-area classified (e.g. fuel-gas conditioning), and who performs Ex inspection?",
-  "Instrument earthing scheme (PE vs IS/clean earth), screen earthing end, and tray bonding rule?",
-  "Cable bend radius basis, tray cover requirement and IS/non-IS segregation rule?",
+  "Which services need a siphon, snubber or gauge guard?",
+  "Which impulse lines need insulation, personnel protection or heat tracing?",
+  "Is the actuator air supply hookup (AFR, tubing) covered by this family or the valve family? Was the IA header blown clean before hookup?",
+  "Is PSV/TSV inspection in this family or the valve family, and must PSV isolations be car-sealed or locked open?",
+  "What cable gland type and IP/Ex rating apply per area, and which stopping plugs are approved for spare entries?",
+  "Which BOP areas are hazardous-area classified, under which scheme (zone or class/division), and who performs Ex inspection?",
+  "What instrument earthing scheme applies (PE vs IS/clean earth), at which end is the screen earthed, and what is the tray bonding rule?",
+  "What is the cable bend radius basis, the tray cover requirement and the IS/non-IS segregation rule?",
   "Are JB internals (terminations, ferrules) and calibration/loop check in QC scope or commissioning scope?",
-  "Insulation or heat tracing required on any impulse lines?",
+  "Who signs punch closure (Construction or QC), and is a closure photo required?",
   "How is punch category B+ defined on this project?",
   "Are any hookup defects pre-agreed as Cat A (e.g. HP/LP reversed, root valve missing, open vent on hazardous service)?"
  ],
  "general_area": [
-  "What does punch category B+ mean on this project, and who may assign it?",
-  "What is the default punch category for leftover temporary items or housekeeping at handover (A or B)?",
-  "Is a test-blind register kept per system, and does QC sign off each removal?",
-  "Which scaffolds may stay for commissioning, and is there an agreed retention list?",
-  "Which standard governs safety showers and eyewash? Is cooled or tempered water specified for site ambient? Is a flow test record required?",
-  "Is fire water (hydrants/monitors) in the QC walkdown scope or inspected separately, and which fire code applies?",
-  "Which tagging, pipe marking/colour-code and safety signage specs apply, including required sign languages?",
-  "What are the paint touch-up system and DFT acceptance in the project paint spec?",
-  "Must insulation be complete before handover, or may it be punched? What are the acceptance criteria?",
-  "Is permanent lighting energised in this area? Is a lux survey or emergency-light test record needed before handover?",
-  "Who owns preservation after handover (construction or commissioning), and which preservation procedure applies?",
-  "What is the normal position of bund drain valves under the operating philosophy?",
+  "How is punch category B+ defined on this project?",
+  "Who may assign punch category B+?",
+  "Does B+ also block handover?",
+  "What punch category applies to leftover temporary items and housekeeping?",
+  "Which general-area items (lighting, earthing, signage, fire water, showers, lifting gear) are in mechanical QC scope?",
+  "Is this area hazardous-area classified?",
+  "Is a test-blind register kept per system?",
+  "Does QC sign off each test-blind removal?",
+  "Where are required spade/spectacle positions listed?",
+  "Which scaffolds may stay for commissioning?",
+  "Which standard governs safety showers/eyewash?",
+  "Is tempered or shaded supply specified for showers?",
+  "Is a shower flow-test record needed before handover?",
+  "Which fire code governs fire water here?",
+  "Which lifting appliances need a load-test cert before handover?",
+  "Who issues lifting-appliance load-test certs?",
+  "Which equipment tagging spec applies?",
+  "Which pipe marking/colour-code spec applies?",
+  "Which safety signage spec and languages apply?",
+  "Which paint touch-up system applies?",
+  "What DFT acceptance applies to paint touch-up?",
+  "May insulation be punched at handover?",
+  "What are the insulation acceptance criteria?",
+  "Which hot lines/surfaces need personnel protection?",
+  "Is personnel protection by guard or by insulation?",
+  "Is permanent lighting energised in this area?",
+  "Is an emergency-light test record needed before handover?",
+  "Is a lux survey needed before handover?",
+  "Who owns preservation after handover?",
+  "Which preservation procedure applies after handover?",
+  "What is the normal position of bund drain valves?",
+  "How are system handover limits marked on site?",
+  "Who fits system boundary tags?",
   "Which record types are mandatory in the system handover dossier?",
-  "Which role signs punch closure, and is a closure photo required as evidence?"
+  "Which role signs punch closure?",
+  "Is a closure photo required as punch evidence?"
+ ],
+ "punch_closure": [
+  "Which code editions apply (B31.1, B31.3, B16.5, Sec V, Sec IX, API 650), and is each line B31.1 or B31.3?",
+  "What is the B+ category definition, and how does it differ from B?",
+  "Who may change a punch category, and how is a change recorded?",
+  "What evidence must construction attach before requesting QC closure (form, photos, records)?",
+  "Which punch categories need client or commissioning witness at closure?",
+  "For systems already under commissioning control, what permit/LOTO is needed before QC re-inspects?",
+  "If QC cannot access an item, is the closure rejected or left pending?",
+  "When does rework invalidate a completed pressure/leak or functional test, and who decides on re-test?",
+  "Who may operate valves or equipment for a re-test under commissioning control?",
+  "Does the project require a repair WPS/approval, and does it limit the number of weld repair attempts?",
+  "For a repaired weld, was the original NDE 100% or spot, and must extra (progressive) exams be done?",
+  "Is a QC hold point required before insulating or painting over a repair?",
+  "If a flushed/blown or cleaned line is opened for rework, is re-flush required?",
+  "Is gasket reuse ever allowed, and must bolting be replaced on re-make?",
+  "Must torque records show the calibrated tool ID?",
+  "Is a before-photo always on file from when the punch was raised, or must QC take one?",
+  "Can a punch be closed OK with comments, or must residual defects stay open or be raised as new punch?",
+  "If QC rejects a closure, is the same punch re-opened or a new punch raised?",
+  "Are new defects found during verification raised as new punch items or added to the existing one?",
+  "Is there a target closure date or milestone per category that QC must track?",
+  "How are QC verifications logged: electronic punch system, paper sheet, or both?"
  ]
 };
 export const GENERAL_DEFECTS = ["Housekeeping not done", "Temporary material not removed", "Tag / label missing", "Paint damaged", "Insulation damaged", "Support missing", "Bolt not fully through nut", "Bolts rusted", "Torque not recorded", "Drain / vent missing", "Guard missing", "Earthing missing"];
