@@ -189,6 +189,23 @@ const marked = await page.evaluate(
 ok(marked, 'mark-up saved as new photo revision');
 await tap('.viewer [data-v="close"]');
 
+console.log('Back swipe closes sheets');
+const urlBefore = page.url();
+await tap('[data-a="item-comment"]');
+await page.waitForSelector('.backdrop');
+await page.goBack();
+await wait(300);
+ok((await page.locator('.backdrop').count()) === 0 && page.url() === urlBefore, 'Back closes the open sheet and stays on the item');
+await tap('[data-a="chk-add"]');
+await page.waitForSelector('.backdrop');
+await tap('.backdrop [data-s="cancel"]');
+await wait(300);
+await page.goBack();
+await wait(300);
+ok(!page.url().includes('#/item/'), 'after closing a sheet with Cancel, Back leaves the screen normally');
+await page.goForward();
+await page.waitForSelector('.chk');
+
 console.log('Result validation');
 await tap('[data-a="item-result"]');
 await tap('.backdrop [data-v="ok"]');
@@ -197,8 +214,12 @@ await tap('.backdrop [data-v="rej"]');
 await tap('.backdrop [data-s="save"]');
 ok(await page.locator('.backdrop').count(), 'Rejected without a reason is refused');
 await tap('.backdrop [data-v="okc"]');
-await tap('.backdrop [data-s="save"]');
-await wait();
+await tap('.backdrop [data-s="next"]');
+await page.waitForSelector('.backdrop [data-s="start"]');
+ok((await page.inputValue('.backdrop input[name=area]')) === 'Water treatment', 'Save & next opens a new check with the same area');
+await tap('.backdrop [data-s="cancel"]');
+await wait(300);
+ok((await page.locator('.backdrop').count()) === 0 && page.url().includes('#/item/'), 'still on the item after cancelling next');
 ok((await page.locator('.item-head .badge.r-okc').count()) === 1, 'result OK with comments saved');
 
 console.log('Punch lifecycle');

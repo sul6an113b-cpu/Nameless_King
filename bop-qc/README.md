@@ -14,7 +14,11 @@ An offline iPhone web app for balance-of-plant QC walkdowns. You inspect an item
 2. Open the URL in **Safari**, tap **Share → Add to Home Screen**.
 3. Open it **from the home-screen icon** once while online. After that it runs offline.
 
-The home-screen app keeps its data separately from Safari. Always use the icon. **Deleting the icon deletes the data**, so back up first.
+The home-screen app keeps its data separately from Safari. Always use the icon. Data typed in a Safari tab is a different store that Safari can delete after 7 days without use, and the app shows a warning when it is opened that way. Assume **deleting the icon deletes the data**, and back up before you do.
+
+Link to the folder URL **with its trailing slash** and the same capitalisation every time, e.g. `…/Nameless_King/bop-qc/`. The offline cache only covers that exact path.
+
+More → Storage shows whether the offline files are cached, whether the app is running installed, and whether iOS has granted persistent storage. The installed app asks for persistent storage on every launch.
 
 ## Daily use
 
@@ -33,7 +37,7 @@ The home-screen app keeps its data separately from Safari. Always use the icon. 
 
 | Export | Content | Use |
 |---|---|---|
-| Report (HTML) | Summary, **follow-up list of every item not closed**, each item with result, checklist, comments, questions, photos | Open → Share → Print → pinch out on the preview → Save as PDF |
+| Report (HTML) | Summary, **follow-up list of every item not closed**, each item with result, checklist, comments, questions, photos | Open it in the app, or Share it (Mail / Files). PDF route: see the table under [Hosting](#hosting) |
 | Punch list CSV | One row per comment: local no., project no., category, status, dates, days open, photo file names, history | Excel tracking |
 | Items / Checkpoints / Questions CSV | One row per item / checkpoint / question | Excel |
 | Package (ZIP) | Report + all CSVs + full-size photos named `CHK-0007_TAG_1.jpg`, `P-0012_closure_1.jpg` | Office PC |
@@ -76,6 +80,24 @@ Any static HTTPS host works. On GitHub Pages for this repository:
 3. The app is then at `https://<user>.github.io/<repo>/bop-qc/`.
 
 The app code contains no project information, but the repository is public. **Never commit exported reports, CSVs or backups to it.** `.gitignore` in this folder blocks the usual export file names.
+
+All of an account's GitHub Pages sites share one web origin (`<user>.github.io`). Any other page published from the same account can technically read this app's on-phone storage. Only publish pages you trust from that account, or host the app on its own domain.
+
+### iPhone behaviour (from WebKit source, docs and bug reports)
+
+| Point | Status |
+|---|---|
+| Home-screen apps are exempt from Safari's 7-day deletion of site data | Confirmed |
+| `navigator.storage.persist()` is granted to home-screen apps | Confirmed |
+| Storage quota is up to about 60 % of disk per site (iOS 17+) | Confirmed |
+| Safari and the home-screen app keep separate storage | Confirmed |
+| The camera button opens the camera directly. "From library…" offers the photo library, with HEIC converted to JPEG | Confirmed |
+| Photos arrive already rotated upright, so the app does no manual EXIF rotation | Confirmed |
+| Share sheet accepts CSV, HTML and ZIP files; `share()` must follow a tap within ~5 s | Confirmed. This is why export is two taps (Prepare → Share) |
+| Deleting the home-screen icon deletes the data | Unknown (no primary source). Treated as true: back up |
+| "Save" (browser download) inside the home-screen app | Unknown. Use **Share → Save to Files** as the main route |
+| Printing the HTML report to PDF from the iPhone | Unknown. The report opens inside the app. Try Share → Print, or save it to Files and print from there. Confirm on your phone |
+| Edge-swipe Back in the home-screen app | Likely. The app makes a swipe close an open sheet instead of leaving the screen |
 
 ### Releasing an update
 

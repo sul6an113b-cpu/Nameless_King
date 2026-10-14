@@ -30,21 +30,6 @@ const saveUI = () => {
     sessionStorage.setItem('bopqc-ui', JSON.stringify(UI));
   } catch {}
 };
-const local = {
-  get(k) {
-    try {
-      return localStorage.getItem(`bopqc-${k}`);
-    } catch {
-      return null;
-    }
-  },
-  set(k, v) {
-    try {
-      localStorage.setItem(`bopqc-${k}`, v);
-    } catch {}
-  },
-};
-
 // ---------------------------------------------------------------------------
 // small render helpers
 
@@ -121,6 +106,47 @@ async function hydrate(root = document) {
 // sheets (bottom dialogs)
 
 const openSheets = [];
+
+// iOS home-screen apps go Back on a left-edge swipe. Each open sheet owns one
+// history entry with the same URL, so a swipe closes the sheet instead of
+// leaving the screen. Closing a sheet with a button pops that entry again;
+// navigation and new entries wait until the pop has landed.
+let pendingBacks = 0;
+let queuedNav = null;
+function syncSheetHistory() {
+  for (const s of openSheets) {
+    if (s.hasHist || s.closed) continue;
+    try {
+      history.pushState({ inApp: true, sheet: true }, '');
+      s.hasHist = true;
+      s.histUrl = location.href;
+    } catch {}
+  }
+}
+function nav(hash, replace = false) {
+  if (pendingBacks) {
+    queuedNav = { hash, replace };
+    return;
+  }
+  if (replace) location.replace(hash);
+  else location.hash = hash;
+}
+window.addEventListener('popstate', () => {
+  if (pendingBacks) {
+    pendingBacks--;
+    if (!pendingBacks) {
+      if (queuedNav) {
+        const q = queuedNav;
+        queuedNav = null;
+        nav(q.hash, q.replace);
+      } else syncSheetHistory();
+    }
+    return;
+  }
+  const top = openSheets[openSheets.length - 1];
+  if (top && top.hasHist && top.histUrl === location.href) top.close('back');
+});
+
 function sheet({ title, sub = '', body, foot, onClick, onClose, cls = '' }) {
   const bd = document.createElement('div');
   bd.className = 'backdrop';
@@ -141,6 +167,11 @@ function sheet({ title, sub = '', body, foot, onClick, onClose, cls = '' }) {
       bd.remove();
       const i = openSheets.indexOf(api);
       if (i >= 0) openSheets.splice(i, 1);
+      // Remove this sheet's history entry unless Back or navigation already did.
+      if (api.hasHist && reason !== 'back' && reason !== 'nav') {
+        pendingBacks++;
+        history.back();
+      }
       if (onClose) onClose(reason);
     },
   };
@@ -155,6 +186,7 @@ function sheet({ title, sub = '', body, foot, onClick, onClose, cls = '' }) {
   });
   document.body.appendChild(bd);
   openSheets.push(api);
+  if (!pendingBacks) syncSheetHistory();
   hydrate(bd);
   return api;
 }
@@ -378,17 +410,18 @@ window.addEventListener('hashchange', () => {
   closeAllSheets();
   // Mark entries created inside the app so Back can use history safely.
   try {
-    history.replaceState({ inApp: true }, '');
+    if (!(history.state && history.state.inApp)) history.replaceState({ inApp: true }, '');
   } catch {}
   render();
   window.scrollTo(0, 0);
 });
 
 function back(fallback) {
+  if (pendingBacks) return;
   if (history.state && history.state.inApp) history.back();
-  else location.hash = fallback;
+  else nav(fallback);
 }
-const go = (hash) => (location.hash = hash);
+const go = (hash) => nav(hash);
 
 // ---------------------------------------------------------------------------
 // global click actions (data-a)
@@ -421,8 +454,8 @@ function previewBanner() {
 
 function banners() {
   let h = previewBanner();
-  if (!EMBEDDED && isIOS() && !isStandalone() && local.get('hideInstall') !== '1') {
-    h += `<div class="banner info"><div class="grow small"><b>Install for offline use:</b> tap Share <span aria-hidden="true">⇪</span> → <b>Add to Home Screen</b>, then open it from the icon.</div><button class="btn small" data-a="hide-install">Hide</button></div>`;
+  if (!EMBEDDED && isIOS() && !isStandalone()) {
+    h += `<div class="banner"><div class="grow small"><b>You are in Safari, not the installed app.</b> Data typed here is kept apart from the app, and Safari may delete it after 7 days without use. Install: Share <span aria-hidden="true">⇪</span> → <b>Add to Home Screen</b>, then always open it from the icon.</div></div>`;
   }
   const count = S.items.size + S.punches.size;
   if (count) {
@@ -435,10 +468,6 @@ function banners() {
   }
   return h;
 }
-A['hide-install'] = () => {
-  local.set('hideInstall', '1');
-  refresh();
-};
 
 function itemCard(i) {
   const pr = store.checkProgress(i);
@@ -826,7 +855,7 @@ A['item-del'] = async () => {
   const nph = store.photosOf(it.id).length;
   if (!(await confirmSheet(`Delete <b>${esc(it.no)}</b> (${esc(it.tag || 'no tag')})?<br>This also deletes ${np} comment(s), ${nq} question(s) and their photos (${nph} item photo(s)). This cannot be undone.`, { ok: 'Delete', danger: true }))) return;
   await store.deleteItem(it.id);
-  location.replace('#/items');
+  nav('#/items', true);
   toast('Item deleted');
 };
 
@@ -1317,7 +1346,7 @@ A['p-del'] = async () => {
   const p = curPunch;
   if (!(await confirmSheet(`Delete ${esc(p.no)} and its photos? This cannot be undone.`, { ok: 'Delete', danger: true }))) return;
   await store.deletePunch(p.id);
-  location.replace(p.itemId ? `#/item/${encodeURIComponent(p.itemId)}` : '#/punch');
+  nav(p.itemId ? `#/item/${encodeURIComponent(p.itemId)}` : '#/punch', true);
   toast('Deleted');
 };
 
@@ -1412,7 +1441,7 @@ function scrExport() {
 
     <div class="sec-h">Report</div>
     <div class="card">
-      <div class="small">Walkdown report: summary, follow-up list (all not-closed items), every item with result, checklist, comments and photos. Open it, then Share → Print → pinch out to save as PDF.</div>
+      <div class="small">Walkdown report: summary, follow-up list (all not-closed items), every item with result, checklist, comments and photos.</div>
       ${field('Photos in report', `<select data-ef="photos"><option value="small" ${f.photos === 'small' ? 'selected' : ''}>Small (recommended)</option><option value="large" ${f.photos === 'large' ? 'selected' : ''}>Full size (big file)</option><option value="none" ${f.photos === 'none' ? 'selected' : ''}>No photos</option></select>`)}
       <button class="btn primary block" data-a="exp" data-k="report">Make report (HTML)</button>
     </div>
@@ -1494,7 +1523,7 @@ function fileSheet(file, { isBackup = false, isReport = false } = {}) {
     title: 'File ready',
     sub: `${esc(file.name)} · ${bytes(file.size)}`,
     body: `${EMBEDDED ? `<div class="warnbox">Preview: ${HOST_DL ? 'Save asks you before it saves the file.' : 'saving files is blocked here.'} Share works only in the installed app.</div>` : `<div class="small" style="margin:8px 0">${canShare ? 'Share opens the iOS share sheet: Save to Files, Mail, WhatsApp, AirDrop…' : 'Your browser cannot share files directly – use Save.'}</div>`}
-      ${isReport ? '<div class="small muted">To make a PDF: open the report, tap Share → Print, then pinch out on the preview → Share → Save to Files.</div>' : ''}
+      ${isReport ? '<div class="small muted">Open shows it here. For a PDF try Share → Print (pinch out on the print preview to make a PDF).</div>' : ''}
       ${isBackup ? '<div class="warnbox">The backup only counts once it is saved somewhere off this phone (Files / iCloud Drive / e-mail).</div>' : ''}`,
     foot: `${isReport ? '<button class="btn" data-s="open">Open</button>' : ''}<button class="btn" data-s="save">Save</button>${canShare ? '<button class="btn primary" data-s="share">Share…</button>' : ''}`,
     async onClick(s, b, api) {
@@ -1681,11 +1710,29 @@ async function scrMore() {
   const box = $('#storage');
   if (!box) return;
   const nPhotos = [...S.photos.values()].reduce((a, l) => a + l.length, 0);
-  box.innerHTML = `<div class="kv"><div>Used</div><div>${e.usage != null ? bytes(e.usage) : 'unknown'}${e.quota ? ` of ~${bytes(e.quota)}` : ''}</div>
+  const off = await offlineStatus();
+  box.innerHTML = `<div class="kv"><div>Offline files</div><div>${off}</div>
+      <div>App</div><div>${isStandalone() ? 'Installed (home-screen icon)' : EMBEDDED ? 'Preview inside claude.ai' : 'Browser tab – install for site use'}</div>
+      <div>Used</div><div>${e.usage != null ? bytes(e.usage) : 'unknown'}${e.quota ? ` of ~${bytes(e.quota)}` : ''}</div>
       <div>Records</div><div>${S.items.size} items · ${S.punches.size} punch · ${S.questions.size} questions · ${nPhotos} photos</div>
       <div>Protected</div><div>${e.persisted === true ? 'Yes – iOS will not clear it automatically' : e.persisted === false ? 'Not confirmed' : 'Unknown on this browser'}</div></div>
     ${e.persisted === true ? '' : '<button class="btn small" style="margin-top:8px" data-a="persist">Ask the phone to keep data</button>'}
     <div class="tiny muted" style="margin-top:6px">Deleting the home-screen icon deletes the data. Back up regularly.</div>`;
+}
+
+// Checks the cache this copy of the app would use offline.
+async function offlineStatus() {
+  if (EMBEDDED) return 'Not available in the preview';
+  try {
+    if (!('caches' in window) || !navigator.serviceWorker || !navigator.serviceWorker.controller) return '<b>Not ready</b> – open the app once with signal, then reopen it';
+    const keys = (await caches.keys()).filter((k) => k.startsWith('bopqc-'));
+    if (!keys.length) return '<b>Not ready</b> – open the app once with signal';
+    const c = await caches.open(keys[keys.length - 1]);
+    const n = (await c.keys()).length;
+    return `Ready (${n} files, ${esc(keys[keys.length - 1].replace('bopqc-', ''))})`;
+  } catch {
+    return 'Unknown';
+  }
 }
 
 A.persist = async () => {
@@ -1884,11 +1931,8 @@ async function boot() {
   } catch {}
   render();
   registerSW();
-  // Ask once for persistent storage after there is something worth keeping.
-  if (S.items.size && !local.get('askedPersist')) {
-    local.set('askedPersist', '1');
-    db.requestPersist();
-  }
+  // Home-screen apps are granted persistent storage on request (Safari tabs usually are not).
+  if (isStandalone()) db.requestPersist();
 }
 
 boot();
