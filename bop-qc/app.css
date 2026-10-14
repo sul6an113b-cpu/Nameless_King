@@ -105,7 +105,7 @@ a { color: var(--primary); }
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: calc(var(--safe-t) + 8px) 16px 8px;
+  padding: calc(var(--safe-t) + 8px) max(16px, env(safe-area-inset-right, 0px)) 8px max(16px, env(safe-area-inset-left, 0px));
   background: var(--surface);
   border-bottom: 1px solid var(--line);
   min-height: 52px;
@@ -117,7 +117,10 @@ a { color: var(--primary); }
 #top-status { font-size: 12px; color: var(--muted); text-align: right; }
 
 #view {
-  padding: 12px 16px calc(var(--tabs-h) + var(--bar-h) + var(--safe-b) + 24px);
+  padding-top: 12px;
+  padding-bottom: calc(var(--tabs-h) + var(--bar-h) + var(--safe-b) + 24px);
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
   max-width: 760px;
   margin: 0 auto;
   outline: none;
@@ -160,7 +163,7 @@ body.detail #tabs { display: none; }
   z-index: 25;
   display: flex;
   gap: 8px;
-  padding: 8px 12px;
+  padding: 8px max(12px, env(safe-area-inset-right, 0px)) 8px max(12px, env(safe-area-inset-left, 0px));
   background: var(--bg);
   background: color-mix(in srgb, var(--bg) 88%, transparent);
   -webkit-backdrop-filter: blur(8px);
@@ -169,6 +172,7 @@ body.detail #tabs { display: none; }
 }
 #bar:empty { display: none; }
 body.detail #bar { bottom: 0; padding-bottom: calc(8px + var(--safe-b)); }
+#tabs { padding-left: env(safe-area-inset-left, 0px); padding-right: env(safe-area-inset-right, 0px); }
 #bar .btn { flex: 1; min-height: 52px; }
 #bar .btn.icon { flex: 0 0 56px; padding: 0; font-size: 22px; }
 
@@ -534,3 +538,6 @@ body.detail #toast { bottom: calc(var(--bar-h) + var(--safe-b) + 18px); }
 .list-row { display: flex; align-items: center; gap: 10px; padding: 10px 0; border-bottom: 1px solid var(--line); }
 .list-row:last-child { border-bottom: 0; }
 .mono { font-variant-numeric: tabular-nums; }
+
+.report-viewer .stage { display: block; background: #fff; }
+.report-viewer iframe { width: 100%; height: 100%; border: 0; background: #fff; display: block; }

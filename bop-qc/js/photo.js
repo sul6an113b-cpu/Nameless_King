@@ -134,7 +134,6 @@ export function markup(data, { quality = 0.8 } = {}) {
       img = await loadImg(src);
     } catch (e) {
       URL.revokeObjectURL(src);
-      alert(e.message);
       resolve(null);
       return;
     }
@@ -226,7 +225,7 @@ export function markup(data, { quality = 0.8 } = {}) {
           const thumb = await encode(canvas, tw, th, 0.7);
           close({ data: await blobToAB(full), thumb: await blobToAB(thumb), w: W, h: H });
         } catch (e) {
-          alert(e.message);
+          b.textContent = 'Failed – retry';
           b.disabled = false;
         }
       }

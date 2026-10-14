@@ -201,9 +201,54 @@ function busy(msg) {
   };
 }
 
+// In-app message (native alert() is blocked when the app runs inside another page).
+function notice(title, html) {
+  sheet({ title, body: `<div style="margin:8px 0">${html}</div>`, foot: '<button class="btn primary" data-s="ok">OK</button>', onClick: (s, b, api) => api.close() });
+}
+
 function fail(e) {
   console.error(e);
-  alert(`Error: ${e && e.message ? e.message : e}`);
+  notice('Something went wrong', `<p>${esc(e && e.message ? e.message : e)}</p><p class="small muted">Nothing already saved was lost.</p>`);
+}
+
+// True when the page runs inside a frame (e.g. a preview on claude.ai), where
+// offline use, saving files and sharing are blocked by the host.
+const EMBEDDED = (() => {
+  try {
+    return window.self !== window.top;
+  } catch {
+    return true;
+  }
+})();
+
+// Inside a claude.ai preview, files are saved through the host (it asks the
+// viewer first). Top-level copies of the app have no window.claude: plain download.
+let HOST_DL = null;
+if (EMBEDDED && window.claude && typeof window.claude.use === 'function') {
+  window.claude
+    .use('downloads')
+    .then((d) => (HOST_DL = d))
+    .catch(() => {});
+}
+
+async function saveFile(file) {
+  if (HOST_DL) {
+    try {
+      await HOST_DL.save({ filename: file.name, data: file });
+      return true;
+    } catch (e) {
+      if (e && e.code === 'declined') toast('Not saved');
+      else if (e && e.code === 'rate_limited') toast('A save is already waiting for your answer');
+      else notice('Could not save', `<p>${esc((e && e.message) || 'Saving is not available here.')}</p>`);
+      return false;
+    }
+  }
+  if (EMBEDDED) {
+    notice('Saving is blocked here', '<p>This preview cannot save files. Use the installed app.</p>');
+    return false;
+  }
+  X.downloadFile(file);
+  return true;
 }
 
 // ---------------------------------------------------------------------------
@@ -368,9 +413,15 @@ A.go = (el) => go(el.dataset.href);
 // ---------------------------------------------------------------------------
 // ITEMS LIST
 
+function previewBanner() {
+  return EMBEDDED
+    ? `<div class="banner info"><div class="grow small"><b>Preview.</b> This copy runs inside claude.ai: it does not work offline and cannot share files. Anything you enter stays in this browser only. For site use, install the app from its own web address (see More → Help).</div></div>`
+    : '';
+}
+
 function banners() {
-  let h = '';
-  if (isIOS() && !isStandalone() && local.get('hideInstall') !== '1') {
+  let h = previewBanner();
+  if (!EMBEDDED && isIOS() && !isStandalone() && local.get('hideInstall') !== '1') {
     h += `<div class="banner info"><div class="grow small"><b>Install for offline use:</b> tap Share <span aria-hidden="true">⇪</span> → <b>Add to Home Screen</b>, then open it from the icon.</div><button class="btn small" data-a="hide-install">Hide</button></div>`;
   }
   const count = S.items.size + S.punches.size;
@@ -1343,11 +1394,12 @@ A['p-verify'] = () => {
 function scrExport() {
   head('Export', 'Reports, Excel lists, backup');
   const f = UI.exp;
+  const pb = previewBanner();
   const areas = store.recent('area');
   const subs = store.recent('subcontractor');
   const sc = X.scope(f);
   const last = S.lastBackupAt;
-  view.innerHTML = `
+  view.innerHTML = `${pb}
     <div class="sec-h" style="margin-top:6px">Scope</div>
     <div class="card">
       ${field('Area', `<select data-ef="area"><option value="">All areas</option>${areas.map((a) => `<option ${f.area === a ? 'selected' : ''}>${esc(a)}</option>`).join('')}</select>`)}
@@ -1437,11 +1489,11 @@ A.exp = async (el) => {
 
 // Second step so Share runs straight from a tap (iOS requires it).
 function fileSheet(file, { isBackup = false, isReport = false } = {}) {
-  const canShare = X.canShareFile(file);
+  const canShare = !EMBEDDED && X.canShareFile(file);
   sheet({
     title: 'File ready',
     sub: `${esc(file.name)} · ${bytes(file.size)}`,
-    body: `<div class="small" style="margin:8px 0">${canShare ? 'Share opens the iOS share sheet: Save to Files, Mail, WhatsApp, AirDrop…' : 'Your browser cannot share files directly – use Save.'}</div>
+    body: `${EMBEDDED ? `<div class="warnbox">Preview: ${HOST_DL ? 'Save asks you before it saves the file.' : 'saving files is blocked here.'} Share works only in the installed app.</div>` : `<div class="small" style="margin:8px 0">${canShare ? 'Share opens the iOS share sheet: Save to Files, Mail, WhatsApp, AirDrop…' : 'Your browser cannot share files directly – use Save.'}</div>`}
       ${isReport ? '<div class="small muted">To make a PDF: open the report, tap Share → Print, then pinch out on the preview → Share → Save to Files.</div>' : ''}
       ${isBackup ? '<div class="warnbox">The backup only counts once it is saved somewhere off this phone (Files / iCloud Drive / e-mail).</div>' : ''}`,
     foot: `${isReport ? '<button class="btn" data-s="open">Open</button>' : ''}<button class="btn" data-s="save">Save</button>${canShare ? '<button class="btn primary" data-s="share">Share…</button>' : ''}`,
@@ -1456,22 +1508,40 @@ function fileSheet(file, { isBackup = false, isReport = false } = {}) {
             refresh();
           }
         } else if (s === 'save') {
-          X.downloadFile(file);
-          if (isBackup) await store.markBackedUp();
+          if ((await saveFile(file)) && isBackup) await store.markBackedUp();
         } else if (s === 'open') {
-          const url = URL.createObjectURL(file);
-          const w = window.open(url, '_blank');
-          if (!w) location.href = url;
-          setTimeout(() => URL.revokeObjectURL(url), 120000);
+          await openReport(file);
         }
       } catch (e) {
         if (s === 'share') {
           // Some file types / iOS versions refuse share(): fall back to saving.
-          X.downloadFile(file);
-          if (isBackup) await store.markBackedUp();
+          if ((await saveFile(file)) && isBackup) await store.markBackedUp();
         } else fail(e);
       }
     },
+  });
+}
+
+// Show the report inside the app (no new window: home-screen apps have no tabs).
+async function openReport(file) {
+  const html = await file.text();
+  const v = document.createElement('div');
+  v.className = 'viewer report-viewer';
+  v.innerHTML = `<div class="stage"><iframe title="Report" sandbox="allow-same-origin allow-modals"></iframe></div>
+    <div class="vbar"><button class="btn" data-v="close">Close</button>${X.canShareFile(file) && !EMBEDDED ? '<button class="btn" data-v="share">Share…</button>' : ''}</div>`;
+  document.body.appendChild(v);
+  v.querySelector('iframe').srcdoc = html;
+  v.addEventListener('click', async (ev) => {
+    const b = ev.target.closest('[data-v]');
+    if (!b) return;
+    if (b.dataset.v === 'close') v.remove();
+    else if (b.dataset.v === 'share') {
+      try {
+        await X.shareFile(file);
+      } catch (e) {
+        fail(e);
+      }
+    }
   });
 }
 
@@ -1508,8 +1578,8 @@ A.restore = () => {
           const r = await X.restore(file, mode);
           bz.done();
           applyTheme();
-          alert(`Restore done.\nItems: ${r.items}\nPunch items: ${r.punches}\nQuestions: ${r.questions}\nPhotos: ${r.photos}\nUnchanged (already newer here): ${r.skipped}${r.missingPhotos ? `\nPhotos missing in file: ${r.missingPhotos}` : ''}`);
           refresh();
+          notice('Restore done', `<div class="kv"><div>Items</div><div>${r.items}</div><div>Punch items</div><div>${r.punches}</div><div>Questions</div><div>${r.questions}</div><div>Photos</div><div>${r.photos}</div><div>Unchanged</div><div>${r.skipped} (newer copy already here)</div>${r.missingPhotos ? `<div>Missing photos</div><div>${r.missingPhotos}</div>` : ''}</div>`);
         } catch (e) {
           bz.done();
           fail(e);
@@ -1624,15 +1694,24 @@ A.persist = async () => {
   refresh();
 };
 
-A.wipe = async () => {
-  if (!(await confirmSheet('Delete <b>all</b> items, punch items, questions, photos and settings on this phone? Make a backup first.', { ok: 'Continue', danger: true }))) return;
-  const typed = prompt('Type DELETE to confirm');
-  if (typed !== 'DELETE') return toast('Not deleted');
-  await db.clearAll();
-  await store.load();
-  applyTheme();
-  go('#/items');
-  toast('All data deleted');
+A.wipe = () => {
+  sheet({
+    title: 'Delete all data',
+    body: `<p>Deletes <b>all</b> items, punch items, questions, photos and settings on this phone. Make a backup first.</p>
+      ${field('Type DELETE to confirm', '<input type="text" name="confirm" autocomplete="off" autocapitalize="characters">')}`,
+    foot: '<button class="btn" data-s="cancel">Cancel</button><button class="btn danger solid" data-s="go">Delete everything</button>',
+    async onClick(s, b, api) {
+      if (s === 'cancel') return api.close();
+      if (formData(api.body).confirm !== 'DELETE') return toast('Type DELETE to confirm');
+      api.close();
+      await db.clearAll();
+      await store.load();
+      applyTheme();
+      go('#/items');
+      refresh();
+      toast('All data deleted');
+    },
+  });
 };
 
 // ---------------------------------------------------------------------------
@@ -1762,7 +1841,7 @@ document.addEventListener('visibilitychange', () => {
 });
 
 function registerSW() {
-  if (!('serviceWorker' in navigator) || location.protocol === 'file:') return;
+  if (EMBEDDED || !('serviceWorker' in navigator) || location.protocol === 'file:') return;
   let reloading = false;
   // First install also fires controllerchange (clients.claim) - only reload for updates.
   const hadController = !!navigator.serviceWorker.controller;
