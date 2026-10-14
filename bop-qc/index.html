@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>BOP QC Walkdown</title>
+<meta name="description" content="Offline walkdown checklist, punch list and closure tracking for balance-of-plant QC.">
+<meta name="theme-color" content="#0b3d63">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="BOP QC">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="format-detection" content="telephone=no">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<link rel="stylesheet" href="app.css">
+</head>
+<body>
+<header id="top">
+  <div id="title-wrap">
+    <div id="title">BOP QC</div>
+    <div id="subtitle"></div>
+  </div>
+  <div id="top-status" aria-live="polite"></div>
+</header>
+<main id="view" tabindex="-1"></main>
+<div id="bar"></div>
+<nav id="tabs" aria-label="Sections">
+  <a href="#/items" data-tab="items"><span class="ti" aria-hidden="true">☑</span><span>Items</span></a>
+  <a href="#/punch" data-tab="punch"><span class="ti" aria-hidden="true">⚑</span><span>Punch</span></a>
+  <a href="#/ask" data-tab="ask"><span class="ti" aria-hidden="true">?</span><span>Ask</span></a>
+  <a href="#/export" data-tab="export"><span class="ti" aria-hidden="true">⇪</span><span>Export</span></a>
+  <a href="#/more" data-tab="more"><span class="ti" aria-hidden="true">⚙</span><span>More</span></a>
+</nav>
+<div id="toast" role="status" aria-live="polite"></div>
+<noscript><p style="padding:16px">This app needs JavaScript.</p></noscript>
+<script type="module" src="js/app.js"></script>
+</body>
+</html>
