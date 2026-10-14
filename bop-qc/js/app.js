@@ -19,7 +19,7 @@ const UI = {
   items: { q: '', res: 'all' },
   punch: { st: 'notclosed', cat: '', area: '', q: '' },
   ask: { st: 'open', q: '' },
-  exp: { area: '', from: '', to: '', punchStatus: 'all', photos: 'small' },
+  exp: { area: '', sub: '', from: '', to: '', punchStatus: 'all', photos: 'small' },
 };
 try {
   const saved = JSON.parse(sessionStorage.getItem('bopqc-ui') || '{}');
@@ -458,7 +458,7 @@ A['items-res'] = (el) => {
 
 function itemForm(v) {
   const r = v.refs || {};
-  const anyRef = v.location || Object.values(r).some(Boolean);
+  const anyRef = v.location || v.attended || Object.values(r).some(Boolean);
   return `
     ${field('Tag / item ID', input('tag', v.tag, 'Line no., equipment tag, area name…'), 'Typed and kept on this phone only.')}
     ${field('Area', input('area', v.area, 'e.g. Water treatment', 'dl-area'))}
@@ -466,6 +466,7 @@ function itemForm(v) {
     ${field('Subcontractor', input('subcontractor', v.subcontractor, '', 'dl-sub'))}
     <details ${anyRef ? 'open' : ''}><summary>Location &amp; document refs (optional)</summary>
       ${field('Location', input('location', v.location, 'Rack, elevation, bay…'))}
+      ${field('Attended / witnessed by', input('attended', v.attended, 'e.g. subcon QC, client QC'))}
       ${field('Drawing / isometric', input('ref_drawing', r.drawing))}
       ${field('P&ID', input('ref_pid', r.pid))}
       ${field('Test pack', input('ref_testPack', r.testPack))}
@@ -482,6 +483,7 @@ function readItemForm(root) {
     system: d.system,
     subcontractor: d.subcontractor,
     location: d.location,
+    attended: d.attended,
     refs: { drawing: d.ref_drawing, pid: d.ref_pid, testPack: d.ref_testPack, itp: d.ref_itp, other: d.ref_other },
   };
 }
@@ -572,7 +574,7 @@ function scrItem(id) {
   const prev = it.prevId ? S.items.get(it.prevId) : null;
   const later = [...S.items.values()].filter((x) => x.prevId === it.id);
   const r = it.refs || {};
-  const refs = [['Location', it.location], ['Drawing', r.drawing], ['P&ID', r.pid], ['Test pack', r.testPack], ['ITP', r.itp], ['Ref', r.other]].filter(([, v]) => v);
+  const refs = [['Location', it.location], ['Attended', it.attended], ['Drawing', r.drawing], ['P&ID', r.pid], ['Test pack', r.testPack], ['ITP', r.itp], ['Ref', r.other]].filter(([, v]) => v);
 
   let groups = '';
   let lastG = null;
@@ -604,7 +606,7 @@ function scrItem(id) {
 
     ${it.checks.length ? `<div class="sec-h">Checklist · ${pr.marked}/${pr.total} marked</div>
       <div class="progress" aria-hidden="true"><i style="width:${pr.total ? Math.round((pr.marked / pr.total) * 100) : 0}%"></i></div>
-      <div class="tiny muted">✓ ${pr.ok} · ✗ ${pr.defect} · ? ${pr.unknown} · N/A ${pr.na}</div>` : ''}
+      <div class="spread"><div class="tiny muted" style="padding-top:8px">✓ ${pr.ok} · ✗ ${pr.defect} · ? ${pr.unknown} · N/A ${pr.na}</div>${pr.total - pr.marked ? '<button class="btn small" data-a="next-unmarked">Next unmarked ↓</button>' : ''}</div>` : ''}
     ${groups}
     <div class="row wrap" style="margin-top:10px">
       <button class="btn small" data-a="chk-add">+ Add checkpoint</button>
@@ -621,6 +623,7 @@ function scrItem(id) {
 
     <hr>
     <div class="row wrap">
+      <button class="btn small" data-a="item-report">Report for this item</button>
       <button class="btn small" data-a="item-reinspect">Re-inspect (new check)</button>
       <button class="btn small" data-a="item-next">Next item, same area</button>
       <button class="btn small danger" data-a="item-del">Delete item</button>
@@ -737,6 +740,22 @@ A['chk-all-ok'] = async () => {
   refresh();
 };
 
+A['next-unmarked'] = () => {
+  const c = curItem.checks.find((x) => !x.state);
+  const el = c && $(`.chk[data-cid="${CSS.escape(c.id)}"]`);
+  if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+};
+A['item-report'] = async () => {
+  const b = busy('Preparing…');
+  try {
+    const file = await X.reportFile(X.scope({ itemIds: [curItem.id] }), 'small');
+    b.done();
+    fileSheet(file, { isReport: true });
+  } catch (e) {
+    b.done();
+    fail(e);
+  }
+};
 A['item-edit'] = () => editItemSheet(curItem);
 A['item-comment'] = () => commentSheet({ item: curItem, check: null });
 A['item-question'] = () => questionSheet({ item: curItem, check: null });
@@ -1325,12 +1344,14 @@ function scrExport() {
   head('Export', 'Reports, Excel lists, backup');
   const f = UI.exp;
   const areas = store.recent('area');
+  const subs = store.recent('subcontractor');
   const sc = X.scope(f);
   const last = S.lastBackupAt;
   view.innerHTML = `
     <div class="sec-h" style="margin-top:6px">Scope</div>
     <div class="card">
       ${field('Area', `<select data-ef="area"><option value="">All areas</option>${areas.map((a) => `<option ${f.area === a ? 'selected' : ''}>${esc(a)}</option>`).join('')}</select>`)}
+      ${subs.length ? field('Subcontractor', `<select data-ef="sub"><option value="">All subcontractors</option>${subs.map((a) => `<option ${f.sub === a ? 'selected' : ''}>${esc(a)}</option>`).join('')}</select>`) : ''}
       <div class="row"><div class="grow">${field('Checks from', `<input type="date" data-ef="from" value="${esc(f.from)}">`)}</div><div class="grow">${field('to', `<input type="date" data-ef="to" value="${esc(f.to)}">`)}</div></div>
       <div class="chips"><button class="chip" data-a="exp-today">Today</button><button class="chip" data-a="exp-week">Last 7 days</button><button class="chip" data-a="exp-alld">All dates</button></div>
       ${field('Punch items', `<select data-ef="punchStatus"><option value="all" ${f.punchStatus === 'all' ? 'selected' : ''}>All statuses</option><option value="notclosed" ${f.punchStatus === 'notclosed' ? 'selected' : ''}>Not closed only</option></select>`)}

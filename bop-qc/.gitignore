@@ -1,0 +1,10 @@
+# Never commit field data to this public repository.
+*_report_*.html
+*_package_*.zip
+*_backup_*.zip
+*_punch_*.csv
+*_items_*.csv
+*_checkpoints_*.csv
+*_questions_*.csv
+*.csv
+*.zip

@@ -12,14 +12,23 @@ const BACKUP_FORMAT = 'bopqc-backup';
 // ---------- scope -----------------------------------------------------------
 // f = {area, from, to, punchStatus: 'all'|'notclosed'}
 export function scope(f = {}) {
+  // Single-item report: just that item, its comments and questions.
+  if (f.itemIds && f.itemIds.length) {
+    const ids = new Set(f.itemIds);
+    const items = f.itemIds.map((id) => S.items.get(id)).filter(Boolean);
+    const punches = [...S.punches.values()].filter((p) => ids.has(p.itemId)).sort(punchSort);
+    const questions = [...S.questions.values()].filter((q) => ids.has(q.itemId)).sort((a, b) => noNum(a.no) - noNum(b.no));
+    return { items, punches, followUp: punches.filter((p) => p.status !== 'closed'), questions, filter: f };
+  }
   const inArea = (a) => !f.area || (a || '') === f.area;
+  const inSub = (x) => !f.sub || (x || '') === f.sub;
   const inDates = (iso) => {
     const d = isoDay(iso);
     return (!f.from || d >= f.from) && (!f.to || d <= f.to);
   };
-  const items = [...S.items.values()].filter((i) => inArea(i.area) && inDates(i.createdAt)).sort((a, b) => noNum(a.no) - noNum(b.no));
+  const items = [...S.items.values()].filter((i) => inArea(i.area) && inSub(i.subcontractor) && inDates(i.createdAt)).sort((a, b) => noNum(a.no) - noNum(b.no));
   const itemIds = new Set(items.map((i) => i.id));
-  const allPunches = [...S.punches.values()].filter((p) => inArea(p.area));
+  const allPunches = [...S.punches.values()].filter((p) => inArea(p.area) && inSub(p.subcontractor));
   const statusOk = (p) => f.punchStatus !== 'notclosed' || p.status !== 'closed';
   // Punch list: every item in an exported check + standalone items raised in the date range.
   const punches = allPunches
@@ -28,7 +37,7 @@ export function scope(f = {}) {
   // Follow-up: everything in the area not yet verified closed, regardless of date.
   const followUp = allPunches.filter((p) => p.status !== 'closed').sort(punchSort);
   const questions = [...S.questions.values()]
-    .filter((q) => inArea(q.area) && (q.itemId ? itemIds.has(q.itemId) : inDates(q.createdAt)))
+    .filter((q) => (q.itemId ? itemIds.has(q.itemId) : inArea(q.area) && !f.sub && inDates(q.createdAt)))
     .sort((a, b) => noNum(a.no) - noNum(b.no));
   return { items, punches, followUp, questions, filter: f };
 }
@@ -38,8 +47,12 @@ function punchSort(a, b) {
 }
 
 export function scopeLabel(f = {}) {
+  if (f.itemIds && f.itemIds.length) {
+    return `Item: ${f.itemIds.map((id) => S.items.get(id)).filter(Boolean).map((i) => `${i.no} ${i.tag}`).join(', ')}`;
+  }
   const parts = [];
   parts.push(f.area ? `Area: ${f.area}` : 'All areas');
+  if (f.sub) parts.push(`Subcontractor: ${f.sub}`);
   if (f.from || f.to) parts.push(`Checks dated ${f.from ? fmtDate(f.from) : '…'} to ${f.to ? fmtDate(f.to) : '…'}`);
   else parts.push('All dates');
   if (f.punchStatus === 'notclosed') parts.push('Punch: not closed only');
@@ -106,7 +119,7 @@ export function punchCSV(punches, names = photoFileNames()) {
 }
 
 export function itemsCSV(items, names = photoFileNames()) {
-  const header = ['Check no', 'Date', 'Type', 'Tag / item', 'Area', 'System', 'Location', 'Subcontractor', 'Inspector', 'Result', 'Result note', 'Result date', 'Checkpoints', 'OK', 'Defect', 'Unknown', 'N/A', 'Not marked', 'Comments', 'Open', 'Ready for QC', 'Closed', 'Open by category', 'Questions open', 'Drawing / ISO', 'P&ID', 'Test pack', 'ITP / procedure', 'Other ref', 'Re-inspection of', 'Photos'];
+  const header = ['Check no', 'Date', 'Type', 'Tag / item', 'Area', 'System', 'Location', 'Subcontractor', 'Inspector', 'Attended by', 'Result', 'Result note', 'Result date', 'Checkpoints', 'OK', 'Defect', 'Unknown', 'N/A', 'Not marked', 'Comments', 'Open', 'Ready for QC', 'Closed', 'Open by category', 'Questions open', 'Drawing / ISO', 'P&ID', 'Test pack', 'ITP / procedure', 'Other ref', 'Re-inspection of', 'Photos'];
   const rows = items.map((i) => {
     const pr = checkProgress(i);
     const ps = punchStats(itemPunches(i.id));
@@ -114,7 +127,7 @@ export function itemsCSV(items, names = photoFileNames()) {
     const prev = i.prevId ? S.items.get(i.prevId) : null;
     const r = i.refs || {};
     return [
-      i.no, fmtDateTime(i.createdAt), typeInfo(i.type).label, i.tag, i.area, i.system, i.location, i.subcontractor, i.inspector,
+      i.no, fmtDateTime(i.createdAt), typeInfo(i.type).label, i.tag, i.area, i.system, i.location, i.subcontractor, i.inspector, i.attended,
       resultLabel(i.result), i.resultNote, fmtDateTime(i.resultAt),
       pr.total, pr.ok, pr.defect, pr.unknown, pr.na, pr.total - pr.marked,
       itemPunches(i.id).length, ps.open, ps.ready, ps.closed,
@@ -259,7 +272,7 @@ export async function reportHTML(sc, { photoMode = 'small' } = {}) {
       const qs = itemQuestions(i.id);
       return `<section class="item">
         <div class="hd"><div><h3>${esc(i.no)} · ${esc(i.tag || '(no tag)')}</h3><div class="muted small">${esc(t.label)} · ${esc(fmtDateTime(i.createdAt))}${i.inspector ? ' · ' + esc(i.inspector) : ''}</div></div>${resultBadge(i.result)}</div>
-        <div class="kv small">${i.area ? `<div class="muted">Area</div><div>${esc(i.area)}</div>` : ''}${i.system ? `<div class="muted">System</div><div>${esc(i.system)}</div>` : ''}${i.location ? `<div class="muted">Location</div><div>${esc(i.location)}</div>` : ''}${i.subcontractor ? `<div class="muted">Subcontractor</div><div>${esc(i.subcontractor)}</div>` : ''}${prev ? `<div class="muted">Re-inspection of</div><div>${esc(prev.no)} (${esc(resultLabel(prev.result))})</div>` : ''}${refRows}</div>
+        <div class="kv small">${i.area ? `<div class="muted">Area</div><div>${esc(i.area)}</div>` : ''}${i.system ? `<div class="muted">System</div><div>${esc(i.system)}</div>` : ''}${i.location ? `<div class="muted">Location</div><div>${esc(i.location)}</div>` : ''}${i.subcontractor ? `<div class="muted">Subcontractor</div><div>${esc(i.subcontractor)}</div>` : ''}${i.attended ? `<div class="muted">Attended by</div><div>${esc(i.attended)}</div>` : ''}${prev ? `<div class="muted">Re-inspection of</div><div>${esc(prev.no)} (${esc(resultLabel(prev.result))})</div>` : ''}${refRows}</div>
         ${i.resultNote ? `<div class="note"><b>Result note:</b> ${esc(i.resultNote)}</div>` : ''}
         <div class="small muted">Checkpoints: ${pr.total} · OK ${pr.ok} · Defect ${pr.defect} · Unknown ${pr.unknown} · N/A ${pr.na} · Not marked ${pr.total - pr.marked}</div>
         ${photosHTML(photosOf(i.id), src, names, large)}
@@ -281,7 +294,7 @@ export async function reportHTML(sc, { photoMode = 'small' } = {}) {
 <table><tbody><tr><th>Items checked</th><td>${sc.items.length}</td><th>OK</th><td>${resCount.ok}</td><th>OK with comments</th><td>${resCount.okc}</td><th>Rejected</th><td>${resCount.rej}</td><th>In progress</th><td>${resCount.none}</td></tr></tbody></table>
 <table><thead><tr><th>Cat</th><th>Meaning</th><th>Open</th><th>Ready for QC</th><th>Closed</th><th>Total</th></tr></thead><tbody>${catRows}</tbody></table>
 <h2>Follow-up: punch items not yet verified closed (${sc.followUp.length})</h2>
-<div class="small muted">All dates${sc.filter.area ? ', area ' + esc(sc.filter.area) : ''}. Sorted by category.</div>
+<div class="small muted">${sc.filter.itemIds ? 'This item only' : `All dates${sc.filter.area ? ', area ' + esc(sc.filter.area) : ''}${sc.filter.sub ? ', subcontractor ' + esc(sc.filter.sub) : ''}`}. Sorted by category.</div>
 ${punchTable(sc.followUp)}
 <h2>Items (${sc.items.length})</h2>
 ${itemsHTML || '<p class="muted">No items in scope.</p>'}

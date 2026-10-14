@@ -153,6 +153,7 @@ export async function createItem(fields) {
     system: fields.system || '',
     subcontractor: fields.subcontractor || '',
     location: fields.location || '',
+    attended: fields.attended || '',
     refs: { ...(fields.refs || {}) },
     inspector: S.settings.inspector || '',
     prevId: fields.prevId || null,
