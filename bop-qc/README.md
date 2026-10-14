@@ -20,6 +20,14 @@ Link to the folder URL **with its trailing slash** and the same capitalisation e
 
 More → Storage shows whether the offline files are cached, whether the app is running installed, and whether iOS has granted persistent storage. The installed app asks for persistent storage on every launch.
 
+**Before the first site walk, run More → Device check once on your iPhone** (with signal, from the icon). It records what actually works on your phone:
+- automatic: installed, offline files, protected storage, space, database read/write, photo encoding, file sharing
+- manual: share sheet, saving a file, camera, print/PDF
+
+This turns the "Unknown" rows in the table below into checked results.
+
+If iOS restarts the app in the background (it often does while the camera or Files is open), the app reopens the screen you were on. It checks for a new version each time it comes back to the front.
+
 ## Daily use
 
 | Step | What you do |

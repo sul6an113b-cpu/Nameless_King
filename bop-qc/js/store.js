@@ -71,6 +71,7 @@ export const S = {
   templates: { hidden: {}, custom: {} },
   lastBackupAt: null,
   restoreIncomplete: null,
+  deviceCheck: null, // results of More → Device check on this phone
   items: new Map(),
   punches: new Map(),
   questions: new Map(),
@@ -90,6 +91,7 @@ export async function load() {
   S.templates.custom ||= {};
   S.lastBackupAt = meta.get('lastBackupAt') || null;
   S.restoreIncomplete = meta.get('restoreIncomplete') || null;
+  S.deviceCheck = meta.get('deviceCheck') || null;
   S.drafts = new Map([...meta].filter(([k]) => k.startsWith('draft:')));
   const [items, punches, questions, photos] = await Promise.all([db.all('items'), db.all('punches'), db.all('questions'), db.all('photos')]);
   S.items = new Map(items.map((x) => [x.id, x]));

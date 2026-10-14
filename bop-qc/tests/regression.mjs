@@ -484,6 +484,23 @@ dst.close()`,
   await ctx.close();
 }
 
+console.log('Device check and reopening the last screen');
+{
+  const { ctx, page } = await fresh();
+  await page.goto(BASE + '#/check');
+  await page.waitForSelector('[data-a="dc-run"]');
+  await tap(page, '[data-a="dc-run"]');
+  await page.waitForSelector('.badge.r-ok');
+  const passes = await page.locator('.badge.r-ok').count();
+  ok(passes >= 3, `automatic checks run (${passes} passed)`);
+  await newItem(page, { tag: 'BACK-HERE' });
+  const itemHash = new URL(page.url()).hash;
+  await page.goto(BASE); // what iOS does when it restarts the app at its start page
+  await page.waitForSelector('.item-head');
+  ok(new URL(page.url()).hash === itemHash && (await page.locator('.item-head .tag').innerText()) === 'BACK-HERE', 'start page reopens the screen in use');
+  await ctx.close();
+}
+
 console.log('DS-7 – backup counts only when confirmed');
 {
   const { ctx, page } = await fresh();

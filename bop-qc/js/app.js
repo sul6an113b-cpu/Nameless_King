@@ -468,6 +468,7 @@ const ROUTES = {
   more: { fn: scrMore, tab: 'more' },
   templates: { fn: scrTemplates, detail: true },
   help: { fn: scrHelp, detail: true },
+  check: { fn: scrDeviceCheck, detail: true },
 };
 
 function route() {
@@ -496,9 +497,26 @@ function refresh() {
 // prevHash: the screen before this one inside the app (null on the first screen).
 let prevHash = null;
 let curHash = location.hash;
+// iOS may restart a backgrounded home-screen app at its start page: remember the
+// screen so the next start can reopen it.
+const ROUTE_KEY = 'bopqc-route';
+function rememberRoute() {
+  try {
+    localStorage.setItem(ROUTE_KEY, JSON.stringify({ hash: location.hash, at: Date.now() }));
+  } catch {}
+}
+function lastRoute() {
+  try {
+    const r = JSON.parse(localStorage.getItem(ROUTE_KEY) || 'null');
+    return r && r.hash && Date.now() - r.at < 12 * 3600 * 1000 ? r.hash : null;
+  } catch {
+    return null;
+  }
+}
 window.addEventListener('hashchange', () => {
   prevHash = curHash;
   curHash = location.hash;
+  rememberRoute();
   closeAllLayers();
   // Mark entries created inside the app so Back can use history safely.
   try {
@@ -543,8 +561,12 @@ function previewBanner() {
     : '';
 }
 
+function updateBanner() {
+  return UPDATE ? '<div class="banner info"><div class="grow small"><b>Update ready.</b> Your data is kept.</div><button class="btn small primary" data-a="apply-update">Update</button></div>' : '';
+}
+
 function banners() {
-  let h = previewBanner();
+  let h = previewBanner() + updateBanner();
   if (S.restoreIncomplete) {
     h += `<div class="banner bad"><div class="grow small"><b>A restore did not finish.</b> This phone may hold only part of the backup. Run Export → Restore → Replace again with the same file.</div></div>`;
   }
@@ -1748,13 +1770,13 @@ function fileSheet(file, { isBackup = false, isReport = false } = {}) {
 }
 
 // Show the report inside the app (no new window: home-screen apps have no tabs).
-async function openReport(file) {
+async function openReport(file, { onClose } = {}) {
   const html = await file.text();
   const v = document.createElement('div');
   v.className = 'viewer report-viewer';
   v.innerHTML = `<div class="stage"><iframe title="Report" sandbox="allow-same-origin allow-modals"></iframe></div>
     <div class="vbar"><button class="btn" data-v="close">Close</button>${X.canShareFile(file) && !EMBEDDED ? '<button class="btn" data-v="share">Share…</button>' : ''}</div>`;
-  const L = layer({ el: v });
+  const L = layer({ el: v, onClose });
   v.querySelector('iframe').srcdoc = html;
   v.addEventListener('click', async (ev) => {
     const b = ev.target.closest('[data-v]');
@@ -1868,6 +1890,7 @@ async function scrMore() {
     <div class="card" id="storage"><div class="small muted">Checking…</div></div>
 
     <div class="sec-h">Help</div>
+    <a class="card" href="#/check"><b>Device check</b><div class="small muted">${S.deviceCheck ? `Last run ${esc(fmtDate(S.deviceCheck.at))}: ${Object.values(S.deviceCheck.results).filter((r) => r.ok === true).length} passed, ${Object.values(S.deviceCheck.results).filter((r) => r.ok === false).length} failed` : 'Not run yet – run it once on this iPhone before relying on the app on site.'}</div></a>
     <a class="card" href="#/help"><b>How to use / install / back up</b></a>
 
     <div class="sec-h">Danger zone</div>
@@ -2027,6 +2050,140 @@ A['tpl-del'] = async (el) => {
 };
 
 // ---------------------------------------------------------------------------
+// DEVICE CHECK - turns the iPhone unknowns (README) into facts for this phone
+
+const CHECKS = [
+  ['standalone', 'Opened from the home-screen icon', 'auto'],
+  ['offline', 'Offline files cached', 'auto'],
+  ['persist', 'Storage protected from automatic clearing', 'auto'],
+  ['space', 'Storage space', 'auto'],
+  ['idb', 'Save and read back a test record', 'auto'],
+  ['canvas', 'Photo processing (JPEG encode)', 'auto'],
+  ['canshare', 'File sharing available', 'auto'],
+  ['share', 'Share a test file (share sheet opens)', 'manual'],
+  ['download', 'Save a test file (appears in Files)', 'manual'],
+  ['camera', 'Camera photo saved and readable', 'manual'],
+  ['print', 'Print / PDF from the report', 'manual'],
+];
+
+async function runAutoChecks() {
+  const r = {};
+  r.standalone = { ok: isStandalone(), detail: isStandalone() ? 'Yes' : 'No – open the app from its icon, not a Safari tab' };
+  const off = await offlineStatus();
+  r.offline = { ok: off.startsWith('Ready'), detail: off.replace(/<[^>]+>/g, '') };
+  const e = await db.estimate();
+  r.persist = { ok: e.persisted === true ? true : e.persisted === false ? false : null, detail: e.persisted === true ? 'Granted' : e.persisted === false ? 'Not granted – back up often' : 'Unknown on this browser' };
+  r.space = { ok: e.quota ? e.usage < e.quota * 0.8 : null, detail: e.usage != null ? `${bytes(e.usage)} used${e.quota ? ` of ~${bytes(e.quota)}` : ''}` : 'Unknown' };
+  try {
+    const key = `selftest:${Date.now()}`;
+    await db.setMeta(key, { x: 1 });
+    const v = await db.getMeta(key, null);
+    await db.del('meta', key);
+    r.idb = { ok: !!(v && v.x === 1), detail: v && v.x === 1 ? 'OK' : 'Read-back failed' };
+  } catch (err) {
+    r.idb = { ok: false, detail: err.message || String(err) };
+  }
+  try {
+    const c = document.createElement('canvas');
+    c.width = 64;
+    c.height = 48;
+    c.getContext('2d').fillRect(0, 0, 10, 10);
+    const b = await new Promise((res) => c.toBlob(res, 'image/jpeg', 0.7));
+    r.canvas = { ok: !!(b && b.size > 0), detail: b ? `${b.size} bytes` : 'No output' };
+  } catch (err) {
+    r.canvas = { ok: false, detail: err.message || String(err) };
+  }
+  const probe = new File(['test'], 'test.csv', { type: 'text/csv' });
+  const zipProbe = new File(['test'], 'test.zip', { type: 'application/zip' });
+  const can = X.canShareFile(probe) && X.canShareFile(zipProbe);
+  r.canshare = { ok: EMBEDDED ? null : can, detail: EMBEDDED ? 'Not available in the preview' : can ? 'CSV and ZIP can be shared' : 'Not supported – use Save' };
+  return r;
+}
+
+async function saveCheck(results) {
+  const v = { at: new Date().toISOString(), ua: navigator.userAgent, results: { ...((S.deviceCheck && S.deviceCheck.results) || {}), ...results } };
+  await db.setMeta('deviceCheck', v);
+  S.deviceCheck = v;
+}
+
+async function scrDeviceCheck() {
+  head('Device check', 'Run once on this iPhone');
+  setBar(`<button class="btn" data-a="back" data-fallback="#/more">‹ Back</button><button class="btn primary" data-a="dc-run">Run automatic checks</button>`);
+  const res = (S.deviceCheck && S.deviceCheck.results) || {};
+  const badge = (r) => (!r ? '<span class="badge r-none">Not run</span>' : r.ok === true ? '<span class="badge r-ok">Pass</span>' : r.ok === false ? '<span class="badge r-rej">Fail</span>' : '<span class="badge r-okc">Unknown</span>');
+  const manualBtn = {
+    share: '<button class="btn small" data-a="dc-share">Test</button>',
+    download: '<button class="btn small" data-a="dc-download">Test</button>',
+    camera: '<button class="btn small" data-a="dc-camera">Test</button>',
+    print: '<button class="btn small" data-a="dc-print">Test</button>',
+  };
+  view.innerHTML = `
+    <div class="small muted" style="margin:6px 2px">Some iPhone behaviour could not be confirmed from documentation (README → iPhone behaviour). These checks record what actually works on this phone. Run them with signal, from the home-screen icon.</div>
+    ${CHECKS.map(([id, label, kind]) => `<div class="card"><div class="spread"><div class="grow"><b>${esc(label)}</b>${res[id] ? `<div class="small muted">${esc(res[id].detail || '')}</div>` : ''}</div>${badge(res[id])}</div>${kind === 'manual' ? `<div style="margin-top:8px">${manualBtn[id]}</div>` : ''}</div>`).join('')}
+    ${S.deviceCheck ? `<div class="tiny muted">Last run ${esc(fmtDateTime(S.deviceCheck.at))} · ${esc(S.deviceCheck.ua)}</div>` : ''}`;
+}
+
+async function askResult(id, question) {
+  const yes = await confirmSheet(question, { ok: 'Yes', title: 'Did it work?' });
+  await saveCheck({ [id]: { ok: yes, detail: yes ? 'Confirmed by you' : 'Did not work – see README' } });
+  refresh();
+}
+
+A['dc-run'] = async () => {
+  const b = busy('Checking…');
+  try {
+    await saveCheck(await runAutoChecks());
+  } finally {
+    b.done();
+  }
+  refresh();
+};
+A['dc-share'] = async () => {
+  const f = new File(['BOP QC share test\r\n'], 'bopqc-share-test.csv', { type: 'text/csv' });
+  if (EMBEDDED || !X.canShareFile(f)) {
+    await saveCheck({ share: { ok: false, detail: 'Sharing files not supported here' } });
+    return refresh();
+  }
+  try {
+    const r = await X.shareFile(f);
+    await saveCheck({ share: { ok: r === 'shared' ? true : null, detail: r === 'shared' ? 'Share sheet worked' : 'Cancelled – run again' } });
+  } catch (e) {
+    await saveCheck({ share: { ok: false, detail: e.message || String(e) } });
+  }
+  refresh();
+};
+A['dc-download'] = async () => {
+  const r = await saveFile(new File(['BOP QC download test\r\n'], 'bopqc-download-test.txt', { type: 'text/plain' }));
+  if (r === 'saved') {
+    await saveCheck({ download: { ok: true, detail: 'Saved through the host' } });
+    return refresh();
+  }
+  if (!r) return;
+  await askResult('download', 'Did “bopqc-download-test.txt” appear in Files (Downloads)?');
+};
+A['dc-camera'] = () => {
+  pickPhotos(true, async (files) => {
+    const b = busy('Processing…');
+    try {
+      const p = await processImage(files[0], { maxPx: S.settings.photoMaxPx, quality: S.settings.photoQuality });
+      await saveCheck({ camera: { ok: p.data.byteLength > 0, detail: `${p.w}×${p.h}, ${bytes(p.data.byteLength)}` } });
+    } catch (e) {
+      await saveCheck({ camera: { ok: false, detail: e.message || String(e) } });
+    } finally {
+      b.done();
+      refresh();
+    }
+  });
+};
+A['dc-print'] = async () => {
+  const html = '<!doctype html><meta charset="utf-8"><title>Print test</title><h1>BOP QC print test</h1><p>Use Share → Print (or Options → PDF) and check that this page prints or saves as PDF.</p>';
+  // Try it in the viewer (Share… → Print), then answer when the viewer is closed.
+  await openReport(new File([html], 'bopqc-print-test.html', { type: 'text/html' }), {
+    onClose: (reason) => reason !== 'nav' && askResult('print', 'Could you print the test page or save it as PDF (Share… → Print, or Options → PDF)?'),
+  });
+};
+
+// ---------------------------------------------------------------------------
 // HELP
 
 function scrHelp() {
@@ -2062,6 +2219,10 @@ function scrHelp() {
     <p>Code references are generic. “verify clause/edition” means the clause was not confirmed. Enter confirmed editions in More → Code editions.</p>
   </div>
   <div class="card small">
+    <h3>Before the first site walk</h3>
+    <p>Run <b>More → Device check</b> once on your iPhone (with signal, from the icon). It confirms offline files, protected storage, sharing, saving, camera and printing on your own phone.</p>
+  </div>
+  <div class="card small">
     <h3>Back up</h3>
     <p>Everything stays on this phone. iOS deletes it if you delete the home-screen icon. Export → <b>Make backup</b> → Share → Save to Files / iCloud Drive (or e-mail it to yourself) at least every few days. Restore with Export → Restore.</p>
   </div>`;
@@ -2088,6 +2249,9 @@ const flushField = () => document.activeElement && document.activeElement.blur &
 document.addEventListener('visibilitychange', () => document.visibilityState === 'hidden' && flushField());
 window.addEventListener('pagehide', flushField);
 
+// A home-screen app resumed from the background does not reload, so it can keep
+// an old version for a long time: check for updates on start and on every resume.
+let UPDATE = null; // waiting service worker, shown as a banner until applied
 function registerSW() {
   if (EMBEDDED || !('serviceWorker' in navigator) || location.protocol === 'file:') return;
   let reloading = false;
@@ -2099,24 +2263,30 @@ function registerSW() {
     location.reload();
   });
   navigator.serviceWorker
-    .register('sw.js')
+    .register('sw.js', { updateViaCache: 'none' })
     .then((reg) => {
       const offer = (w) => {
         if (!w || !navigator.serviceWorker.controller) return;
-        const el = document.createElement('div');
-        el.className = 'banner info';
-        el.innerHTML = '<div class="grow small"><b>Update ready.</b> Your data is kept.</div><button class="btn small primary">Update</button>';
-        el.querySelector('button').onclick = () => w.postMessage('skipWaiting');
-        view.prepend(el);
+        UPDATE = w;
+        refreshBanners();
       };
       if (reg.waiting) offer(reg.waiting);
       reg.addEventListener('updatefound', () => {
         const w = reg.installing;
         w && w.addEventListener('statechange', () => w.state === 'installed' && offer(w));
       });
+      document.addEventListener('visibilitychange', () => {
+        if (document.visibilityState === 'visible' && navigator.onLine) reg.update().catch(() => {});
+      });
     })
     .catch((e) => console.warn('SW registration failed', e));
 }
+function refreshBanners() {
+  if (!layers.length && ['items', 'more'].includes(route().name)) refresh();
+}
+A['apply-update'] = () => {
+  if (UPDATE) UPDATE.postMessage('skipWaiting');
+};
 
 // iOS does not shrink the layout for the on-screen keyboard: measure it so
 // sheets (and their Save buttons) sit above it.
@@ -2144,6 +2314,11 @@ async function boot() {
   try {
     history.replaceState({ inApp: false }, '');
   } catch {}
+  const back = !location.hash && lastRoute();
+  if (back && back !== '#/items' && back !== '#/') {
+    history.replaceState({ inApp: false }, '', back);
+    curHash = location.hash;
+  }
   render();
   registerSW();
   // Home-screen apps are granted persistent storage on request (Safari tabs usually are not).
