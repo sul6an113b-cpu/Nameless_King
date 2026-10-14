@@ -837,13 +837,15 @@ function scrItem(id) {
   const checkIds = new Set(it.checks.map((c) => c.id));
   const free = ps.filter((p) => !p.checkId || !checkIds.has(p.checkId));
   const freeQ = qs.filter((q) => !q.checkId || !checkIds.has(q.checkId));
+  const earlier = earlierOpen(it);
+  const earlierHTML = earlier.length ? `<div class="sec-h">Still open from earlier checks (${earlier.length})</div>${earlier.map((p) => punchCard(p)).join('')}` : '';
   const drafts = [...new Set([...S.drafts.keys(), ...S.photos.keys()])].filter((k) => k.startsWith(`draft:${it.id}:`));
   const draftHTML = drafts
     .map((k) => {
       const cid = k.split(':')[2];
       const c = it.checks.find((x) => x.id === cid);
       const n = store.photosOf(k).length;
-      return `<div class="banner"><div class="grow small"><b>Unsaved comment</b>${c ? ` on “${esc(c.text)}”` : ''}${n ? ` · ${n} photo${n === 1 ? '' : 's'}` : ''}</div><button class="btn small" data-a="draft-resume" data-cid="${esc(c ? cid : 'free')}">Resume</button></div>`;
+      return `<div class="banner"><div class="grow small"><b>Unsaved comment</b>${c ? ` on “${esc(c.text)}”` : ''}${n ? ` · ${n} photo${n === 1 ? '' : 's'}` : ''}</div><button class="btn small" data-a="draft-resume" data-cid="${esc(cid)}" data-key="${esc(k)}">Resume</button></div>`;
     })
     .join('');
 
@@ -872,6 +874,7 @@ function scrItem(id) {
       ${pr.total - pr.marked ? `<button class="btn small" data-a="chk-all-ok">Mark ${pr.total - pr.marked} unmarked OK…</button>` : ''}
     </div>
 
+    ${earlierHTML}
     <div class="sec-h">Comments not tied to a checkpoint (${free.length})</div>
     ${free.map((p) => punchCard(p, true)).join('') || '<div class="small muted">None.</div>'}
     <button class="btn small" style="margin-top:8px" data-a="item-comment">+ Comment</button>
@@ -996,7 +999,7 @@ A['chk-all-ok'] = async () => {
 
 A['draft-resume'] = (el) => {
   const c = curItem.checks.find((x) => x.id === el.dataset.cid) || null;
-  commentSheet({ item: curItem, check: c });
+  commentSheet({ item: curItem, check: c, key: el.dataset.key });
 };
 
 A['next-unmarked'] = () => {
@@ -1041,16 +1044,28 @@ A['item-del'] = async () => {
 // ---------------------------------------------------------------------------
 // RESULT
 
+// Not-closed comments on the earlier checks this one re-inspects (prevId chain).
+function earlierOpen(it) {
+  const out = [];
+  const seen = new Set([it.id]);
+  for (let p = it.prevId && S.items.get(it.prevId); p && !seen.has(p.id); p = p.prevId && S.items.get(p.prevId)) {
+    seen.add(p.id);
+    out.push(...store.itemPunches(p.id).filter((x) => x.status !== 'closed'));
+  }
+  return out;
+}
+
 function resultSheet(it) {
   let sel = it.result;
   const pr = store.checkProgress(it);
   const ps = store.itemPunches(it.id);
-  const open = ps.filter((p) => p.status !== 'closed');
+  const earlier = earlierOpen(it);
+  const open = [...ps.filter((p) => p.status !== 'closed'), ...earlier];
   const catA = open.filter((p) => p.category === 'A');
   const qOpen = store.itemQuestions(it.id).filter((q) => q.status === 'open');
   const warnings = () => {
     const w = [];
-    if (sel === 'ok' && open.length) w.push(['bad', `${open.length} comment(s) still open on this item. “OK” means no comments – use “OK with comments”, or verify the comments closed first.`]);
+    if (sel === 'ok' && open.length) w.push(['bad', `${open.length} comment(s) still open on this item${earlier.length ? ` (${earlier.length} from the earlier check${earlier.length === 1 ? '' : 's'}: ${earlier.map((p) => esc(p.no)).join(', ')})` : ''}. “OK” means no comments – use “OK with comments”, or verify the comments closed first.`]);
     if (sel === 'okc' && !ps.length) w.push(['', 'No comments recorded. Add the comments the subcontractor must fix.']);
     if (catA.length && sel && sel !== 'rej') w.push(['bad', `Cat A comment open (${catA.map((p) => esc(p.no)).join(', ')}): safety / equipment-damage risk, blocks handover. Confirm the result.`]);
     if (pr.total - pr.marked) w.push(['', `${pr.total - pr.marked} checkpoint(s) not marked – they show as “Not marked” in the report.`]);
@@ -1073,8 +1088,9 @@ function resultSheet(it) {
         <button class="r-rej ${sel === 'rej' ? 'on' : ''}" data-s="pick" data-v="rej">✗ Rejected</button>
       </div>
       <div id="warn">${warnings()}</div>
-      ${field('Result note', `<textarea name="note" placeholder="Reason / summary (required for Rejected)">${esc(it.resultNote)}</textarea>`)}`,
-    foot: `${it.result ? '<button class="btn" data-s="clear">Clear</button>' : '<button class="btn" data-s="cancel">Cancel</button>'}
+      ${field('Result note', `<textarea name="note" placeholder="Reason / summary (required for Rejected)">${esc(it.resultNote)}</textarea>`)}
+      ${it.result ? '<button type="button" class="btn small danger" data-s="clear">Clear the result…</button>' : ''}`,
+    foot: `<button class="btn" data-s="cancel">Cancel</button>
       <button class="btn" data-s="next">Save &amp; next</button>
       <button class="btn primary" data-s="save">Save</button>`,
     isDirty: 'form',
@@ -1087,6 +1103,7 @@ function resultSheet(it) {
         return;
       }
       if (s === 'clear') {
+        if (!(await confirmSheet(`Clear the result of ${esc(it.no)} and delete its result note?`, { ok: 'Clear', danger: true }))) return;
         await store.setResult(it.id, null, '');
         api.close();
         refresh();
@@ -1120,8 +1137,9 @@ function catPicker(selected) {
 
 // Typed text, category and photos are saved as a draft on the phone straight
 // away, so an app restart (e.g. iOS closing it while the camera is open) loses nothing.
-function commentSheet({ item, check }, { onCancel } = {}) {
-  const key = store.draftKey(item.id, check ? check.id : null);
+// key: an existing draft to resume (defaults to the draft of this item/checkpoint).
+function commentSheet({ item, check, key: draft0 = null }, { onCancel } = {}) {
+  const key = draft0 || store.draftKey(item.id, check ? check.id : null);
   const draft = S.drafts.get(key) || {};
   let cat = draft.cat || '';
   let done = false; // saved or discarded
@@ -1161,12 +1179,14 @@ function commentSheet({ item, check }, { onCancel } = {}) {
     foot: `<button class="btn" data-s="cancel">Cancel</button><button class="btn primary" data-s="save">Save comment</button>`,
     isDirty,
     onClose(reason) {
+      if (saving) return; // the comment is being saved: nothing to keep or revert
       // Leaving the screen keeps the draft; it is offered again on the item.
-      if (!done && !saving && reason === 'nav') keepDraft.flush();
+      if (!done && reason === 'nav') keepDraft.flush();
       else if (!done && reason !== 'nav') discard().catch(fail);
       if (reason !== 'saved' && onCancel) onCancel(reason);
     },
     async onClick(s, b, api) {
+      if (saving) return; // Save is running: ignore Cancel and other taps
       const ta = $('textarea[name=text]', api.body);
       if (s === 'cancel') {
         const n = store.photosOf(key).length;
@@ -1236,9 +1256,15 @@ function commentSheet({ item, check }, { onCancel } = {}) {
           throw e;
         }
         done = true;
+        saving = false;
         api.close('saved');
         refresh();
         toast(`${p.no} saved (Cat ${cat})`);
+        const cur = S.items.get(item.id);
+        if (cur && (cur.result === 'ok' || (cur.result === 'okc' && cat === 'A'))) {
+          const ask = cur.result === 'ok' ? `${esc(cur.no)} is marked <b>OK</b> but now has an open Cat ${esc(cat)} comment.` : `${esc(cur.no)} is <b>OK with comments</b> but now has an open <b>Cat A</b> comment (blocks handover).`;
+          if (await confirmSheet(`${ask}<br>The result is not changed automatically.`, { ok: 'Change result…', title: 'Check the result' })) resultSheet(S.items.get(item.id));
+        }
       }
     },
   });
@@ -1520,7 +1546,7 @@ function scrPunch(id) {
       ${p.status === 'ready' ? `<div class="small"><b>Ready for QC</b> since ${esc(fmtDateTime(p.readyAt))}.</div>
         <div class="row wrap" style="margin-top:8px"><button class="btn primary" data-a="p-verify">Verify closure</button><button class="btn" data-a="p-reopen">Back to open</button></div>` : ''}
       ${p.status === 'closed' ? `<div class="small"><b>Verified closed</b> ${esc(fmtDateTime(p.closedAt))}</div>
-        ${v && v.checks ? `<div class="tiny muted" style="margin-top:4px">${CLOSURE_CHECKS.filter((c) => v.checks[c.id]).map((c) => `${v.checks[c.id] === 'ok' ? '✓' : v.checks[c.id] === 'na' ? 'N/A' : '✗'} ${esc(c.text)}`).join('<br>')}</div>` : ''}
+        ${v && v.checks ? `<div class="tiny muted" style="margin-top:4px">${X.closureAnswers(v).map(([t, a]) => `${a === 'ok' ? '✓' : a === 'na' ? 'N/A' : '✗'} ${esc(t)}`).join('<br>')}</div>` : ''}
         ${v && v.note ? `<div class="small" style="margin-top:4px">${esc(v.note)}</div>` : ''}
         <div class="row wrap" style="margin-top:8px"><button class="btn danger" data-a="p-reopen">Re-open</button></div>` : ''}
     </div>
@@ -1654,7 +1680,9 @@ A['p-verify'] = () => {
         return;
       }
       const note = formData(api.body).note;
-      const verify = { checks: { ...st }, note, at: new Date().toISOString() };
+      // Keep the wording that was answered, so later library edits never change this record.
+      const texts = Object.fromEntries(Object.keys(st).map((id) => [id, (CLOSURE_CHECKS.find((c) => c.id === id) || { text: id }).text]));
+      const verify = { checks: { ...st }, texts, library: CHECKLIST_VERSION, note, at: new Date().toISOString() };
       if (s === 'closed') {
         b.disabled = true;
         await store.setPunchStatus(p.id, 'closed', { note: note || 'Closure verified by QC', verify });
@@ -1886,7 +1914,8 @@ A.restore = () => {
             'Restore done',
             `<div class="kv"><div>Items</div><div>${r.items}</div><div>Punch items</div><div>${r.punches}</div><div>Questions</div><div>${r.questions}</div><div>Photos</div><div>${r.photos}</div><div>Unchanged</div><div>${r.skipped} (newer copy already here)</div>
             <div>Settings</div><div>${r.settings === 'restored' ? 'Restored from the backup' : 'Kept this phone’s settings (checklist additions merged)'}</div>
-            ${r.missingPhotos ? `<div>Missing photos</div><div>${r.missingPhotos} (not in the file)</div>` : ''}</div>
+            ${r.missingPhotos ? `<div>Missing photos</div><div>${r.missingPhotos} (not in the file)</div>` : ''}
+            ${r.drafts ? `<div>Unsaved comments</div><div>${r.drafts} restored</div>` : ''}${r.skippedDrafts ? `<div>Unsaved comments</div><div>${r.skippedDrafts} not merged (they belong to the other phone; use Replace on an empty phone to bring them back)</div>` : ''}</div>
             ${r.renumbered.length ? `<div class="warnbox">Numbers already used on this phone were given new numbers: ${r.renumbered.map(esc).join(', ')}. The old number is kept in each record.</div>` : ''}`,
           );
         } catch (e) {

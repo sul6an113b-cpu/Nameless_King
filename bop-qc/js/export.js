@@ -7,7 +7,7 @@ import { makeZip, openZip } from './zip.js';
 import { esc, fmtDate, fmtDateTime, isoDay, daysBetween, slug, stamp, u8ToBase64, noNum } from './util.js';
 import { CHECKLIST_VERSION, CLOSURE_CHECKS } from './checklists.js';
 
-export const APP_VERSION = '1.1.0';
+export const APP_VERSION = '1.2.0';
 const BACKUP_FORMAT = 'bopqc-backup';
 
 // ---------- scope -----------------------------------------------------------
@@ -110,11 +110,25 @@ const catLabel = (code) => {
 };
 
 const ANSWER = { ok: 'Yes', no: 'No', na: 'N/A' };
-// The answers given at the last closure verification, e.g. "Item located: Yes; …".
+// The answers given at the last closure verification, in the wording that was
+// answered (stored with the answers), e.g. "Item located: Yes; …".
+export function closureAnswers(verify) {
+  const v = verify && verify.checks;
+  if (!v) return [];
+  const texts = verify.texts || {};
+  const order = (id) => {
+    const i = CLOSURE_CHECKS.findIndex((c) => c.id === id);
+    return i < 0 ? 999 : i;
+  };
+  return Object.keys(v)
+    .filter((id) => v[id])
+    .sort((a, b) => order(a) - order(b))
+    .map((id) => [texts[id] || (CLOSURE_CHECKS.find((c) => c.id === id) || { text: id }).text, v[id]]);
+}
 function closureChecks(p) {
-  const v = p.verify && p.verify.checks;
-  if (!v) return '';
-  return CLOSURE_CHECKS.filter((c) => v[c.id]).map((c) => `${c.text}: ${ANSWER[v[c.id]] || v[c.id]}`).join('; ');
+  const list = closureAnswers(p.verify).map(([t, a]) => `${t}: ${ANSWER[a] || a}`);
+  if (!list.length) return '';
+  return p.status === 'closed' ? list.join('; ') : `Closure not accepted ${fmtDate(p.verify.at)}: ${list.join('; ')}`;
 }
 
 export function punchCSV(punches, names = photoFileNames()) {
@@ -234,6 +248,15 @@ function photosHTML(list, src, names, large) {
   return figs ? `<div class="photos${large ? ' large' : ''}">${figs}</div>` : '';
 }
 
+// Under the status: when it was verified, since when it waits for QC, or why the
+// last closure was not accepted.
+function statusNote(p) {
+  if (p.status === 'closed') return `<br><span class="small">${esc(fmtDate(p.closedAt))}</span>`;
+  if (p.status === 'ready') return `<br><span class="small">since ${esc(fmtDate(p.readyAt))}</span>`;
+  const h = [...(p.history || [])].reverse().find((x) => x.action === 'reopened');
+  return h ? `<br><span class="small"><b>Closure not accepted</b> ${esc(fmtDate(h.at))}: ${esc(h.note)}</span>` : '';
+}
+
 export async function reportHTML(sc, { photoMode = 'small' } = {}) {
   const names = photoFileNames();
   const st = S.settings;
@@ -261,7 +284,7 @@ export async function reportHTML(sc, { photoMode = 'small' } = {}) {
 
   const punchRow = (p) => {
     const item = p.itemId ? S.items.get(p.itemId) : null;
-    return `<tr><td>${esc(p.no)}${p.projectNo ? `<br><span class="small muted">${esc(p.projectNo)}</span>` : ''}</td><td>${catBadge(p.category)}</td><td>${esc(p.text)}${p.checkText ? `<br><span class="small muted">Checkpoint: ${esc(p.checkText)}</span>` : ''}</td><td>${esc(p.tag)}${item ? `<br><span class="small muted">${esc(item.no)}</span>` : ''}</td><td>${esc(p.area)}</td><td>${esc(p.subcontractor)}</td><td>${esc(PUNCH_STATUS[p.status])}${p.closedAt ? `<br><span class="small">${esc(fmtDate(p.closedAt))}</span>` : ''}</td><td>${esc(fmtDate(p.createdAt))}</td><td>${p.status === 'closed' ? daysBetween(p.createdAt, p.closedAt) : daysBetween(p.createdAt)}</td></tr>`;
+    return `<tr><td>${esc(p.no)}${p.projectNo ? `<br><span class="small muted">${esc(p.projectNo)}</span>` : ''}</td><td>${catBadge(p.category)}</td><td>${esc(p.text)}${p.checkText ? `<br><span class="small muted">Checkpoint: ${esc(p.checkText)}</span>` : ''}</td><td>${esc(p.tag)}${item ? `<br><span class="small muted">${esc(item.no)}</span>` : ''}</td><td>${esc(p.area)}</td><td>${esc(p.subcontractor)}</td><td>${esc(PUNCH_STATUS[p.status])}${statusNote(p)}</td><td>${esc(fmtDate(p.createdAt))}</td><td>${p.status === 'closed' ? daysBetween(p.createdAt, p.closedAt) : daysBetween(p.createdAt)}</td></tr>`;
   };
   const punchTable = (list) =>
     list.length
@@ -439,8 +462,11 @@ export async function restore(file, mode = 'merge') {
   const missing = photos.filter((p) => !zip.has(bn(p.id)));
   if (mode === 'replace' && missing.length) throw new Error(`Backup incomplete: ${missing.length} photo file(s) missing. Nothing was changed.`);
 
-  const report = { items: 0, punches: 0, questions: 0, photos: 0, skipped: 0, missingPhotos: missing.length, renumbered: [], settings: 'kept' };
+  const report = { items: 0, punches: 0, questions: 0, photos: 0, skipped: 0, missingPhotos: missing.length, renumbered: [], settings: 'kept', drafts: 0, skippedDrafts: 0 };
   const emptyPhone = S.items.size + S.punches.size + S.questions.size === 0;
+  // Unsaved comments (drafts) are one phone's own work: they come back on a
+  // Replace or onto an empty phone, never into another phone's live data.
+  const takeDrafts = mode === 'replace' || emptyPhone;
 
   let wiped = false;
   try {
@@ -504,8 +530,7 @@ export async function restore(file, mode = 'merge') {
     await flush();
 
     for (const ph of photos) {
-      // Drafts are one phone's unsaved work: only a full Replace brings them back.
-      if (mode === 'merge' && ph.ownerType === 'draft') continue;
+      if (!takeDrafts && ph.ownerType === 'draft') continue;
       const local = existingPhotos.get(ph.id);
       if (!zip.has(bn(ph.id)) || !photoNewer(ph, local)) continue;
       const own = async (sfx) => (zip.has(bn(ph.id, sfx)) ? (await zip.read(bn(ph.id, sfx))).slice().buffer : undefined);
@@ -524,8 +549,12 @@ export async function restore(file, mode = 'merge') {
       report.photos++;
     }
 
-    if (mode === 'replace') {
-      for (const [k, v] of Object.entries(data.drafts || {})) if (k.startsWith('draft:')) await db.setMeta(k, v);
+    for (const [k, v] of Object.entries(data.drafts || {})) {
+      if (!k.startsWith('draft:')) continue;
+      if (takeDrafts) {
+        await db.setMeta(k, v);
+        report.drafts++;
+      } else report.skippedDrafts++;
     }
 
     if (mode === 'replace' || emptyPhone) {

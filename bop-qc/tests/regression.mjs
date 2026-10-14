@@ -673,6 +673,80 @@ console.log('R2 – second review fixes');
   await B.ctx.close();
 }
 
+console.log('R3 – third review fixes');
+{
+  const { ctx, page } = await fresh();
+  // U3-1: a re-inspection cannot quietly be OK while the rejected check still has an open Cat A.
+  await newItem(page, { tag: 'L-1001' });
+  await defect(page, 0, { text: 'Drain valve missing', cat: 'A' });
+  await tap(page, '[data-a="item-result"]');
+  await tap(page, '.backdrop [data-v="rej"]');
+  await page.fill('.backdrop textarea[name=note]', 'Cat A open');
+  await tap(page, '.backdrop [data-s="save"]');
+  await wait(page, 400);
+  await tap(page, '[data-a="item-reinspect"]');
+  await tap(page, '.backdrop [data-s="start"]');
+  await page.waitForSelector('.chk');
+  await wait(page, 300);
+  ok(/still open from earlier checks/i.test(await page.locator('#view').innerText()), 're-inspection shows the earlier open comments');
+  await tap(page, '[data-a="item-result"]');
+  await tap(page, '.backdrop [data-v="ok"]');
+  const warn = await page.locator('.backdrop #warn').innerText();
+  ok(/from the earlier check/.test(warn) && /Cat A/.test(warn), 'result OK warns about the earlier open Cat A');
+  // U3-2: the left button is Cancel; clearing a result needs confirmation.
+  ok((await page.locator('.backdrop .sheet-f button').first().getAttribute('data-s')) === 'cancel', 'left button of the result sheet is Cancel');
+  await tap(page, '.backdrop [data-s="cancel"]');
+  await wait(page, 300);
+  // U3-4 / R3-D3: refused closure keeps its own answers with wording; re-open drops an old acceptance.
+  await page.goto(BASE + '#/punch');
+  await page.waitForSelector('#list .card');
+  await page.locator('#list .card').first().click();
+  await page.waitForSelector('#bar [data-a="p-verify"]');
+  await tap(page, '#bar [data-a="p-verify"]');
+  await page.waitForSelector('.backdrop #vrows');
+  const rows = await page.locator('.backdrop #vrows > .chk').count();
+  for (let i = 0; i < rows; i++) {
+    const row = page.locator('.backdrop #vrows > .chk').nth(i);
+    if (await row.locator('[data-v="na"]').count()) await row.locator('[data-v="na"]').click();
+    else await row.locator('[data-v="ok"]').click();
+  }
+  await tap(page, '.backdrop [data-s="closed"]');
+  await wait(page, 400);
+  let p = (await idb(page, 'punches'))[0];
+  ok(p.verify && p.verify.texts && Object.keys(p.verify.texts).length === Object.keys(p.verify.checks).length, 'verification stores the wording that was answered');
+  await tap(page, '#view [data-a="p-reopen"]');
+  await page.fill('.backdrop textarea[name=note]', 'Temp support back');
+  await tap(page, '.backdrop [data-s="ok"]');
+  await wait(page, 400);
+  p = (await idb(page, 'punches'))[0];
+  ok(p.status === 'open' && p.verify === null, 're-open drops the earlier acceptance');
+  await ctx.close();
+}
+{
+  // R3-D2: unsaved comments come back when restoring onto an empty phone with Merge.
+  const A = await fresh();
+  await newItem(A.page);
+  await A.page.locator('.chk').nth(0).locator('[data-v="defect"]').click();
+  await A.page.fill('.backdrop textarea[name=text]', 'Unsaved observation');
+  await choose(A.page, '.backdrop [data-s="photo"]', await photoFile(A.page, 'dr.jpg'));
+  await wait(A.page, 700);
+  await A.page.evaluate(() => document.querySelectorAll('.backdrop').forEach((b) => b.remove()));
+  const bk = await exportFile(A.page, 'backup');
+  const B = await fresh();
+  await B.page.goto(BASE + '#/export');
+  await B.page.waitForSelector('[data-a="restore"]');
+  const [fc] = await Promise.all([B.page.waitForEvent('filechooser'), tap(B.page, '[data-a="restore"]')]);
+  await fc.setFiles(bk);
+  await B.page.waitForSelector('.backdrop [data-s="go"]');
+  await tap(B.page, '.backdrop [data-s="go"]');
+  await B.page.waitForSelector('.backdrop .sheet[aria-label="Restore done"]', { timeout: 15000 });
+  const t = await B.page.locator('.backdrop .sheet').last().innerText();
+  const ph = await idb(B.page, 'photos');
+  ok(/Unsaved comments[\s\S]*1 restored/.test(t) && ph.some((x) => x.ownerType === 'draft'), 'unsaved comment and its photo restored onto an empty phone');
+  await A.ctx.close();
+  await B.ctx.close();
+}
+
 console.log('DS-7 – backup counts only when confirmed');
 {
   const { ctx, page } = await fresh();

@@ -1,6 +1,7 @@
-// Offline cache for the app shell. Bump VERSION on every release so phones
-// pick up the new files (the app shows an "Update ready" banner).
-const VERSION = 'bopqc-v1.1.0';
+// Offline cache for the app shell. VERSION is stamped by tools/release.py from
+// APP_VERSION and a hash of every cached file, so any change reaches installed
+// phones (the app shows "Update ready"). tests/release-check.mjs guards it.
+const VERSION = 'bopqc-v1.2.0-c8c812821d';
 const ASSETS = [
   './',
   './index.html',

@@ -117,7 +117,7 @@ Two independent research runs were made. Where they disagree, or the source was 
 
 ### Releasing an update
 
-Change files, then bump `VERSION` in `sw.js`. Phones download the new version in the background and show **Update ready**. Data is kept.
+After changing any app file, run `python3 tools/release.py`. It stamps `sw.js` with a cache version built from `APP_VERSION` (in `js/export.js`) and a hash of every cached file. Installed phones then download the new version when they next come to the front and show **Update ready**; data is kept. `node tests/release-check.mjs` fails if the stamp is stale.
 
 ## Development
 
@@ -126,6 +126,7 @@ cd bop-qc
 npx http-server -p 8765 -c-1          # any static server
 PW=$(npm root -g)/playwright/index.mjs node tests/e2e.mjs http://localhost:8765/
 PW=$(npm root -g)/playwright/index.mjs node tests/regression.mjs http://localhost:8765/
+node tests/release-check.mjs                      # offline cache version matches the files
 ```
 
 `tests/e2e.mjs` drives the app in Chromium at iPhone 13 size. It covers the walkdown flow, photo downscaling and mark-up, closure verification, all exports (ZIP validated with Python), wipe and restore, and running offline.
@@ -141,6 +142,7 @@ PW=$(npm root -g)/playwright/index.mjs node tests/regression.mjs http://localhos
 - every photo named in a package CSV being inside the ZIP
 - restore validation, renumbering, settings and re-zipped backups
 - backup confirmation
+- a second and third review round: merges, slow-storage save races, double taps, history after restarts, dark-mode contrast, re-inspections with earlier open Cat A comments, and closure records keeping their wording
 
 Neither suite replaces a check on a real iPhone (Safari/WebKit).
 

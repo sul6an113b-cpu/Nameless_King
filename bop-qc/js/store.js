@@ -442,7 +442,9 @@ async function _setPunchStatus(id, status, { note = '', verify = null } = {}) {
     p.history.push({ at: t, action: 'reopened', note: note || 'Not closed' });
     p.readyAt = null;
     p.closedAt = null;
-    if (verify) p.verify = verify;
+    // Keep the answers of a refused closure; drop an earlier acceptance (its
+    // "verified" history entry still records that it was once closed).
+    p.verify = verify || null;
     // An item-linked punch follows its item's current tag and area.
     const item = p.itemId ? S.items.get(p.itemId) : null;
     if (item) {
