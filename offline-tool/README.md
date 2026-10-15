@@ -39,8 +39,8 @@ you enable it.)
 
 * A Mac with **Python 3** (type `python3 --version` in Terminal; if macOS
   offers to install the developer tools, accept).
-* **Tailscale** on the Mac and on each phone or laptop, all signed in to the
-  same account.
+* **Tailscale** on the Mac and on each phone or laptop, signed in to your
+  account (or, for people you add later, see *Sharing with someone else*).
 * In the Tailscale admin console, on the **DNS** page
   (<https://login.tailscale.com/admin/dns>): **MagicDNS** on and
   **HTTPS Certificates** enabled. If you forget, `publish` prints a link to
@@ -102,10 +102,28 @@ would delete those pictures from every device. Put the files back, or add
 page into the same folder is refused unless you add `--replace`; use `--home`
 for a second page instead.
 
-**Getting a newer `offline_tool.py`:** download it, build with it as in setup,
-then run its `publish` once (no options needed: it remembers the port and who
-may open it). `build` reminds you when the background server runs a
-different copy.
+**Getting a newer `offline_tool.py`:** first delete the old one from
+Downloads (otherwise the browser saves the new one as `offline_tool (1).py` and
+you would keep running the old one). Download the new one, build with it as in
+setup, then run its `publish` once (no options needed: it remembers the port
+and who may open it). `build` and `status` print the tool's version, and
+`build` reminds you when the background server runs a different copy.
+
+## Sharing with someone else
+
+By default only your own Tailscale login can open the page. To add a family
+member or colleague:
+
+1. In the Tailscale admin console, either invite them to your tailnet
+   (**Users › Invite users**) or share just this Mac with them
+   (**Machines › this Mac › Share**). They accept with their own Tailscale
+   login.
+2. On the Mac: `python3 ~/SymbolLibraryOffline/offline_tool.py publish --allow-user their@login`
+3. They open the same `https://…ts.net` link with Tailscale on, and install it
+   as in step 4 above.
+
+`publish --only-me` takes everyone else off again. Their devices keep the copy
+they already saved, but no longer get updates.
 
 ## Other commands
 
@@ -160,12 +178,12 @@ list of people. Options worth knowing:
 * **The link does not load on the phone:** check Tailscale is on (on both
   devices) and the Mac is awake. To keep serving with the display off, turn on
   *System Settings › Battery › Options › Prevent automatic sleeping on power
-  adapter when the display is off*. Closing a MacBook's lid still puts it to
-  sleep unless it is on power with an external display. Once a device shows
-  *Offline ready* the Mac can be off.
+  adapter when the display is off* (on a desktop Mac: *System Settings ›
+  Energy › Prevent automatic sleeping when the display is off*). Closing a
+  MacBook's lid still puts it to sleep unless it is on power with an external
+  display. Once a device shows *Offline ready* the Mac can be off.
 * **"Not shared with this login":** that device is signed in to a different
-  Tailscale login. On the Mac run `publish --allow-user that@login` (your own
-  login stays allowed).
+  Tailscale login. See *Sharing with someone else*.
 * **The server will not start:** read `~/SymbolLibraryOffline/server.log`.
   A failed `publish` puts back whatever was running before, so a working link
   keeps working.

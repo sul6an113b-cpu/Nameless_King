@@ -43,7 +43,7 @@ from datetime import datetime, timezone
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 
-TOOL_VERSION = '2'
+TOOL_VERSION = '3'
 DEFAULT_HOME = '~/SymbolLibraryOffline'
 DEFAULT_PORT = 8765
 DEFAULT_HTTPS_PORT = 443
@@ -73,6 +73,11 @@ class PublishFailed(Exception):
 def home_id(home):
     """Names the folder a server serves without revealing its path."""
     return hashlib.sha256(str(home).encode('utf-8')).hexdigest()[:16]
+
+
+def access_id(users):
+    """Names the list of people a server lets in, so publish can check what is running."""
+    return hashlib.sha256('\n'.join(sorted({decode_login(u) for u in users})).encode('utf-8')).hexdigest()[:16]
 
 
 def size_text(n):
@@ -334,25 +339,26 @@ OFFLINE_JS = r'''/* Saves this page and every file it shows for offline use, wit
 
   // Ask the browser for the newer service worker, noting if this attempt's worker fails.
   async function startUpdate() {
-    var at = { failed: false, settled: false };
+    var at = { failed: false, settled: false, before: null };
     if (!reg) reg = await getReg();
     if (!reg) { at.failed = true; return at; }
+    at.before = reg.active;
     function watch(w) {
       if (w) w.addEventListener('statechange', function () { if (w.state === 'redundant' && !updated) at.failed = true; });
     }
-    watch(reg.installing);
-    watch(reg.waiting);
+    // only the worker this request creates counts: one already installing may be the browser's
+    // own earlier check, made before the files were saved, and its failure says nothing
     reg.addEventListener('updatefound', function () { watch(reg.installing); });
     reg.update().then(function () { at.settled = true; }, function () { at.failed = true; });
     return at;
   }
 
-  // Wait until the service worker for `version` has saved the page and taken over.
-  async function shellReady(at, version, ms) {
-    var name = SHELL + version, end = Date.now() + ms, idle = 0;
+  // Wait until a new service worker has taken over (or this attempt's has failed).
+  async function shellReady(at, ms) {
+    var end = Date.now() + ms, idle = 0;
     while (Date.now() < end && !updated && !at.failed) {
       var w = reg && (reg.installing || reg.waiting);
-      if (!w && await caches.has(name) && await (await caches.open(name)).match('index.html')) return true;
+      if (!w && reg && reg.active && reg.active !== at.before) return true;
       idle = at.settled && !w ? idle + 500 : 0;       // update check done but nothing installing
       if (idle > 3000) return false;
       await sleep(500);
@@ -381,7 +387,6 @@ OFFLINE_JS = r'''/* Saves this page and every file it shows for offline use, wit
     // An older copy of the page reading a newer list is mid-update: it may add files but
     // must not delete any, because it still shows them until the new version takes over.
     var current = list.version === VERSION, upgrading = online && !current;
-    var attempt = upgrading && !updated ? await startUpdate() : null;   // runs alongside the downloads
 
     var files = list.files || [], total = files.length, bytes = 0, want = new Map();
     files.forEach(function (f) { bytes += f.b || 0; want.set(new URL(f.u, location.href).href, f); });
@@ -409,7 +414,7 @@ OFFLINE_JS = r'''/* Saves this page and every file it shows for offline use, wit
       while (next < todo.length && !full && !lost) {
         var e = todo[next++];
         try {
-          var hit = await cache.match(e[0]);              // the new service worker may have saved it meanwhile
+          var hit = await cache.match(e[0]);              // another run may have saved it meanwhile
           if (hit && hit.headers.get('x-offline-rev') === e[1].r) { have++; progress(); continue; }
           var got = await grab(e[0], 25000);
           await cache.put(e[0], new Response(got.blob, { headers: {
@@ -435,9 +440,9 @@ OFFLINE_JS = r'''/* Saves this page and every file it shows for offline use, wit
       return;
     }
 
-    if (attempt && !updated) {
+    if (upgrading && !updated) {
       say('Updating…', 'busy', 'Saving the new version. The current one keeps working until it is complete.');
-      if (!(await shellReady(attempt, list.version, 1200000))) {
+      if (!(await shellReady(await startUpdate(), 600000))) {
         say('Update unfinished · tap to retry', 'warn', 'The new version of the page did not finish saving. This copy still works.', sync);
         return;
       }
@@ -507,54 +512,35 @@ var SHELL = 'offline-shell-' + VERSION, FILES = 'offline-files', META = 'offline
 var OURS = /-(shell-[0-9a-f]{12}|files|meta)$/;   // this tool's caches, from any build or older naming
 var ROOT = new URL('./', self.location.href).href, ROOT_PATH = new URL(ROOT).pathname;
 
-// Fetch a file past every cache; give up once nothing has arrived for 25 s.
-function grab(url) {
-  var ctl = new AbortController(), timer = 0;
-  function arm() { clearTimeout(timer); timer = setTimeout(function () { ctl.abort(); }, 25000); }
-  arm();
-  return fetch(url + (url.indexOf('?') < 0 ? '?' : '&') + MARK + '=' + Date.now(), { cache: 'no-store', signal: ctl.signal })
-    .then(function (r) {
-      if (!r.ok) throw new Error('HTTP ' + r.status + ' for ' + url);
-      var type = r.headers.get('content-type') || 'application/octet-stream', reader = r.body.getReader(), parts = [];
-      function pump() {
-        return reader.read().then(function (x) {
-          if (x.done) return { blob: new Blob(parts, { type: type }), type: type };
-          parts.push(x.value);
-          arm();
-          return pump();
-        });
-      }
-      return pump();
-    }).finally(function () { clearTimeout(timer); });
+// The files this build's page shows, all saved at the right revision? (The page saves
+// them itself, with progress, before it asks for this worker.)
+function filesSaved(list) {
+  return caches.open(FILES).then(function (files) {
+    return Promise.all(list.map(function (f) {
+      return files.match(new URL(f.u, ROOT).href).then(function (hit) {
+        return !!hit && hit.headers.get('x-offline-rev') === f.r;
+      });
+    }));
+  }).then(function (oks) { return oks.every(Boolean); });
 }
 
-// Save every file the new page shows that is not saved yet. Each file is kept as soon as
-// it arrives, so a retry carries on where an interrupted one stopped.
-function saveFiles(shell) {
-  return Promise.all([shell.match('precache.json').then(function (r) { return r.json(); }), caches.open(FILES)])
-    .then(function (x) {
-      var list = x[0].files || [], files = x[1], next = 0;
-      function worker() {
-        if (next >= list.length) return null;
-        var f = list[next++], url = new URL(f.u, ROOT).href;
-        return files.match(url).then(function (hit) {
-          if (hit && hit.headers.get('x-offline-rev') === f.r) return null;
-          return grab(url).then(function (got) {
-            return files.put(url, new Response(got.blob, { headers: { 'content-type': got.type, 'x-offline-rev': f.r } }));
-          });
-        }).then(worker);
-      }
-      return Promise.all([worker(), worker(), worker(), worker()]);
-    });
-}
-
-// An update takes over only once its page and every file it shows are saved, so an update
-// cut short leaves the previous copy whole. A first install has nothing to protect: the
-// page saves the files itself and shows progress.
+// An update takes over only once every file its page shows is saved, so an update cut
+// short leaves the previous copy whole. It checks first and fails at once if anything is
+// missing, so the install stays short; the page itself is saved last, with the very file
+// list that was checked.
 self.addEventListener('install', function (event) {
-  event.waitUntil(caches.open(SHELL).then(function (cache) {
-    return cache.addAll(SHELL_FILES.map(function (u) { return new Request(u, { cache: 'reload' }); }))
-      .then(function () { return self.registration.active ? saveFiles(cache) : null; });
+  event.waitUntil(fetch('precache.json?' + MARK + '=' + Date.now(), { cache: 'no-store' }).then(function (r) {
+    if (!r.ok) throw new Error('precache.json: HTTP ' + r.status);
+    return r.clone().json().then(function (list) {
+      return self.registration.active ? filesSaved(list.files || []) : true;
+    }).then(function (complete) {
+      if (!complete) throw new Error('the files of this version are not saved yet');
+      return caches.open(SHELL).then(function (cache) {
+        var rest = SHELL_FILES.filter(function (u) { return u !== 'precache.json'; });
+        return cache.addAll(rest.map(function (u) { return new Request(u, { cache: 'reload' }); }))
+          .then(function () { return cache.put('precache.json', r); });
+      });
+    });
   }).then(function () { return self.skipWaiting(); }, function (e) {
     return caches.delete(SHELL).then(function () { throw e; });   // no half-saved page left behind
   }));
@@ -718,7 +704,7 @@ def cmd_build(a):
         shutil.rmtree(old)
     (home / 'build.json').write_text(json.dumps({'source': str(src.resolve()), 'title': title}), encoding='utf-8')
 
-    print('Built %s' % site)
+    print('Built %s with offline_tool.py version %s' % (site, TOOL_VERSION))
     print('  page     %s (%s)' % (title, size_text(len(out_page))))
     print('  files    %d copied (%s)' % (len(entries), size_text(total)))
     print('  version  %s%s' % (version, ' (unchanged)' if previous and previous.get('version') == version else ''))
@@ -814,8 +800,9 @@ class Handler(SimpleHTTPRequestHandler):
         return None
 
     def end_headers(self):
-        if self.local and self.home_id:
-            self.send_header('X-Offline-Home', self.home_id)     # lets publish tell its own server apart
+        if self.local and self.home_id:                          # this computer only: lets publish check
+            self.send_header('X-Offline-Home', self.home_id)     # which folder and which people this serves
+            self.send_header('X-Offline-Access', access_id(self.allow_users))
         self.send_header('Cache-Control', 'no-cache')
         self.send_header('X-Content-Type-Options', 'nosniff')
         self.send_header('Referrer-Policy', 'no-referrer')
@@ -838,7 +825,11 @@ def cmd_serve(a):
     Handler.home_id = home_id(home)
     Handler.allow_users = frozenset(decode_login(u) for u in a.allow_user or ())
     Handler.allow_hosts = frozenset(h.lower().rstrip('.') for h in a.allow_host or ())
-    httpd = ThreadingHTTPServer((a.bind, a.port), functools.partial(Handler, directory=str(site)))
+    try:
+        httpd = ThreadingHTTPServer((a.bind, a.port), functools.partial(Handler, directory=str(site)))
+    except OSError as e:
+        die('Cannot listen on port %d (%s). Another program may use it: pick another one with --port,\n'
+            'and give publish the same --port.' % (a.port, e.strerror or e))
     httpd.daemon_threads = True
     who = ', '.join(sorted(Handler.allow_users)) or 'everyone your tailnet lets in'
     print('Serving %s at http://%s:%d/ for %s (Ctrl-C stops)' % (site, a.bind, a.port, who), flush=True)
@@ -890,19 +881,22 @@ def owner_login(st):
 
 
 def probe(port):
-    """(folder id, build version) of the offline-tool server on this port, or None."""
+    """(folder id, build version, access id) of the offline-tool server on this port, or
+    None. Copies of this tool from before these ids existed answer with ''."""
     opener = urllib.request.build_opener(urllib.request.ProxyHandler({}))    # never through a proxy
     try:
         with opener.open('http://127.0.0.1:%d/precache.json' % port, timeout=2) as r:
-            return r.headers.get('X-Offline-Home', ''), json.loads(r.read()).get('version')
+            return (r.headers.get('X-Offline-Home', ''), json.loads(r.read()).get('version'),
+                    r.headers.get('X-Offline-Access', ''))
     except Exception:
         return None
 
 
-def wait_for_server(port, version, hid, seconds=15):
+def wait_for_server(port, version, hid, access, seconds=15):
+    """Until the server on port serves this folder's build to exactly these people."""
     end = time.time() + seconds
     while time.time() < end:
-        if probe(port) == (hid, version):
+        if probe(port) == (hid, version, access):
             return True
         time.sleep(0.5)
     return False
@@ -972,15 +966,16 @@ def protected_path(p):
     return None
 
 
-def port_usable(port, hid):
-    """True if nothing answers on 127.0.0.1:port (on any interface), or only this
-    folder's own server does."""
+def port_usable(port, hid, version=None):
+    """True if nothing answers on 127.0.0.1:port (on any interface), or only this folder's
+    own server does: one that names this folder, or (given its build version) an older copy
+    of this tool serving it."""
     try:
         socket.create_connection(('127.0.0.1', port), 0.5).close()
     except OSError:
         return True
     found = probe(port)
-    return bool(found) and found[0] == hid
+    return bool(found) and (found[0] == hid or (version is not None and found[:2] == ('', version)))
 
 
 def served_by(cli, host, https_port):
@@ -1061,11 +1056,12 @@ def cmd_publish(a):
               'Everyone your tailnet rules let in can open it; add --allow-user you@example.com to limit it.\n')
 
     if port is None:                              # first publish: take the first free port
-        port = next((p for p in range(DEFAULT_PORT, DEFAULT_PORT + 40) if not agent or port_usable(p, hid)), None)
+        port = next((p for p in range(DEFAULT_PORT, DEFAULT_PORT + 40) if port_usable(p, hid)), None)
         if port is None:
             die('No free local port between %d and %d. Pick one with --port.' % (DEFAULT_PORT, DEFAULT_PORT + 39))
-    elif agent and not port_usable(port, hid):
+    elif not port_usable(port, hid, info['version'] if port == s.get('port') else None):
         die('Local port %d is used by another program. Run publish again with --port %d.' % (port, port + 1))
+    access = access_id(users)
     target = 'http://127.0.0.1:%d' % port
     previous = 'http://127.0.0.1:%d' % s['port'] if s.get('host') == host and s.get('port') else None
     busy = served_by(cli, host, https_port)
@@ -1083,7 +1079,7 @@ def cmd_publish(a):
             if s.get('agent') and previous and served_by(cli, host, s.get('https_port') or DEFAULT_HTTPS_PORT) == previous:
                 try:
                     agent_start(home, s['port'], s.get('allow_users') or [])
-                    if wait_for_server(s['port'], info['version'], hid, 10):
+                    if wait_for_server(s['port'], info['version'], hid, access_id(s.get('allow_users') or []), 10):
                         return '\nThe previous share is still running.'
                 except PublishFailed:
                     pass
@@ -1097,14 +1093,23 @@ def cmd_publish(a):
     try:
         if agent:
             agent_start(home, port, users)
-            if not wait_for_server(port, info['version'], hid):
-                raise PublishFailed('The background server did not come up on port %d. See %s.\n'
-                                    'If another program uses that port, run publish again with --port %d.'
-                                    % (port, home / 'server.log', port + 1))
-        elif not wait_for_server(port, info['version'], hid, seconds=2):
-            die('Start the server first and keep it running, then publish again:\n'
-                '    %s serve --home %s --port %d%s' % (me(), shlex.quote(str(home)), port,
-                                                         ''.join(' --allow-user ' + shlex.quote(u) for u in users)))
+            if not wait_for_server(port, info['version'], hid, access):
+                found = probe(port)
+                raise PublishFailed(
+                    'Another serve for this folder is running on port %d. Stop it, then run publish again.' % port
+                    if found and found[0] == hid else
+                    'The background server did not come up on port %d. See %s.\n'
+                    'If another program uses that port, run publish again with --port %d.'
+                    % (port, home / 'server.log', port + 1))
+        elif not wait_for_server(port, info['version'], hid, access, seconds=2):
+            cmd = '    %s serve --home %s --port %d%s' % (me(), shlex.quote(str(home)), port,
+                                                          ''.join(' --allow-user ' + shlex.quote(u) for u in users))
+            found = probe(port)
+            if found and found[0] in (hid, '') and found[1] == info['version']:
+                die('The server running on port %d lets in a different list of people (or is an older copy\n'
+                    'of this tool). Stop it (Ctrl-C in its window) and start it again with:\n%s\n'
+                    'then publish again.' % (port, cmd))
+            die('Start the server first and keep it running, then publish again:\n' + cmd)
         if not st.get('CertDomains'):
             print('Note: HTTPS certificates may be off for your tailnet. If Tailscale asks, follow its link\n'
                   '(or enable "HTTPS Certificates" at https://login.tailscale.com/admin/dns).\n')
@@ -1185,14 +1190,19 @@ def cmd_status(a):
     info = site_info(home)
     print('built copy   ' + ('%s, version %s, %d files, built %s' % (home / 'site', info['version'], len(info['files']),
                              info['built']) if info else 'none at %s' % (home / 'site')))
+    print('tool         offline_tool.py version %s' % TOOL_VERSION)
     found = probe(port)
     if not found:
         print('local server not answering on port %d' % port)
+    elif found[0] == '' and info and found[1] == info['version']:
+        print('local server http://127.0.0.1:%d/ is up, run by an older copy of this tool (run publish once)' % port)
     elif found[0] != home_id(home):
         print('local server port %d answers for another folder, not %s' % (port, home))
     else:
         print('local server http://127.0.0.1:%d/ is up%s' % (port, '' if info and found[1] == info['version']
                                                              else ' but serves a different build (version %s)' % found[1]))
+        if s and found[2] != access_id(s.get('allow_users') or []):
+            print('             but it lets in a different list of people than publish saved; run publish again')
     if sys.platform == 'darwin':
         r = launchctl('print', 'gui/%d/%s' % (os.getuid(), agent_label(home)))
         print('background   %s' % ('installed (%s)' % agent_label(home) if r.returncode == 0 else 'not installed'))
