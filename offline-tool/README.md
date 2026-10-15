@@ -90,8 +90,10 @@ python3 ~/SymbolLibraryOffline/offline_tool.py build ~/path/to/SymbolLibrary
 
 Next time a device opens the app, or brings it back to the front, while
 connected to Tailscale, the badge shows **Updating…** while it fetches only the
-files that changed, then **Updated · tap to reload**. Files the new page no
-longer uses are removed once it is running.
+files that changed, then **Updated · tap to reload**. The new version takes
+over only once all of its files are saved, so an update that gets cut off
+leaves the previous copy complete. Files the new page no longer uses are
+removed once it is running.
 
 If files that the previous build had are missing now (say the `img/` folder is
 not in place yet), `build` changes nothing and tells you, because publishing it
@@ -122,10 +124,11 @@ list of people. Options worth knowing:
 
 | Option | Use |
 | --- | --- |
-| `publish --allow-user someone@example.com` | Also let another Tailscale login open it (repeat for more people). Your own login always can. |
+| `publish --allow-user someone@example.com` | Also let another Tailscale login open it (repeat for more people). Adds to the people already allowed; your own login always can. |
+| `publish --only-me` | Go back to just your own login. Add `--allow-user` for anyone who should stay. |
 | `publish --allow-tailnet` | Let every device your tailnet's access rules allow open it. |
 | `publish --https-port 8443` | If this Mac already serves something else on Tailscale port 443. The link gets `:8443`, and the old link is turned off (devices need to install it again from the new link). |
-| `publish --port 8766` | If another program already uses local port 8765. |
+| `publish --port 8766` | Choose the local port. The first publish takes the first free one from 8765 by itself. |
 | `build --short-name Symbols` | The name under the home-screen icon (12 characters or fewer). |
 | `build --strict` | Change nothing if any file the page shows is missing. |
 | `build --allow-missing` | Publish even though files the last build had are gone. |
