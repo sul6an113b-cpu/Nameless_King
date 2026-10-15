@@ -22,6 +22,7 @@ import functools
 import hashlib
 import html
 import html.parser
+import ipaddress
 import json
 import os
 import plistlib
@@ -29,6 +30,7 @@ import posixpath
 import re
 import shlex
 import shutil
+import socket
 import struct
 import subprocess
 import sys
@@ -292,7 +294,7 @@ OFFLINE_JS = r'''/* Saves this page and every file it shows for offline use, wit
     arm();
     url += (url.indexOf('?') < 0 ? '?' : '&') + MARK + '=' + Date.now();
     return fetch(url, { cache: 'no-store', signal: ctl.signal }).then(function (r) {
-      if (!r.ok) { var e = new Error('HTTP ' + r.status); e.http = true; throw e; }
+      if (!r.ok) { var e = new Error('HTTP ' + r.status); e.http = true; e.status = r.status; throw e; }
       var type = r.headers.get('content-type') || '';
       if (!r.body || !r.body.getReader) return r.blob().then(function (b) { return { blob: b, type: type || b.type }; });
       var reader = r.body.getReader(), parts = [];
@@ -320,17 +322,29 @@ OFFLINE_JS = r'''/* Saves this page and every file it shows for offline use, wit
     return null;
   }
 
+  // Ask the browser for the newer service worker, noting if this attempt's worker fails.
+  async function startUpdate() {
+    var at = { failed: false, settled: false };
+    if (!reg) reg = await getReg();
+    if (!reg) { at.failed = true; return at; }
+    function watch(w) {
+      if (w) w.addEventListener('statechange', function () { if (w.state === 'redundant' && !updated) at.failed = true; });
+    }
+    watch(reg.installing);
+    watch(reg.waiting);
+    reg.addEventListener('updatefound', function () { watch(reg.installing); });
+    reg.update().then(function () { at.settled = true; }, function () { at.failed = true; });
+    return at;
+  }
+
   // Wait until the service worker for `version` has saved the page and taken over.
-  async function shellReady(version, ms) {
-    var name = SHELL + version, end = Date.now() + ms, failed = false;
-    while (Date.now() < end && !updated && !failed) {
-      if (!reg) reg = await getReg();
+  async function shellReady(at, version, ms) {
+    var name = SHELL + version, end = Date.now() + ms, idle = 0;
+    while (Date.now() < end && !updated && !at.failed) {
       var w = reg && (reg.installing || reg.waiting);
-      if (w && !w.watched) {
-        w.watched = true;
-        w.addEventListener('statechange', function () { if (this.state === 'redundant') failed = true; });
-      }
-      if (reg && !w && await caches.has(name) && await (await caches.open(name)).match('index.html')) return true;
+      if (!w && await caches.has(name) && await (await caches.open(name)).match('index.html')) return true;
+      idle = at.settled && !w ? idle + 500 : 0;       // update check done but nothing installing
+      if (idle > 3000) return false;
       await sleep(500);
     }
     return updated;
@@ -343,6 +357,11 @@ OFFLINE_JS = r'''/* Saves this page and every file it shows for offline use, wit
       list = JSON.parse(await new Response(got.blob).text());
       online = true;
     } catch (e) {
+      if (e && e.status === 403) {
+        say('Not shared with this login', 'warn', 'This device is signed in to a Tailscale login the Mac does not share this page with. ' +
+            'On the Mac, publish again with --allow-user for that login.', sync);
+        return;
+      }
       list = await savedList();
     }
     if (!list) {
@@ -352,10 +371,7 @@ OFFLINE_JS = r'''/* Saves this page and every file it shows for offline use, wit
     // An older copy of the page reading a newer list is mid-update: it may add files but
     // must not delete any, because it still shows them until the new version takes over.
     var current = list.version === VERSION, upgrading = online && !current;
-    if (upgrading) {
-      if (!reg) reg = await getReg();
-      if (reg) reg.update().catch(function () {});
-    }
+    var attempt = upgrading && !updated ? await startUpdate() : null;   // runs alongside the downloads
 
     var files = list.files || [], total = files.length, bytes = 0, want = new Map();
     files.forEach(function (f) { bytes += f.b || 0; want.set(new URL(f.u, location.href).href, f); });
@@ -364,10 +380,11 @@ OFFLINE_JS = r'''/* Saves this page and every file it shows for offline use, wit
       var keys = await cache.keys();
       await Promise.all(keys.map(function (k) { return want.has(k.url) ? null : cache.delete(k); }));
     }
-    var todo = [];
+    var todo = [], stale = 0;     // stale: saved, but from another build (an update did not finish)
     await Promise.all(Array.from(want).map(async function (e) {
       var hit = await cache.match(e[0]);
-      if (!hit || hit.headers.get('x-offline-rev') !== e[1].r) todo.push(e);
+      if (!hit) todo.push(e);
+      else if (hit.headers.get('x-offline-rev') !== e[1].r) { if (online) todo.push(e); else stale++; }
     }));
 
     var have = total - todo.length, detail = total + ' files · ' + mb(bytes) + ' · version ' + list.version;
@@ -406,9 +423,9 @@ OFFLINE_JS = r'''/* Saves this page and every file it shows for offline use, wit
       return;
     }
 
-    if (upgrading && !updated) {
+    if (attempt && !updated) {
       say('Updating…', 'busy', 'Saving the new version of the page itself.');
-      if (!(await shellReady(list.version, 180000))) {
+      if (!(await shellReady(attempt, list.version, 180000))) {
         say('Update unfinished · tap to retry', 'warn', 'The new version of the page did not finish saving. This copy still works.', sync);
         return;
       }
@@ -422,6 +439,8 @@ OFFLINE_JS = r'''/* Saves this page and every file it shows for offline use, wit
     }
     if (updated) showUpdated();
     else if (online) say('Offline ready', 'ready', detail);
+    else if (stale) say('Offline copy · update unfinished', 'busy', stale + ' files are from another version. ' +
+                        'Connect to Tailscale to finish updating.', sync);
     else say('Offline copy', 'ready', detail + '\nNo connection: showing the saved copy.');
   }
 
@@ -454,6 +473,16 @@ OFFLINE_JS = r'''/* Saves this page and every file it shows for offline use, wit
   });
   sync();
   window.addEventListener('online', sync);
+  // Phones resume an installed app rather than reloading it: check again when it comes
+  // back to the front (at most every 30 s), which is also how updates are noticed.
+  var lastWake = Date.now();
+  function wake() {
+    if (document.visibilityState !== 'visible' || Date.now() - lastWake < 30000) return;
+    lastWake = Date.now();
+    sync();
+  }
+  document.addEventListener('visibilitychange', wake);
+  window.addEventListener('pageshow', function (e) { if (e.persisted) wake(); });
 })();
 '''
 
@@ -550,6 +579,16 @@ def cmd_build(a):
     if missing and a.strict:
         show_missing(missing, src)
         die('Nothing changed (--strict).')
+    try:
+        last = json.loads((home / 'build.json').read_text(encoding='utf-8'))
+    except (OSError, ValueError):
+        last = {}
+    other_page = previous and (previous.get('name') != title or last.get('source', str(src.resolve())) != str(src.resolve()))
+    if other_page and len(had & set(found)) * 2 < len(had) and not a.replace:
+        die('Nothing changed: %s holds "%s"%s, which your devices may have installed.\n'
+            'Building "%s" here would replace it on every device and delete its saved files.\n'
+            'Use --home for a second page, or add --replace if replacing it is what you want.'
+            % (home, previous.get('name'), ' (from %s)' % last['source'] if last.get('source') else '', title))
     if dropped and not a.allow_missing:
         show_missing(missing, src)
         die('Nothing changed: %d of these are in the build your devices already have, and publishing\n'
@@ -611,6 +650,7 @@ def cmd_build(a):
     stage.rename(site)
     if old.exists():
         shutil.rmtree(old)
+    (home / 'build.json').write_text(json.dumps({'source': str(src.resolve()), 'title': title}), encoding='utf-8')
 
     print('Built %s' % site)
     print('  page     %s (%s)' % (title, size_text(len(out_page))))
@@ -623,8 +663,12 @@ def cmd_build(a):
     if sys.platform == 'darwin' and protected_path(home):
         print('\nNote: publish cannot run its background server from inside %s. Build into a folder\n'
               'directly in your home folder instead (the default %s is fine).' % (protected_path(home), DEFAULT_HOME))
+    copy = home / 'offline_tool.py'
     if not (home / 'publish.json').exists():
         print('\nNext: %s publish%s' % (me(), home_flag(a)))
+    elif copy.exists() and Path(__file__).resolve() != copy.resolve() and copy.read_bytes() != Path(__file__).read_bytes():
+        print('\nThe background server runs a different copy of this tool. To switch it to this one, run once:\n'
+              '    %s publish%s' % (me(), home_flag(a)))
     else:
         print('\nAlready published: devices pick this up the next time they open it online.')
 
@@ -639,6 +683,25 @@ def decode_login(value):
         except Exception:
             pass
     return value.strip().lower()
+
+
+TAILNET_NETS = [ipaddress.ip_network(n) for n in ('100.64.0.0/10', 'fd7a:115c:a1e0::/48', '127.0.0.0/8', '::1/128')]
+
+
+def from_tailnet(forwarded_for):
+    """Whether the client Tailscale forwarded for is a tailnet (or local) address."""
+    if not forwarded_for:
+        return True                     # not proxied, or no address given: nothing to judge by
+    last = forwarded_for.split(',')[-1].strip()
+    if last.startswith('['):
+        last = last[1:last.find(']')]
+    elif last.count(':') == 1:
+        last = last.split(':')[0]       # 1.2.3.4:port
+    try:
+        ip = ipaddress.ip_address(last)
+    except ValueError:
+        return False
+    return any(ip in n for n in TAILNET_NETS)
 
 
 class Handler(SimpleHTTPRequestHandler):
@@ -662,8 +725,12 @@ class Handler(SimpleHTTPRequestHandler):
             if not (host.endswith('.ts.net') or host in self.allow_hosts or host in LOCAL_HOSTS):
                 self.send_error(421, 'Wrong host')
                 return None
-            if self.allow_users and decode_login(self.headers.get('Tailscale-User-Login', '')) not in self.allow_users:
-                self.send_error(403, 'Not shared with you')
+            if 'Tailscale-Funnel-Request' in self.headers or not from_tailnet(self.headers.get('X-Forwarded-For')):
+                self.send_error(403, 'Tailnet only')          # Funnel (public internet) traffic
+                return None
+            login = decode_login(self.headers.get('Tailscale-User-Login', ''))
+            if self.allow_users and login not in self.allow_users:
+                self.send_error(403, 'Not shared with you', 'Not shared with %s.' % (login or 'this device'))
                 return None
         return super().send_head()
 
@@ -816,16 +883,35 @@ def agent_start(home, port, allow_users):
 
 
 def protected_path(p):
-    """The macOS privacy-protected folder p is in, or None."""
-    p = os.path.realpath(str(p))
-    home = os.path.realpath(str(Path.home()))
-    for name in PROTECTED:
-        root = os.path.join(home, name)
-        if p == root or p.startswith(root + os.sep):
-            return '~/' + name
-    if p.startswith('/Volumes/'):
-        return '/Volumes'
+    """The macOS privacy-protected folder p is in, or None. Checks the path as given and
+    with symlinks resolved, ignoring case as macOS does."""
+    fold = str.casefold if sys.platform == 'darwin' else str
+    homes = {fold(os.path.abspath(str(Path.home()))), fold(os.path.realpath(str(Path.home())))}
+    for cand in {fold(os.path.abspath(str(p))), fold(os.path.realpath(str(p)))}:
+        for h in homes:
+            for name in PROTECTED:
+                root = os.path.join(h, fold(name))
+                if cand == root or cand.startswith(root + os.sep):
+                    return '~/' + name
+        if cand.startswith(fold('/Volumes/')) and not any(cand == h or cand.startswith(h + os.sep) for h in homes):
+            return '/Volumes'
     return None
+
+
+def port_usable(port):
+    """True if 127.0.0.1:port is free, or already held by this tool's own server."""
+    sock = socket.socket()
+    sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+    try:
+        sock.bind(('127.0.0.1', port))
+        return True
+    except OSError:
+        try:
+            return 'files' in json.loads(local_get(port, 'precache.json'))
+        except Exception:
+            return False
+    finally:
+        sock.close()
 
 
 def served_by(cli, host, https_port):
@@ -854,8 +940,15 @@ def load_settings(home):
         return {}
 
 
+class PublishFailed(Exception):
+    pass
+
+
 def cmd_publish(a):
     home = Path(a.home).expanduser().resolve()
+    s = load_settings(home)                      # a previous publish of this home, if any
+    port = a.port or s.get('port') or DEFAULT_PORT
+    https_port = a.https_port or s.get('https_port') or DEFAULT_HTTPS_PORT
     agent = sys.platform == 'darwin' and not a.no_agent
     if agent:
         for p, what in ((home, '--home folder'), (sys.executable, 'Python')):
@@ -863,8 +956,8 @@ def cmd_publish(a):
             if where:
                 die('The %s is inside %s (%s). macOS stops background programs from reading\n'
                     'there, so the server would not start. Use a folder directly in your home folder\n'
-                    '(the default is %s)%s.' % (what, where, p, DEFAULT_HOME,
-                                               '' if what != 'Python' else ', or run this with /usr/bin/python3'))
+                    '(the default is %s)%s, or run the server yourself with --no-agent.'
+                    % (what, where, p, DEFAULT_HOME, '' if what != 'Python' else ', run this with /usr/bin/python3'))
     info = site_info(home)
     if not info:
         die('Nothing built at %s yet. Run: %s build path/to/index.html%s' % (home / 'site', me(), home_flag(a)))
@@ -878,49 +971,73 @@ def cmd_publish(a):
         die('MagicDNS is off for your tailnet, so this computer has no https name.\n'
             'Turn it on at https://login.tailscale.com/admin/dns and run this again.')
 
-    users = a.allow_user or []
-    if not users and not a.allow_tailnet:
-        owner = owner_login(st)
-        if owner:
-            users = [owner]
-        else:
-            print('Note: this computer is a tagged device, so there is no owner login to limit access to.\n'
-                  'Everyone your tailnet rules let in can open it; add --allow-user you@example.com to limit it.\n')
+    # Who may open it. The Mac's own login is always included; publishing again without
+    # options keeps whatever was chosen last time.
+    owner = owner_login(st)
+    mode = 'tailnet' if a.allow_tailnet else 'users' if a.allow_user else s.get('mode') or 'owner'
+    extra = a.allow_user or (s.get('allow_users') if mode == 'users' and not a.allow_user else []) or []
+    users = [] if mode == 'tailnet' else list(dict.fromkeys(decode_login(u) for u in ([owner] if owner else []) + extra))
+    if mode != 'tailnet' and not users:
+        print('Note: this computer is a tagged device, so there is no owner login to limit access to.\n'
+              'Everyone your tailnet rules let in can open it; add --allow-user you@example.com to limit it.\n')
 
-    target = 'http://127.0.0.1:%d' % a.port
-    s = load_settings(home)
-    ours = 'http://127.0.0.1:%d' % s['port'] if s.get('host') == host and s.get('https_port') == a.https_port else None
-    busy = served_by(cli, host, a.https_port)
-    if busy and busy not in (target, ours):
+    target = 'http://127.0.0.1:%d' % port
+    previous = 'http://127.0.0.1:%d' % s['port'] if s.get('host') == host and s.get('port') else None
+    busy = served_by(cli, host, https_port)
+    if busy and busy not in (target, previous):
         die('%s already serves %s.\nPick another port, e.g.: %s publish --https-port 8443%s'
-            % (public_url(host, a.https_port), busy, me(), home_flag(a)))
+            % (public_url(host, https_port), busy, me(), home_flag(a)))
+    if agent and port != s.get('port') and not port_usable(port):
+        die('Local port %d is used by another program. Run publish again with --port %d.' % (port, port + 1))
 
-    if agent:
-        agent_start(home, a.port, users)
-        if not wait_for_server(a.port, info['version']):
-            agent_stop(home)
-            die('The background server did not come up on port %d, so it was removed again.\n'
-                'See %s. If another program uses that port, run publish again with --port 8766.'
-                % (a.port, home / 'server.log'))
-    elif not wait_for_server(a.port, info['version'], seconds=2):
-        die('Start the server first and keep it running, then publish again:\n'
-            '    %s serve --home %s --port %d%s' % (me(), shlex.quote(str(home)), a.port,
-                                                     ''.join(' --allow-user ' + shlex.quote(u) for u in users)))
+    def rollback():
+        """Put back what ran before this publish, or leave nothing running."""
+        if not agent:
+            return ''
+        if s.get('agent') and previous and served_by(cli, host, s.get('https_port') or DEFAULT_HTTPS_PORT) == previous:
+            try:
+                agent_start(home, s['port'], s.get('allow_users') or [])
+                if wait_for_server(s['port'], info['version'], 10):
+                    return '\nThe previous share is still running.'
+            except SystemExit:
+                pass
+        agent_stop(home)
+        return '\nNothing was left running.'
 
-    if not st.get('CertDomains'):
-        print('Note: HTTPS certificates may be off for your tailnet. If Tailscale asks, follow its link\n'
-              '(or enable "HTTPS Certificates" at https://login.tailscale.com/admin/dns).\n')
-    r = ts(cli, 'serve', '--bg', '--https=%d' % a.https_port, target, capture=False)
-    now = served_by(cli, host, a.https_port)
-    if r.returncode != 0 or (now is not None and now != target):
+    try:
         if agent:
-            agent_stop(home)
-        die('Tailscale is not serving it yet%s. Finish any step Tailscale printed above (or ask\n'
-            'your tailnet admin to allow Serve and HTTPS), then run publish again.'
-            % ('' if r.returncode == 0 else ' (tailscale serve failed)'))
-    settings_path(home).write_text(json.dumps({'port': a.port, 'https_port': a.https_port, 'host': host,
+            agent_start(home, port, users)
+            if not wait_for_server(port, info['version']):
+                raise PublishFailed('The background server did not come up on port %d. See %s.\n'
+                                    'If another program uses that port, run publish again with --port %d.'
+                                    % (port, home / 'server.log', port + 1))
+        elif not wait_for_server(port, info['version'], seconds=2):
+            die('Start the server first and keep it running, then publish again:\n'
+                '    %s serve --home %s --port %d%s' % (me(), shlex.quote(str(home)), port,
+                                                         ''.join(' --allow-user ' + shlex.quote(u) for u in users)))
+        if not st.get('CertDomains'):
+            print('Note: HTTPS certificates may be off for your tailnet. If Tailscale asks, follow its link\n'
+                  '(or enable "HTTPS Certificates" at https://login.tailscale.com/admin/dns).\n')
+        r = ts(cli, 'serve', '--bg', '--https=%d' % https_port, target, capture=False)
+        now = served_by(cli, host, https_port)
+        if r.returncode != 0 or (now is not None and now != target):
+            raise PublishFailed('Tailscale is not serving it yet%s. Finish any step Tailscale printed above (or ask\n'
+                                'your tailnet admin to allow Serve and HTTPS), then run publish again.'
+                                % ('' if r.returncode == 0 else ' (tailscale serve failed)'))
+    except PublishFailed as e:
+        die(str(e) + rollback())
+    except KeyboardInterrupt:
+        print('\nStopped.' + rollback(), file=sys.stderr)
+        sys.exit(130)
+
+    old_port = s.get('https_port') if s.get('host') == host else None
+    if old_port and old_port != https_port and served_by(cli, host, old_port) in (previous, target):
+        ts(cli, 'serve', '--https=%d' % old_port, '--set-path=/', 'off')
+        print('Turned off the old link %s. A different port is a different app to browsers,\n'
+              'so install it again on your devices from the new link.\n' % public_url(host, old_port))
+    settings_path(home).write_text(json.dumps({'port': port, 'https_port': https_port, 'host': host, 'mode': mode,
                                                'allow_users': users, 'agent': agent}), encoding='utf-8')
-    url = public_url(host, a.https_port)
+    url = public_url(host, https_port)
     print('\nShared on your tailnet only (not the public internet):\n\n    %s\n' % url)
     print('Who can open it: %s' % (', '.join(users) if users else 'every device your tailnet rules let in'))
     print('\nOn your phone or laptop, with Tailscale on:\n'
@@ -1019,6 +1136,8 @@ def main(argv=None):
     b.add_argument('--strict', action='store_true', help='change nothing when any referenced file is missing')
     b.add_argument('--allow-missing', action='store_true',
                    help='publish even if files the last build had are missing now (devices delete them)')
+    b.add_argument('--replace', action='store_true',
+                   help='build a different page into a home that already holds one (devices switch to it)')
     b.set_defaults(fn=cmd_build)
 
     s = with_home(sub.add_parser('serve', help='run the local web server in the foreground'))
@@ -1030,11 +1149,11 @@ def main(argv=None):
     s.set_defaults(fn=cmd_serve)
 
     pb = with_home(sub.add_parser('publish', help='keep the server running and share it with tailscale serve'))
-    pb.add_argument('--port', type=int, default=DEFAULT_PORT, help='local port (default %d)' % DEFAULT_PORT)
-    pb.add_argument('--https-port', type=int, default=DEFAULT_HTTPS_PORT, help='tailnet HTTPS port (default 443)')
+    pb.add_argument('--port', type=int, help='local port (default: as last time, else %d)' % DEFAULT_PORT)
+    pb.add_argument('--https-port', type=int, help='tailnet HTTPS port (default: as last time, else 443)')
     who = pb.add_mutually_exclusive_group()
     who.add_argument('--allow-user', action='append', metavar='LOGIN',
-                     help='who may open it (repeatable); default: only the login this computer uses')
+                     help='also let this Tailscale login open it (repeatable); your own login always can')
     who.add_argument('--allow-tailnet', action='store_true',
                      help='let every device your tailnet rules allow open it')
     pb.add_argument('--no-agent', action='store_true', help='do not install a background server; run serve yourself')
