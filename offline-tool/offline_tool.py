@@ -355,12 +355,13 @@ OFFLINE_JS = r'''/* Saves this page and every file it shows for offline use, wit
 
   // Wait until a new service worker has taken over (or this attempt's has failed).
   async function shellReady(at, ms) {
-    var end = Date.now() + ms, idle = 0;
+    var start = Date.now(), end = start + ms, idle = 0;
     while (Date.now() < end && !updated && !at.failed) {
       var w = reg && (reg.installing || reg.waiting);
       if (!w && reg && reg.active && reg.active !== at.before) return true;
       idle = at.settled && !w ? idle + 500 : 0;       // update check done but nothing installing
       if (idle > 3000) return false;
+      if (!at.settled && !w && Date.now() - start > 30000) return false;   // the check itself got no answer
       await sleep(500);
     }
     return updated;
@@ -391,7 +392,7 @@ OFFLINE_JS = r'''/* Saves this page and every file it shows for offline use, wit
     var files = list.files || [], total = files.length, bytes = 0, want = new Map();
     files.forEach(function (f) { bytes += f.b || 0; want.set(new URL(f.u, location.href).href, f); });
     var cache = await caches.open(FILES);
-    if (current) {
+    if (current && await caches.has(SHELL + VERSION)) {     // only once this build's page is the saved one
       var keys = await cache.keys();
       await Promise.all(keys.map(function (k) { return want.has(k.url) ? null : cache.delete(k); }));
     }
@@ -440,6 +441,12 @@ OFFLINE_JS = r'''/* Saves this page and every file it shows for offline use, wit
       return;
     }
 
+    // Loaded past the service worker (a hard reload on a laptop): this page is current, but
+    // the saved copy is an older build. Ask for the new worker as an update would.
+    if (online && current && !updated && !(await caches.has(SHELL + VERSION))) {
+      if (!reg) reg = await getReg();
+      if (reg && reg.active) upgrading = true;
+    }
     if (upgrading && !updated) {
       say('Updating…', 'busy', 'Saving the new version. The current one keeps working until it is complete.');
       if (!(await shellReady(await startUpdate(), 600000))) {
@@ -512,6 +519,49 @@ var SHELL = 'offline-shell-' + VERSION, FILES = 'offline-files', META = 'offline
 var OURS = /-(shell-[0-9a-f]{12}|files|meta)$/;   // this tool's caches, from any build or older naming
 var ROOT = new URL('./', self.location.href).href, ROOT_PATH = new URL(ROOT).pathname;
 
+// Fetch past every cache, giving up once nothing has arrived for 25 s (a Mac that went to
+// sleep answers nothing at all, rather than refusing).
+function fetchIdle(url, init) {
+  var ctl = new AbortController(), timer = 0;
+  function arm() { clearTimeout(timer); timer = setTimeout(function () { ctl.abort(); }, 25000); }
+  arm();
+  return fetch(url, Object.assign({ signal: ctl.signal }, init)).then(function (r) {
+    if (!r.ok) throw new Error(url + ': HTTP ' + r.status);
+    var type = r.headers.get('content-type') || 'application/octet-stream', reader = r.body.getReader(), parts = [];
+    function pump() {
+      return reader.read().then(function (x) {
+        if (x.done) return new Response(new Blob(parts, { type: type }), { headers: { 'content-type': type } });
+        parts.push(x.value);
+        arm();
+        return pump();
+      });
+    }
+    return pump();
+  }).finally(function () { clearTimeout(timer); });
+}
+
+// The first release kept files in '<page name>-files'; take over what it saved.
+function adoptOlder(list) {
+  return caches.keys().then(function (names) {
+    var older = names.filter(function (n) { return /-files$/.test(n) && n !== FILES; });
+    if (!older.length) return null;
+    return Promise.all([FILES].concat(older).map(function (n) { return caches.open(n); })).then(function (cs) {
+      var files = cs[0];
+      return Promise.all(list.map(function (f) {
+        var url = new URL(f.u, ROOT).href;
+        return files.match(url).then(function (hit) {
+          if (hit && hit.headers.get('x-offline-rev') === f.r) return null;
+          return cs.slice(1).reduce(function (found, c) {
+            return found.then(function (h) {
+              return h || c.match(url).then(function (o) { return o && o.headers.get('x-offline-rev') === f.r ? o : null; });
+            });
+          }, Promise.resolve(null)).then(function (o) { return o ? files.put(url, o) : null; });
+        });
+      }));
+    });
+  });
+}
+
 // The files this build's page shows, all saved at the right revision? (The page saves
 // them itself, with progress, before it asks for this worker.)
 function filesSaved(list) {
@@ -529,16 +579,18 @@ function filesSaved(list) {
 // missing, so the install stays short; the page itself is saved last, with the very file
 // list that was checked.
 self.addEventListener('install', function (event) {
-  event.waitUntil(fetch('precache.json?' + MARK + '=' + Date.now(), { cache: 'no-store' }).then(function (r) {
-    if (!r.ok) throw new Error('precache.json: HTTP ' + r.status);
+  event.waitUntil(fetchIdle('precache.json?' + MARK + '=' + Date.now(), { cache: 'no-store' }).then(function (r) {
     return r.clone().json().then(function (list) {
-      return self.registration.active ? filesSaved(list.files || []) : true;
+      if (!self.registration.active) return true;
+      return adoptOlder(list.files || []).then(function () { return filesSaved(list.files || []); });
     }).then(function (complete) {
       if (!complete) throw new Error('the files of this version are not saved yet');
-      return caches.open(SHELL).then(function (cache) {
-        var rest = SHELL_FILES.filter(function (u) { return u !== 'precache.json'; });
-        return cache.addAll(rest.map(function (u) { return new Request(u, { cache: 'reload' }); }))
-          .then(function () { return cache.put('precache.json', r); });
+      var rest = SHELL_FILES.filter(function (u) { return u !== 'precache.json'; });
+      return Promise.all(rest.map(function (u) { return fetchIdle(u, { cache: 'reload' }); })).then(function (got) {
+        return caches.open(SHELL).then(function (cache) {         // all fetched: now save them together
+          return Promise.all(rest.map(function (u, i) { return cache.put(u, got[i]); }))
+            .then(function () { return cache.put('precache.json', r); });
+        });
       });
     });
   }).then(function () { return self.skipWaiting(); }, function (e) {
@@ -1201,7 +1253,9 @@ def cmd_status(a):
     else:
         print('local server http://127.0.0.1:%d/ is up%s' % (port, '' if info and found[1] == info['version']
                                                              else ' but serves a different build (version %s)' % found[1]))
-        if s and found[2] != access_id(s.get('allow_users') or []):
+        if s and found[2] == '':
+            print('             run by an older copy of this tool (run publish once)')
+        elif s and found[2] != access_id(s.get('allow_users') or []):
             print('             but it lets in a different list of people than publish saved; run publish again')
     if sys.platform == 'darwin':
         r = launchctl('print', 'gui/%d/%s' % (os.getuid(), agent_label(home)))
